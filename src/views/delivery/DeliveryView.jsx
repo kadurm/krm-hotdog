@@ -73,8 +73,7 @@ export default function DeliveryView() {
   const handleOpenProduct = (product) => {
     setSelectedProduct(product);
     setProductQty(1);
-    setExtraBacon(false);
-    setExtraCheese(false);
+    // Resetar opções padrão quando abrir o modal
     setCreamyCheese('catupiry');
     setMeltedCheese('mussarela');
     setHasVinagrete(false);
@@ -84,17 +83,14 @@ export default function DeliveryView() {
     let price = selectedProduct.price;
     let nameDetails = [];
     
-    // Opções personalizadas para produtos que suportam
-    if (selectedProduct.hasCustomOptions !== false) {
+    // Se for os itens 3, 4 ou 5, adicionamos as descrições no nome do pedido
+    if (selectedProduct.hasCustomOptions) {
       nameDetails.push(creamyCheese === 'catupiry' ? 'Catupiry' : 'Requeijão');
       nameDetails.push(meltedCheese === 'mussarela' ? 'Mussarela' : 'Cheddar');
-      if (hasVinagrete) nameDetails.push('Com Vinagrete');
+      if (hasVinagrete) nameDetails.push('+ Vinagrete');
     }
-    
-    if (extraBacon) { price += 4.0; nameDetails.push('+ Extra Bacon'); }
-    if (extraCheese) { price += 3.0; nameDetails.push('+ Extra Queijo'); }
 
-    const itemName = selectedProduct.name + (nameDetails.length > 0 ? ` (${nameDetails.join(', ')})` : '');
+    const itemName = selectedProduct.name + (nameDetails.length > 0 ? ` (${nameDetails.join(' | ')})` : '');
     const existingIndex = cart.findIndex(item => item.name === itemName);
     
     if (existingIndex > -1) {

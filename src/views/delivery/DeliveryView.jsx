@@ -512,54 +512,46 @@ export default function DeliveryView() {
                 </p>
               </div>
 
-              {/* Opções Personalizáveis (para prensados que possuem customOptions) */}
-              {selectedProduct.hasCustomOptions !== false && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
+              {/* Exibe opções de queijo e vinagrete apenas se o lanche for 3, 4 ou 5 */}
+              {selectedProduct && selectedProduct.hasCustomOptions && (
+                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: '1px solid var(--border-glass)' }}>
+                  <h4 style={{ marginBottom: '10px', color: '#fff', fontSize: '1rem' }}>Personalize seu Prensado:</h4>
                   
-                  {/* Queijo Cremoso */}
-                  <div>
-                    <h5 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Escolha o Queijo Cremoso:</h5>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: creamyCheese === 'catupiry' ? 'rgba(234, 179, 8, 0.15)' : 'transparent', borderColor: creamyCheese === 'catupiry' ? '#eab308' : 'var(--border-glass)' }}>
-                        <input type="radio" name="creamyCheese" value="catupiry" checked={creamyCheese === 'catupiry'} onChange={() => setCreamyCheese('catupiry')} style={{ accentColor: '#eab308' }} />
-                        <span>Catupiry</span>
+                  {/* Escolha do Queijo Cremoso */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Cremoso:</strong><br/>
+                    <div style={{ marginTop: '4px' }}>
+                      <label style={{ marginRight: '15px', cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
+                        <input type="radio" name="creamy" checked={creamyCheese === 'catupiry'} onChange={() => setCreamyCheese('catupiry')} style={{ accentColor: 'var(--color-brand)' }} /> Catupiry
                       </label>
-                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: creamyCheese === 'requeijao' ? 'rgba(234, 179, 8, 0.15)' : 'transparent', borderColor: creamyCheese === 'requeijao' ? '#eab308' : 'var(--border-glass)' }}>
-                        <input type="radio" name="creamyCheese" value="requeijao" checked={creamyCheese === 'requeijao'} onChange={() => setCreamyCheese('requeijao')} style={{ accentColor: '#eab308' }} />
-                        <span>Requeijão</span>
+                      <label style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
+                        <input type="radio" name="creamy" checked={creamyCheese === 'requeijao'} onChange={() => setCreamyCheese('requeijao')} style={{ accentColor: 'var(--color-brand)' }} /> Requeijão
                       </label>
                     </div>
                   </div>
 
-                  {/* Queijo Fatiado Derretido */}
-                  <div>
-                    <h5 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Escolha o Queijo Fatiado Derretido:</h5>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: meltedCheese === 'mussarela' ? 'rgba(249, 115, 22, 0.15)' : 'transparent', borderColor: meltedCheese === 'mussarela' ? '#f97316' : 'var(--border-glass)' }}>
-                        <input type="radio" name="meltedCheese" value="mussarela" checked={meltedCheese === 'mussarela'} onChange={() => setMeltedCheese('mussarela')} style={{ accentColor: '#f97316' }} />
-                        <span>Mussarela</span>
+                  {/* Escolha do Queijo Derretido */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Fatiado:</strong><br/>
+                    <div style={{ marginTop: '4px' }}>
+                      <label style={{ marginRight: '15px', cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
+                        <input type="radio" name="melted" checked={meltedCheese === 'mussarela'} onChange={() => setMeltedCheese('mussarela')} style={{ accentColor: 'var(--color-brand)' }} /> Mussarela
                       </label>
-                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: meltedCheese === 'cheddar' ? 'rgba(249, 115, 22, 0.15)' : 'transparent', borderColor: meltedCheese === 'cheddar' ? '#f97316' : 'var(--border-glass)' }}>
-                        <input type="radio" name="meltedCheese" value="cheddar" checked={meltedCheese === 'cheddar'} onChange={() => setMeltedCheese('cheddar')} style={{ accentColor: '#f97316' }} />
-                        <span>Cheddar</span>
+                      <label style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
+                        <input type="radio" name="melted" checked={meltedCheese === 'cheddar'} onChange={() => setMeltedCheese('cheddar')} style={{ accentColor: 'var(--color-brand)' }} /> Cheddar
                       </label>
                     </div>
                   </div>
 
-                  {/* Vinagrete */}
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={hasVinagrete}
-                        onChange={(e) => setHasVinagrete(e.target.checked)}
-                        style={{ accentColor: 'var(--color-brand)' }}
-                      />
-                      <span style={{ fontSize: '0.9rem' }}>Adicionar Vinagrete Fresco</span>
+                  {/* Vinagrete Opcional */}
+                  <div>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Acompanhamento:</strong><br/>
+                    <div style={{ marginTop: '4px' }}>
+                      <label style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
+                        <input type="checkbox" checked={hasVinagrete} onChange={(e) => setHasVinagrete(e.target.checked)} style={{ accentColor: 'var(--color-brand)' }} /> Adicionar Vinagrete (Opcional)
+                      </label>
                     </div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Sem custo</span>
-                  </label>
-
+                  </div>
                 </div>
               )}
 

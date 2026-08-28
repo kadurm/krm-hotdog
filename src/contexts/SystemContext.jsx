@@ -8,6 +8,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensadinho', 
     description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon e molhos da casa.', 
     price: 18.00, 
+    image: '/images/prensadinho.png',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: false 
@@ -17,6 +18,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensado', 
     description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e Frango desfiado bem temperado.', 
     price: 20.00, 
+    image: '/images/prensado.png',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: false 
@@ -26,6 +28,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensadão de Costela', 
     description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e Costela suculenta que derrete na boca.', 
     price: 26.00, 
+    image: '/images/costela.png',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: true 
@@ -35,6 +38,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensadão de Pernil', 
     description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e Pernil desfiado super temperado.', 
     price: 24.00, 
+    image: '/images/pernil.png',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: true 
@@ -44,6 +48,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensadão de Carne Seca', 
     description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e o autêntico sabor da Carne Seca.', 
     price: 28.00, 
+    image: '/images/carne-seca.png',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: true 
@@ -218,7 +223,11 @@ export const SystemProvider = ({ children }) => {
     const saved = localStorage.getItem('nuu_products_v2');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return parsed.map(p => {
+          const init = INITIAL_PRODUCTS.find(i => i.id === p.id);
+          return init ? { ...p, image: init.image } : p;
+        });
       } catch (e) {
         return INITIAL_PRODUCTS;
       }

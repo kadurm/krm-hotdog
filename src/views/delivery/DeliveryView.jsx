@@ -241,10 +241,16 @@ export default function DeliveryView({
       {/* NOVO: CONTROLES FLUTUANTES PARA MOBILE */}
       {checkoutStep === 'menu' && (
         <div className="mobile-floating-header">
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontWeight: 800, fontSize: '1.2rem', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-            <Utensils size={20} /> NUU PRENSADO
-          </div>
+          {/* Logo Real em Imagem */}
+          <img 
+            src="/logoNuuPrensado-semfundo.png" 
+            alt="Nuu Prensado Logo" 
+            style={{ 
+              height: '45px', 
+              objectFit: 'contain', 
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' 
+            }} 
+          />
           
           {/* Controles da direita (Grade e Carrinho) */}
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>

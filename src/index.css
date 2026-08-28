@@ -607,7 +607,7 @@ input:focus, select:focus, textarea:focus {
     display: flex;
     flex-direction: column;
     justify-content: center; /* Centraliza verticalmente */
-    padding: 0 1rem;
+    padding: 5.5rem 1rem 1rem 1rem !important; /* Margem no topo desvia do cabeçalho flutuante */
     height: 100%;
     touch-action: none; /* Mantém o swipe funcionando perfeitamente */
   }
@@ -619,8 +619,8 @@ input:focus, select:focus, textarea:focus {
 
   /* 5. Ajustes de tamanho para caber no mobile */
   .product-circle {
-    width: 220px !important;
-    height: 220px !important;
+    width: 200px !important;
+    height: 200px !important;
     margin: 0 auto; /* Garante centralização horizontal */
   }
   .slider-text-area {

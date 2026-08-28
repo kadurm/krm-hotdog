@@ -143,6 +143,9 @@ export default function DeliveryView() {
     return 'step-inactive';
   };
 
+  // Garanta que visualProducts tenha itens antes de tentar pegar o slide ativo
+  const activeProduct = visualProducts.length > 0 ? (visualProducts[activeSlide] || visualProducts[0]) : null;
+
   // Define a cor de fundo dependendo do modo
   const backgroundColor = checkoutStep !== 'menu' ? 'var(--bg-primary)' 
                         : viewMode === 'grid' ? '#121212' // Fundo escuro premium para a grade

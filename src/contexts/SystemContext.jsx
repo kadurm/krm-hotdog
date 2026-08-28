@@ -215,16 +215,15 @@ const INITIAL_QUOTATIONS = [
 
 export const SystemProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('hd_products');
-    if (!saved) return INITIAL_PRODUCTS;
-    try {
-      const parsed = JSON.parse(saved);
-      const isPrensados = parsed.some(p => p.name === 'Prensadinho' || p.name === 'Prensadin' || p.category === 'prensados');
-      if (!isPrensados) return INITIAL_PRODUCTS;
-      return parsed.map(p => p.name === 'Prensadin' ? { ...p, name: 'Prensadinho' } : p);
-    } catch (e) {
-      return INITIAL_PRODUCTS;
+    const saved = localStorage.getItem('nuu_products_v2');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return INITIAL_PRODUCTS;
+      }
     }
+    return INITIAL_PRODUCTS;
   });
 
   const [inventory, setInventory] = useState(() => {
@@ -262,7 +261,7 @@ export const SystemProvider = ({ children }) => {
 
   // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem('hd_products', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v2', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {

@@ -200,7 +200,7 @@ export default function DeliveryView() {
       </header>
 
       {/* TELA PRINCIPAL (SLIDER IMERSIVO) */}
-      {checkoutStep === 'menu' && activeProduct && (
+      {checkoutStep === 'menu' && viewMode === 'slider' && activeProduct && (
         <div className="immersive-slider" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3rem 2rem 3rem', position: 'relative' }}>
           
           {/* Indicadores Laterais (001, 002, etc) */}
@@ -278,6 +278,67 @@ export default function DeliveryView() {
             <button onClick={nextSlide} style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', backdropFilter: 'blur(5px)' }}><ChevronDown size={24} /></button>
           </div>
 
+        </div>
+      )}
+
+      {/* TELA DE GRADE (GRID VIEW) */}
+      {checkoutStep === 'menu' && viewMode === 'grid' && (
+        <div className="animate-fade-in-up" style={{ padding: '2rem 4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', flex: 1, paddingBottom: '4rem' }}>
+          {visualProducts.map((product) => (
+            <div 
+              key={product.id} 
+              style={{ 
+                background: 'rgba(255,255,255,0.03)', 
+                border: `1px solid rgba(255,255,255,0.1)`, 
+                borderTop: `4px solid ${product.color}`,
+                borderRadius: '16px', 
+                padding: '2rem', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                textAlign: 'center', 
+                color: '#fff',
+                transition: 'transform 0.3s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-10px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              {/* Ícone representando o prato na grade */}
+              <div style={{ fontSize: '4rem', marginBottom: '1rem', filter: 'drop-shadow(0 10px 10px rgba(0,0,0,0.5))' }}>
+                {product.floaties[0]} 
+              </div>
+              
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: product.color }}>
+                {product.name}
+              </h3>
+              
+              <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1.5rem', flex: 1, lineHeight: 1.5 }}>
+                {product.description}
+              </p>
+              
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>
+                R$ {product.price.toFixed(2)}
+              </div>
+              
+              <button 
+                onClick={() => handleOpenProduct(product)} 
+                style={{ 
+                  backgroundColor: product.color, 
+                  color: '#fff', 
+                  border: 'none', 
+                  padding: '12px 0', 
+                  borderRadius: '99px', 
+                  fontWeight: 700, 
+                  fontSize: '1rem',
+                  cursor: 'pointer', 
+                  width: '100%',
+                  boxShadow: `0 4px 15px ${product.color}40`
+                }}
+              >
+                Escolher Montagem
+              </button>
+            </div>
+          ))}
         </div>
       )}
 

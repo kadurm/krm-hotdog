@@ -5,7 +5,7 @@ const SystemContext = createContext(null);
 const INITIAL_PRODUCTS = [
   {
     id: 1,
-    name: 'Prensadin',
+    name: 'Prensadinho',
     price: 18.00,
     description: 'Nossa base tradicional perfeitamente prensada com muito Bacon.',
     category: 'prensados',
@@ -235,7 +235,7 @@ export const SystemProvider = ({ children }) => {
     if (!saved) return INITIAL_PRODUCTS;
     try {
       const parsed = JSON.parse(saved);
-      const isPrensados = parsed.some(p => p.name === 'Prensadin' || p.category === 'prensados');
+      const isPrensados = parsed.some(p => p.name === 'Prensadinho' || p.category === 'prensados');
       return isPrensados ? parsed : INITIAL_PRODUCTS;
     } catch (e) {
       return INITIAL_PRODUCTS;

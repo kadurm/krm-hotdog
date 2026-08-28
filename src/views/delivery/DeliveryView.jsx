@@ -27,7 +27,7 @@ export default function DeliveryView() {
   // 2. Mapeamos as cores e emojis da animação usando os produtos do sistema!
   const visualProducts = products.filter(p => p.active).map((p, index) => {
     const themes = {
-      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] }, // Prensadin Bacon
+      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] }, // Prensadinho Bacon
       2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] }, // Prensado Frango
       3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] }, // Prensadão Costela
       4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] }, // Pernil

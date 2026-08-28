@@ -7,13 +7,33 @@ import {
   LayoutGrid, MonitorPlay
 } from 'lucide-react';
 
-export default function DeliveryView() {
+export default function DeliveryView({
+  viewMode: propViewMode,
+  setViewMode: propSetViewMode,
+  cart: propCart,
+  setCart: propSetCart,
+  isCartOpen: propIsCartOpen,
+  setIsCartOpen: propSetIsCartOpen,
+  checkoutStep: propCheckoutStep,
+  setCheckoutStep: propSetCheckoutStep
+}) {
   const { products, createOrder, orders } = useSystem();
   
   const [activeSlide, setActiveSlide] = useState(0);
-  const [viewMode, setViewMode] = useState('slider'); // NOVO: 'slider' ou 'grid'
-  const [cart, setCart] = useState([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [internalViewMode, setInternalViewMode] = useState('slider');
+  const [internalCart, setInternalCart] = useState([]);
+  const [internalIsCartOpen, setInternalIsCartOpen] = useState(false);
+  const [internalCheckoutStep, setInternalCheckoutStep] = useState('menu');
+
+  const viewMode = propViewMode !== undefined ? propViewMode : internalViewMode;
+  const setViewMode = propSetViewMode || setInternalViewMode;
+  const cart = propCart !== undefined ? propCart : internalCart;
+  const setCart = propSetCart || setInternalCart;
+  const isCartOpen = propIsCartOpen !== undefined ? propIsCartOpen : internalIsCartOpen;
+  const setIsCartOpen = propSetIsCartOpen || setInternalIsCartOpen;
+  const checkoutStep = propCheckoutStep !== undefined ? propCheckoutStep : internalCheckoutStep;
+  const setCheckoutStep = propSetCheckoutStep || setInternalCheckoutStep;
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [extraBacon, setExtraBacon] = useState(false);
   const [extraCheese, setExtraCheese] = useState(false);
@@ -39,7 +59,6 @@ export default function DeliveryView() {
   });
 
   // Checkout States
-  const [checkoutStep, setCheckoutStep] = useState('menu'); // 'menu' | 'form' | 'tracking'
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [deliveryType, setDeliveryType] = useState('delivery');
@@ -165,39 +184,7 @@ export default function DeliveryView() {
         overflowX: 'hidden'
       }}
     >
-      {/* HEADER */}
-      <header style={{ padding: '2rem 4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-        <div />
-        
-        <nav style={{ display: 'flex', gap: '2rem', color: '#fff', fontSize: '0.9rem', fontWeight: 600, alignItems: 'center' }}>
-          {/* BOTÃO DE ALTERNAR VISUALIZAÇÃO */}
-          {checkoutStep === 'menu' && (
-            <button 
-              onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
-              style={{ 
-                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', 
-                color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 16px', borderRadius: '99px', transition: '0.3s', backdropFilter: 'blur(5px)'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            >
-              {viewMode === 'slider' ? <LayoutGrid size={18} /> : <MonitorPlay size={18} />}
-              <span style={{ textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.8rem' }}>
-                {viewMode === 'slider' ? 'Ver em Grade' : 'Ver Imersivo'}
-              </span>
-            </button>
-          )}
 
-          <div 
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-            onClick={() => setIsCartOpen(true)}
-          >
-            <ShoppingBag size={18} />
-            {cart.length > 0 && <span style={{ background: '#fff', color: '#000', padding: '2px 6px', borderRadius: '10px', fontSize: '0.75rem' }}>{cart.length}</span>}
-          </div>
-        </nav>
-      </header>
 
       {/* TELA PRINCIPAL (SLIDER IMERSIVO) */}
       {checkoutStep === 'menu' && viewMode === 'slider' && activeProduct && (

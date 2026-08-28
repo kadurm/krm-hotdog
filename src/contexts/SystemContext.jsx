@@ -232,7 +232,14 @@ const INITIAL_QUOTATIONS = [
 export const SystemProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem('hd_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+    if (!saved) return INITIAL_PRODUCTS;
+    try {
+      const parsed = JSON.parse(saved);
+      const isPrensados = parsed.some(p => p.name === 'Prensadin' || p.category === 'prensados');
+      return isPrensados ? parsed : INITIAL_PRODUCTS;
+    } catch (e) {
+      return INITIAL_PRODUCTS;
+    }
   });
 
   const [inventory, setInventory] = useState(() => {

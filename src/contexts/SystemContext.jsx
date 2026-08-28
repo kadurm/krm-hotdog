@@ -5,7 +5,7 @@ const SystemContext = createContext(null);
 const INITIAL_PRODUCTS = [
   { 
     id: 1, 
-    name: 'Prensadin', 
+    name: 'Prensadinho', 
     description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e muito Bacon.', 
     price: 18.00, 
     active: true, 
@@ -221,7 +221,7 @@ export const SystemProvider = ({ children }) => {
       const parsed = JSON.parse(saved);
       const isPrensados = parsed.some(p => p.name === 'Prensadinho' || p.name === 'Prensadin' || p.category === 'prensados');
       if (!isPrensados) return INITIAL_PRODUCTS;
-      return parsed.map(p => p.name === 'Prensadinho' ? { ...p, name: 'Prensadin' } : p);
+      return parsed.map(p => p.name === 'Prensadin' ? { ...p, name: 'Prensadinho' } : p);
     } catch (e) {
       return INITIAL_PRODUCTS;
     }

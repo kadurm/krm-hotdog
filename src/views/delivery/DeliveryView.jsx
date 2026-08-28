@@ -22,26 +22,16 @@ export default function DeliveryView() {
   const [meltedCheese, setMeltedCheese] = useState('mussarela'); // 'mussarela' ou 'cheddar'
   const [hasVinagrete, setHasVinagrete] = useState(false);
 
-  // SEUS PRODUTOS BASEADOS NA ANOTAÇÃO
-  const menuReal = [
-    { id: 1, name: 'Prensadin', description: 'Nossa base tradicional perfeitamente prensada com muito Bacon.', price: 18.00, hasCustomOptions: false },
-    { id: 2, name: 'Prensado', description: 'A base clássica recheada com Frango desfiado e bem temperado.', price: 20.00, hasCustomOptions: false },
-    { id: 3, name: 'Prensadão de Costela', description: 'Base generosa com Costela suculenta que derrete na boca.', price: 26.00, hasCustomOptions: true },
-    { id: 4, name: 'Prensadão de Pernil', description: 'Base deliciosa com Pernil desfiado super temperado.', price: 24.00, hasCustomOptions: true },
-    { id: 5, name: 'Prensadão de Carne Seca', description: 'O autêntico sabor da Carne Seca na nossa base perfeita.', price: 28.00, hasCustomOptions: true },
-  ];
-
-  // MAPEAMENTO VISUAL (Cores e Emojis para o efeito Imersivo)
-  const sourceProducts = products && products.length > 0 ? products.filter(p => p.active) : menuReal;
-
-  const visualProducts = sourceProducts.map((p, index) => {
+  // 2. Mapeamos as cores e emojis da animação usando os produtos do sistema!
+  const visualProducts = products.filter(p => p.active).map((p, index) => {
     const themes = {
-      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] }, // Prensadin Bacon (Amarelo)
-      2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] }, // Prensado Frango (Laranja)
-      3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] }, // Prensadão Costela (Vermelho Escuro)
-      4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] }, // Pernil (Verde Limão)
-      5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] }, // Carne seca (Marrom/Dourado Escuro)
+      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] }, // Prensadin Bacon
+      2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] }, // Prensado Frango
+      3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] }, // Prensadão Costela
+      4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] }, // Pernil
+      5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] }, // Carne seca
     };
+    
     const theme = themes[p.id] || { color: '#333333', floaties: ['✨', '🍔', '🥤'] };
     return { ...p, ...theme, slideIndex: index };
   });

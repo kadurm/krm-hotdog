@@ -6,7 +6,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 1, 
     name: 'Prensadinho', 
-    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e muito Bacon.', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon e molhos da casa.', 
     price: 18.00, 
     active: true, 
     category: 'prensados', 
@@ -15,7 +15,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 2, 
     name: 'Prensado', 
-    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e Frango desfiado bem temperado.', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e Frango desfiado bem temperado.', 
     price: 20.00, 
     active: true, 
     category: 'prensados', 
@@ -24,7 +24,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 3, 
     name: 'Prensadão de Costela', 
-    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e Costela suculenta que derrete na boca.', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e Costela suculenta que derrete na boca.', 
     price: 26.00, 
     active: true, 
     category: 'prensados', 
@@ -33,7 +33,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 4, 
     name: 'Prensadão de Pernil', 
-    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e Pernil desfiado super temperado.', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e Pernil desfiado super temperado.', 
     price: 24.00, 
     active: true, 
     category: 'prensados', 
@@ -42,7 +42,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 5, 
     name: 'Prensadão de Carne Seca', 
-    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e o autêntico sabor da Carne Seca.', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, bacon, molhos da casa e o autêntico sabor da Carne Seca.', 
     price: 28.00, 
     active: true, 
     category: 'prensados', 

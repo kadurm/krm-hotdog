@@ -220,7 +220,7 @@ const INITIAL_QUOTATIONS = [
 
 export const SystemProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v2');
+    const saved = localStorage.getItem('nuu_products_v4');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -270,7 +270,7 @@ export const SystemProvider = ({ children }) => {
 
   // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem('nuu_products_v2', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v4', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {

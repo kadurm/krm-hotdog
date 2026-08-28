@@ -235,8 +235,9 @@ export const SystemProvider = ({ children }) => {
     if (!saved) return INITIAL_PRODUCTS;
     try {
       const parsed = JSON.parse(saved);
-      const isPrensados = parsed.some(p => p.name === 'Prensadinho' || p.category === 'prensados');
-      return isPrensados ? parsed : INITIAL_PRODUCTS;
+      const isPrensados = parsed.some(p => p.name === 'Prensadinho' || p.name === 'Prensadin' || p.category === 'prensados');
+      if (!isPrensados) return INITIAL_PRODUCTS;
+      return parsed.map(p => p.name === 'Prensadin' ? { ...p, name: 'Prensadinho' } : p);
     } catch (e) {
       return INITIAL_PRODUCTS;
     }

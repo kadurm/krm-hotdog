@@ -248,8 +248,8 @@ export default function DeliveryView() {
 
           {/* Área da Direita: Textos e Botão */}
           <div style={{ flex: '0 0 420px', display: 'flex', flexDirection: 'column', color: '#fff', zIndex: 10 }} className="animate-fade-in-up" key={`text-${activeProduct.id}`}>
-            <h1 style={{ fontSize: '3.5rem', fontWeight: 900, lineHeight: 1.05, marginBottom: '1rem', textShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-              {activeProduct.name.split(' ').map((word, i) => <span key={i} style={{ display: 'block' }}>{word}</span>)}
+            <h1 style={{ fontSize: '2.8rem', fontWeight: 900, lineHeight: 1.1, marginBottom: '1rem', textShadow: '0 10px 30px rgba(0,0,0,0.3)', maxWidth: '380px' }}>
+              {activeProduct.name}
             </h1>
             <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', marginBottom: '2rem', lineHeight: 1.5, maxWidth: '340px' }}>
               {activeProduct.description}

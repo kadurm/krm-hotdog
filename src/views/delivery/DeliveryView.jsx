@@ -162,6 +162,11 @@ export default function DeliveryView({
     return 'step-inactive';
   };
 
+  // Prevenção de tela preta (Crash fix)
+  if (!products || visualProducts.length === 0) {
+    return <div style={{ color: 'white', padding: '2rem', textAlign: 'center' }}>Carregando cardápio...</div>;
+  }
+
   // Garanta que visualProducts tenha itens antes de tentar pegar o slide ativo
   const activeProduct = visualProducts.length > 0 ? (visualProducts[activeSlide] || visualProducts[0]) : null;
 
@@ -172,6 +177,7 @@ export default function DeliveryView({
 
   return (
     <div 
+      className="app-container"
       style={{ 
         backgroundColor: backgroundColor,
         transition: 'background-color 0.8s ease-in-out',
@@ -185,24 +191,23 @@ export default function DeliveryView({
       }}
     >
 
-
       {/* TELA PRINCIPAL (SLIDER IMERSIVO) */}
       {checkoutStep === 'menu' && viewMode === 'slider' && activeProduct && (
         <div className="immersive-slider" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3rem 2rem 3rem', position: 'relative' }}>
           
           {/* Indicadores Laterais (001, 002, etc) */}
-          <div style={{ position: 'absolute', bottom: '2rem', left: '3rem', color: 'rgba(255,255,255,0.7)', fontSize: '1.5rem', fontWeight: 300, letterSpacing: '2px' }}>
+          <div className="slider-indicator" style={{ position: 'absolute', bottom: '2rem', left: '3rem', color: 'rgba(255,255,255,0.7)', fontSize: '1.5rem', fontWeight: 300, letterSpacing: '2px' }}>
             00{activeSlide + 1} / 00{visualProducts.length}
           </div>
 
-          <div style={{ position: 'absolute', left: '3rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '1rem', zIndex: 20 }}>
+          <div className="slider-nav-dots" style={{ position: 'absolute', left: '3rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '1rem', zIndex: 20 }}>
             {visualProducts.map((_, i) => (
-               <div key={i} onClick={() => setActiveSlide(i)} style={{ width: i === activeSlide ? '12px' : '8px', height: i === activeSlide ? '12px' : '8px', borderRadius: '50%', backgroundColor: i === activeSlide ? '#fff' : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: '0.3s' }} />
+               <div key={i} onClick={() => setActiveSlide(i)} className={`dot ${i === activeSlide ? 'active' : ''}`} style={{ width: i === activeSlide ? '12px' : '8px', height: i === activeSlide ? '12px' : '8px', borderRadius: '50%', backgroundColor: i === activeSlide ? '#fff' : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: '0.3s' }} />
             ))}
           </div>
 
           {/* Área Central: Imagem do Produto */}
-          <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+          <div className="slider-image-area" style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
             {/* Elementos flutuantes simulando 3D */}
             {activeProduct.floaties.map((icon, i) => (
               <div 
@@ -223,7 +228,7 @@ export default function DeliveryView({
             
             {/* IMAGEM PRINCIPAL DO PRODUTO */}
             <div className="product-image-container animate-product-enter" key={activeProduct.id}>
-                <div style={{ width: '420px', height: '420px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.25)', boxShadow: '0 30px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', textAlign: 'center', padding: '2rem', backdropFilter: 'blur(10px)', border: '2px solid rgba(255,255,255,0.15)' }}>
+                <div className="product-circle" style={{ width: '420px', height: '420px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.25)', boxShadow: '0 30px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', textAlign: 'center', padding: '2rem', backdropFilter: 'blur(10px)', border: '2px solid rgba(255,255,255,0.15)' }}>
                   <Utensils size={72} style={{ opacity: 0.4, marginBottom: '1rem' }} />
                   <span style={{ fontSize: '1.2rem', fontWeight: 700, opacity: 0.9 }}>{activeProduct.name}</span>
                   <span style={{ fontSize: '0.85rem', opacity: 0.6, marginTop: '4px' }}>[ Foto PNG Recortada ]</span>
@@ -232,19 +237,20 @@ export default function DeliveryView({
           </div>
 
           {/* Área da Direita: Textos e Botão */}
-          <div style={{ flex: '0 0 420px', display: 'flex', flexDirection: 'column', color: '#fff', zIndex: 10 }} className="animate-fade-in-up" key={`text-${activeProduct.id}`}>
-            <h1 style={{ fontSize: '2.8rem', fontWeight: 900, lineHeight: 1.1, marginBottom: '1rem', textShadow: '0 10px 30px rgba(0,0,0,0.3)', maxWidth: '380px' }}>
+          <div className="slider-text-area animate-fade-in-up" style={{ flex: '0 0 420px', display: 'flex', flexDirection: 'column', color: '#fff', zIndex: 10 }} key={`text-${activeProduct.id}`}>
+            <h1 className="product-title" style={{ fontSize: '2.8rem', fontWeight: 900, lineHeight: 1.1, marginBottom: '1rem', textShadow: '0 10px 30px rgba(0,0,0,0.3)', maxWidth: '380px' }}>
               {activeProduct.name}
             </h1>
-            <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', marginBottom: '2rem', lineHeight: 1.5, maxWidth: '340px' }}>
+            <p className="product-desc" style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', marginBottom: '2rem', lineHeight: 1.5, maxWidth: '340px' }}>
               {activeProduct.description}
             </p>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-              <span style={{ fontSize: '2.2rem', fontWeight: 800, textShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+            <div className="slider-action-row" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+              <span className="product-price" style={{ fontSize: '2.2rem', fontWeight: 800, textShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
                 R$ {activeProduct.price.toFixed(2)}
               </span>
               <button 
+                className="add-btn"
                 onClick={() => handleOpenProduct(activeProduct)}
                 style={{ 
                   backgroundColor: '#fff', border: 'none', color: activeProduct.color, padding: '14px 28px', 
@@ -260,7 +266,7 @@ export default function DeliveryView({
           </div>
 
           {/* Setas para passar slide */}
-          <div style={{ position: 'absolute', right: '3rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '1rem', zIndex: 20 }}>
+          <div className="slider-nav-arrows" style={{ position: 'absolute', right: '3rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '1rem', zIndex: 20 }}>
             <button onClick={prevSlide} style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', backdropFilter: 'blur(5px)' }}><ChevronUp size={24} /></button>
             <button onClick={nextSlide} style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', backdropFilter: 'blur(5px)' }}><ChevronDown size={24} /></button>
           </div>
@@ -270,10 +276,11 @@ export default function DeliveryView({
 
       {/* TELA DE GRADE (GRID VIEW) */}
       {checkoutStep === 'menu' && viewMode === 'grid' && (
-        <div className="animate-fade-in-up" style={{ padding: '2rem 4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', flex: 1, paddingBottom: '4rem' }}>
+        <div className="grid-view-container animate-fade-in-up" style={{ padding: '2rem 4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', flex: 1, paddingBottom: '4rem' }}>
           {visualProducts.map((product) => (
             <div 
               key={product.id} 
+              className="grid-card"
               style={{ 
                 background: 'rgba(255,255,255,0.03)', 
                 border: `1px solid rgba(255,255,255,0.1)`, 
@@ -291,7 +298,7 @@ export default function DeliveryView({
               onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
               {/* Ícone representando o prato na grade */}
-              <div style={{ fontSize: '4rem', marginBottom: '1rem', filter: 'drop-shadow(0 10px 10px rgba(0,0,0,0.5))' }}>
+              <div className="grid-icon" style={{ fontSize: '4rem', marginBottom: '1rem', filter: 'drop-shadow(0 10px 10px rgba(0,0,0,0.5))' }}>
                 {product.floaties[0]} 
               </div>
               
@@ -303,7 +310,7 @@ export default function DeliveryView({
                 {product.description}
               </p>
               
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>
+              <div className="grid-price" style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>
                 R$ {product.price.toFixed(2)}
               </div>
               

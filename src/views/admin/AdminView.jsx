@@ -1,20 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSystem } from '../../contexts/SystemContext';
 import { 
   LayoutDashboard, ChefHat, Package, BadgeDollarSign, 
   FileText, PlusCircle, Trash2, AlertTriangle, 
   TrendingUp, Check, RotateCcw, Printer, Download,
-  Utensils, X, Plus, Edit, PlusSquare
+  Utensils, X, Plus, Edit, PlusSquare, LogOut,
+  ChevronLeft, ChevronRight, Menu, ShoppingBag, Sparkles,
+  Search, CheckCircle2, Building2
 } from 'lucide-react';
 
-export default function AdminView() {
+export default function AdminView({ onLogout }) {
   const { 
-    products, inventory, orders, transactions, invoices,
+    products, inventory, orders, transactions, invoices, quotations,
     updateOrderStatus, adjustStock, registerInflowInvoice, 
-    upsertProduct, deleteProduct, addTransaction 
+    upsertProduct, deleteProduct, addTransaction,
+    addQuotation, updateQuotation, deleteQuotation 
   } = useSystem();
 
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'orders' | 'inventory' | 'products' | 'finance' | 'nfe'
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const getTabFromHash = () => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#admin/')) {
+      const tab = hash.replace('#admin/', '');
+      if (['dashboard', 'orders', 'inventory', 'products', 'cotacao', 'finance', 'nfe'].includes(tab)) {
+        return tab;
+      }
+    }
+    return 'dashboard';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabFromHash);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setActiveTab(getTabFromHash());
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const changeTab = (tab) => {
+    setActiveTab(tab);
+    window.location.hash = `admin/${tab}`;
+  };
+
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   // Modal states for forms
@@ -41,6 +72,66 @@ export default function AdminView() {
   const [expenseDesc, setExpenseDesc] = useState('');
   const [expenseVal, setExpenseVal] = useState('');
   const [expenseCat, setExpenseCat] = useState('Geral');
+
+  // Quotation form & filter states
+  const [isQuotModalOpen, setIsQuotModalOpen] = useState(false);
+  const [editingQuot, setEditingQuot] = useState(null);
+  const [quotProductName, setQuotProductName] = useState('');
+  const [quotSupplier, setQuotSupplier] = useState('Supermercado BH');
+  const [quotBrand, setQuotBrand] = useState('');
+  const [quotPackage, setQuotPackage] = useState('');
+  const [quotPackagePrice, setQuotPackagePrice] = useState('');
+  const [quotUnitPrice, setQuotUnitPrice] = useState('');
+  const [quotUnitType, setQuotUnitType] = useState('kg');
+  
+  const [quotFilterSupplier, setQuotFilterSupplier] = useState('todos');
+  const [quotSearchTerm, setQuotSearchTerm] = useState('');
+
+  const handleOpenQuotModal = (quot = null) => {
+    if (quot) {
+      setEditingQuot(quot);
+      setQuotProductName(quot.productName);
+      setQuotSupplier(quot.supplier);
+      setQuotBrand(quot.brand);
+      setQuotPackage(quot.package);
+      setQuotPackagePrice(quot.packagePrice.toString());
+      setQuotUnitPrice(quot.unitPrice.toString());
+      setQuotUnitType(quot.unitType || 'kg');
+    } else {
+      setEditingQuot(null);
+      setQuotProductName('');
+      setQuotSupplier('Supermercado BH');
+      setQuotBrand('');
+      setQuotPackage('');
+      setQuotPackagePrice('');
+      setQuotUnitPrice('');
+      setQuotUnitType('kg');
+    }
+    setIsQuotModalOpen(true);
+  };
+
+  const handleSaveQuotation = (e) => {
+    e.preventDefault();
+    const pkgPrice = parseFloat(quotPackagePrice) || 0;
+    const calcUnit = parseFloat(quotUnitPrice) || pkgPrice;
+
+    const quotData = {
+      productName: quotProductName,
+      supplier: quotSupplier,
+      brand: quotBrand,
+      package: quotPackage,
+      packagePrice: pkgPrice,
+      unitPrice: calcUnit,
+      unitType: quotUnitType
+    };
+
+    if (editingQuot) {
+      updateQuotation(editingQuot.id, quotData);
+    } else {
+      addQuotation(quotData);
+    }
+    setIsQuotModalOpen(false);
+  };
 
   // Dashboard calculations
   const totalFaturamento = transactions
@@ -168,88 +259,289 @@ export default function AdminView() {
     setInflowItems([]);
   };
 
+  const tabDetails = {
+    dashboard: { label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    orders: { 
+      label: 'Cozinha & Pedidos', 
+      icon: <ChefHat size={20} />, 
+      badge: (pendingOrders.length + preparingOrders.length) > 0 ? (pendingOrders.length + preparingOrders.length) : null,
+      badgeColor: 'var(--color-brand)' 
+    },
+    inventory: { 
+      label: 'Controle de Estoque', 
+      icon: <Package size={20} />, 
+      badge: criticalStockCount > 0 ? criticalStockCount : null,
+      badgeColor: 'var(--color-danger)' 
+    },
+    products: { label: 'Cardápio / Produtos', icon: <Utensils size={20} /> },
+    cotacao: { label: 'Cotações', icon: <ShoppingBag size={20} /> },
+    finance: { label: 'Financeiro', icon: <BadgeDollarSign size={20} /> },
+    nfe: { label: 'Notas Fiscais (NF-e)', icon: <FileText size={20} /> }
+  };
+
   return (
-    <div className="admin-view animate-fade-in" style={{ flex: 1, padding: '2rem 0' }}>
-      <div className="container" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '2rem' }}>
+    <div className="admin-view animate-fade-in" style={{ flex: 1, padding: '1rem 0' }}>
+      <div className="container" style={{ display: 'flex', flexDirection: 'column' }}>
         
-        {/* Sidebar Navigation */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button 
-            onClick={() => setActiveTab('dashboard')} 
-            className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
-            style={{ width: '100%', justifyContent: 'flex-start' }}
-          >
-            <LayoutDashboard size={18} /> Dashboard
-          </button>
+        {/* Mobile Header Menu (Pizza / Dropdown) */}
+        <div className="mobile-admin-header glass-panel" style={{ padding: '12px 16px', marginBottom: '1.25rem', flexDirection: 'column', gap: '10px' }}>
           
-          <button 
-            onClick={() => setActiveTab('orders')} 
-            className={`nav-link ${activeTab === 'orders' ? 'active' : ''}`}
-            style={{ width: '100%', justifyContent: 'flex-start', position: 'relative' }}
-          >
-            <ChefHat size={18} /> Cozinha & Pedidos
-            {(pendingOrders.length + preparingOrders.length) > 0 && (
-              <span style={{ 
-                position: 'absolute', 
-                right: '12px', 
-                backgroundColor: 'var(--color-brand)', 
-                color: '#fff', 
-                fontSize: '0.75rem', 
-                padding: '2px 6px', 
-                borderRadius: '99px',
-                fontWeight: 'bold'
-              }}>
-                {pendingOrders.length + preparingOrders.length}
-              </span>
-            )}
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800, color: '#fff', fontSize: '1rem' }}>
+              <span style={{ color: 'var(--color-brand-yellow)' }}>{tabDetails[activeTab]?.icon}</span>
+              <span>{tabDetails[activeTab]?.label}</span>
+            </div>
+            
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+              className="btn-primary" 
+              style={{ padding: '8px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+              <span>Menu Gestão</span>
+            </button>
+          </div>
 
-          <button 
-            onClick={() => setActiveTab('inventory')} 
-            className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`}
-            style={{ width: '100%', justifyContent: 'flex-start', position: 'relative' }}
-          >
-            <Package size={18} /> Controle de Estoque
-            {criticalStockCount > 0 && (
-              <span style={{ 
-                position: 'absolute', 
-                right: '12px', 
-                backgroundColor: 'var(--color-danger)', 
-                color: '#fff', 
-                fontSize: '0.75rem', 
-                padding: '2px 6px', 
-                borderRadius: '99px',
-                fontWeight: 'bold'
-              }}>
-                {criticalStockCount}
-              </span>
-            )}
-          </button>
+          {/* Menu Dropdown de Opções Selecionáveis em Mobile */}
+          {isMobileMenuOpen && (
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '10px', borderTop: '1px solid var(--border-glass)' }}>
+              {Object.entries(tabDetails).map(([key, tab]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    changeTab(key);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`nav-link ${activeTab === key ? 'active' : ''}`}
+                  style={{ width: '100%', justifyContent: 'space-between', padding: '10px 14px' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                  </div>
+                  {tab.badge && (
+                    <span style={{ 
+                      backgroundColor: tab.badgeColor, 
+                      color: '#fff', 
+                      fontSize: '0.75rem', 
+                      padding: '2px 6px', 
+                      borderRadius: '99px',
+                      fontWeight: 'bold'
+                    }}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
 
-          <button 
-            onClick={() => setActiveTab('products')} 
-            className={`nav-link ${activeTab === 'products' ? 'active' : ''}`}
-            style={{ width: '100%', justifyContent: 'flex-start' }}
-          >
-            <Utensils size={18} /> Cardápio / Produtos
-          </button>
+              <button 
+                onClick={onLogout} 
+                className="nav-link"
+                style={{ width: '100%', justifyContent: 'flex-start', color: '#ef4444', padding: '10px 14px', marginTop: '4px' }}
+              >
+                <LogOut size={18} />
+                <span>Sair do Painel</span>
+              </button>
+            </div>
+          )}
 
-          <button 
-            onClick={() => setActiveTab('finance')} 
-            className={`nav-link ${activeTab === 'finance' ? 'active' : ''}`}
-            style={{ width: '100%', justifyContent: 'flex-start' }}
-          >
-            <BadgeDollarSign size={18} /> Financeiro
-          </button>
+        </div>
 
-          <button 
-            onClick={() => setActiveTab('nfe')} 
-            className={`nav-link ${activeTab === 'nfe' ? 'active' : ''}`}
-            style={{ width: '100%', justifyContent: 'flex-start' }}
-          >
-            <FileText size={18} /> Notas Fiscais (NF-e)
-          </button>
-        </aside>
+        <div 
+          className="admin-layout" 
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: isSidebarCollapsed ? '72px 1fr' : '220px 1fr', 
+            gap: '1.5rem',
+            transition: 'grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
+          
+          {/* Desktop-Only Sidebar Navigation */}
+          <aside className="desktop-only-sidebar admin-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            
+            {/* Botão para Minimizar / Expandir */}
+            <button 
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+              className="nav-link"
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'space-between', 
+                padding: '8px 12px',
+                color: 'var(--text-secondary)',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '6px',
+                border: '1px solid var(--border-glass)'
+              }}
+              title={isSidebarCollapsed ? "Expandir Menu Lateral" : "Minimizar Menu Lateral"}
+            >
+              {!isSidebarCollapsed && <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Navegação Gestão</span>}
+              {isSidebarCollapsed ? <ChevronRight size={18} color="var(--color-brand-yellow)" /> : <ChevronLeft size={18} />}
+            </button>
+
+            {/* Dashboard */}
+            <button 
+              onClick={() => changeTab('dashboard')} 
+              className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Dashboard"
+            >
+              <LayoutDashboard size={20} />
+              {!isSidebarCollapsed && <span>Dashboard</span>}
+            </button>
+            
+            {/* Cozinha & Pedidos */}
+            <button 
+              onClick={() => changeTab('orders')} 
+              className={`nav-link ${activeTab === 'orders' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', 
+                position: 'relative',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Cozinha & Pedidos"
+            >
+              <ChefHat size={20} />
+              {!isSidebarCollapsed && <span>Cozinha & Pedidos</span>}
+              {(pendingOrders.length + preparingOrders.length) > 0 && (
+                <span style={{ 
+                  position: 'absolute', 
+                  top: isSidebarCollapsed ? '2px' : '50%',
+                  right: isSidebarCollapsed ? '2px' : '12px',
+                  transform: isSidebarCollapsed ? 'none' : 'translateY(-50%)',
+                  backgroundColor: 'var(--color-brand)', 
+                  color: '#fff', 
+                  fontSize: '0.7rem', 
+                  padding: '2px 5px', 
+                  borderRadius: '99px',
+                  fontWeight: 'bold',
+                  minWidth: '18px',
+                  textAlign: 'center'
+                }}>
+                  {pendingOrders.length + preparingOrders.length}
+                </span>
+              )}
+            </button>
+
+            {/* Controle de Estoque */}
+            <button 
+              onClick={() => changeTab('inventory')} 
+              className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', 
+                position: 'relative',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Controle de Estoque"
+            >
+              <Package size={20} />
+              {!isSidebarCollapsed && <span>Controle de Estoque</span>}
+              {criticalStockCount > 0 && (
+                <span style={{ 
+                  position: 'absolute', 
+                  top: isSidebarCollapsed ? '2px' : '50%',
+                  right: isSidebarCollapsed ? '2px' : '12px',
+                  transform: isSidebarCollapsed ? 'none' : 'translateY(-50%)',
+                  backgroundColor: 'var(--color-danger)', 
+                  color: '#fff', 
+                  fontSize: '0.7rem', 
+                  padding: '2px 5px', 
+                  borderRadius: '99px',
+                  fontWeight: 'bold',
+                  minWidth: '18px',
+                  textAlign: 'center'
+                }}>
+                  {criticalStockCount}
+                </span>
+              )}
+            </button>
+
+            {/* Cardápio / Produtos */}
+            <button 
+              onClick={() => changeTab('products')} 
+              className={`nav-link ${activeTab === 'products' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Cardápio / Produtos"
+            >
+              <Utensils size={20} />
+              {!isSidebarCollapsed && <span>Cardápio / Produtos</span>}
+            </button>
+
+            {/* Cotações */}
+            <button 
+              onClick={() => changeTab('cotacao')} 
+              className={`nav-link ${activeTab === 'cotacao' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px',
+                whiteSpace: 'nowrap'
+              }}
+              title="Cotações"
+            >
+              <ShoppingBag size={20} />
+              {!isSidebarCollapsed && <span>Cotações</span>}
+            </button>
+
+            {/* Financeiro */}
+            <button 
+              onClick={() => changeTab('finance')} 
+              className={`nav-link ${activeTab === 'finance' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Financeiro"
+            >
+              <BadgeDollarSign size={20} />
+              {!isSidebarCollapsed && <span>Financeiro</span>}
+            </button>
+
+            {/* Notas Fiscais (NF-e) */}
+            <button 
+              onClick={() => changeTab('nfe')} 
+              className={`nav-link ${activeTab === 'nfe' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Notas Fiscais (NF-e)"
+            >
+              <FileText size={20} />
+              {!isSidebarCollapsed && <span>Notas Fiscais (NF-e)</span>}
+            </button>
+
+            {/* Sair do Painel */}
+            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-glass)' }}>
+              <button 
+                onClick={onLogout} 
+                className="nav-link"
+                style={{ 
+                  width: '100%', 
+                  justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', 
+                  color: '#ef4444',
+                  padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+                }}
+                title="Sair do Painel"
+              >
+                <LogOut size={20} />
+                {!isSidebarCollapsed && <span>Sair do Painel</span>}
+              </button>
+            </div>
+          </aside>
 
         {/* Main Content Area */}
         <main className="glass-panel" style={{ padding: '2rem', minHeight: '60vh' }}>
@@ -640,6 +932,215 @@ export default function AdminView() {
             </div>
           )}
 
+          {/* TAB: COTAÇÃO & MENOR PREÇO */}
+          {activeTab === 'cotacao' && (
+            <div className="animate-fade-in">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff' }}>Cotação & Menor Preço</h2>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Comparador de custo-benefício (R$/kg, R$/un) sincronizado com o estoque e notas fiscais.
+                  </p>
+                </div>
+
+                <button 
+                  onClick={() => handleOpenQuotModal()} 
+                  className="btn-primary" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', fontSize: '0.8rem', padding: '6px 14px' }}
+                >
+                  <PlusCircle size={15} /> Nova Cotação
+                </button>
+              </div>
+
+              {/* RECOMENDADOR DE REPOSIÇÃO DE ESTOQUE (CUSTO-BENEFÍCIO CAMPEÃO) */}
+              <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', borderLeft: '4px solid var(--color-brand-yellow)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+                  <Sparkles size={18} color="var(--color-brand-yellow)" />
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>
+                    Sugestão de Reposição (Estoque Crítico x Menor Custo)
+                  </h3>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {inventory.filter(item => item.quantity <= item.minQuantity).map(critItem => {
+                    const matches = quotations.filter(q => 
+                      q.productName.toLowerCase().includes(critItem.name.toLowerCase()) || 
+                      critItem.name.toLowerCase().includes(q.productName.toLowerCase())
+                    );
+                    
+                    const cheapest = matches.length > 0 ? [...matches].sort((a, b) => a.unitPrice - b.unitPrice)[0] : null;
+                    const qtyNeeded = Math.max(1, critItem.minQuantity * 2 - critItem.quantity);
+
+                    return (
+                      <div 
+                        key={critItem.id} 
+                        style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          padding: '8px 12px', 
+                          backgroundColor: 'var(--bg-secondary)', 
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-glass)',
+                          gap: '12px',
+                          whiteSpace: 'nowrap',
+                          overflowX: 'auto'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                          <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.82rem' }}>{critItem.name}</span>
+                          <span style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-danger-glow)', color: 'var(--color-danger)', padding: '1px 6px', borderRadius: '99px', fontWeight: 600 }}>
+                            Estoque: {critItem.quantity} {critItem.unit} (Mín: {critItem.minQuantity})
+                          </span>
+                        </div>
+
+                        {cheapest ? (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            🏆 <strong>Melhor Custo:</strong> {cheapest.supplier} — <strong>{cheapest.brand}</strong> ({cheapest.package}) a R$ {cheapest.packagePrice.toFixed(2)} (<strong>R$ {cheapest.unitPrice.toFixed(2)}/{cheapest.unitType}</strong>)
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                            Sem cotação cadastrada
+                          </div>
+                        )}
+
+                        {cheapest && (
+                          <div style={{ textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--color-brand-yellow)', fontWeight: 700 }}>
+                              Total Est.: R$ {(cheapest.unitPrice * qtyNeeded).toFixed(2)}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
+                              ({qtyNeeded} {critItem.unit})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {inventory.filter(item => item.quantity <= item.minQuantity).length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--color-success)', fontSize: '0.8rem' }}>
+                      <CheckCircle2 size={16} style={{ margin: '0 auto 4px auto', display: 'block' }} />
+                      <span>Todos os insumos estão acima do nível mínimo de estoque!</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* FILTROS E PESQUISA DE COTAÇÕES */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'nowrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', flex: 1, maxWidth: '480px' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input 
+                      type="text" 
+                      placeholder="Buscar produto ou marca..." 
+                      value={quotSearchTerm} 
+                      onChange={e => setQuotSearchTerm(e.target.value)} 
+                      style={{ paddingLeft: '32px', width: '100%', fontSize: '0.78rem', padding: '5px 10px 5px 32px' }}
+                    />
+                  </div>
+
+                  <select 
+                    value={quotFilterSupplier} 
+                    onChange={e => setQuotFilterSupplier(e.target.value)}
+                    style={{ minWidth: '140px', fontSize: '0.78rem', padding: '5px 10px' }}
+                  >
+                    <option value="todos">Todos Fornecedores</option>
+                    {Array.from(new Set(quotations.map(q => q.supplier))).map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* TABELA DE COTAÇÕES */}
+              <div className="glass-panel" style={{ padding: '0', overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-glass)' }}>
+                      <th style={{ padding: '8px 12px' }}>Produto / Insumo</th>
+                      <th style={{ padding: '8px 12px' }}>Fornecedor</th>
+                      <th style={{ padding: '8px 12px' }}>Marca</th>
+                      <th style={{ padding: '8px 12px' }}>Embalagem</th>
+                      <th style={{ padding: '8px 12px' }}>Preço Emb.</th>
+                      <th style={{ padding: '8px 12px' }}>Custo Unitário</th>
+                      <th style={{ padding: '8px 12px' }}>Custo-Benefício</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {quotations
+                      .filter(q => {
+                        const matchSearch = q.productName.toLowerCase().includes(quotSearchTerm.toLowerCase()) || q.brand.toLowerCase().includes(quotSearchTerm.toLowerCase());
+                        const matchSupplier = quotFilterSupplier === 'todos' || q.supplier === quotFilterSupplier;
+                        return matchSearch && matchSupplier;
+                      })
+                      .map(quot => {
+                        const sameCategoryQuotations = quotations.filter(item => item.productName.toLowerCase() === quot.productName.toLowerCase());
+                        const lowestPrice = Math.min(...sameCategoryQuotations.map(item => item.unitPrice));
+                        const isCheapest = quot.unitPrice === lowestPrice;
+
+                        return (
+                          <tr key={quot.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#fff' }}>
+                              {quot.productName}
+                            </td>
+                            <td style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}>
+                              {quot.supplier}
+                            </td>
+                            <td style={{ padding: '8px 12px', color: '#fff' }}>
+                              {quot.brand}
+                            </td>
+                            <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
+                              {quot.package}
+                            </td>
+                            <td style={{ padding: '8px 12px', fontWeight: 600 }}>
+                              R$ {quot.packagePrice.toFixed(2)}
+                            </td>
+                            <td style={{ padding: '8px 12px', fontWeight: 800, color: isCheapest ? 'var(--color-brand-yellow)' : '#fff' }}>
+                              R$ {quot.unitPrice.toFixed(2)} / {quot.unitType}
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              {isCheapest ? (
+                                <span style={{ backgroundColor: 'var(--color-brand-yellow-glow)', color: 'var(--color-brand-yellow)', border: '1px solid var(--color-brand-yellow)', padding: '2px 7px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 700 }}>
+                                  ⭐ Menor Preço
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                                  Concorrente
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                <button 
+                                  onClick={() => handleOpenQuotModal(quot)}
+                                  className="btn-secondary" 
+                                  style={{ padding: '3px 6px', fontSize: '0.72rem' }}
+                                  title="Editar"
+                                >
+                                  <Edit size={13} />
+                                </button>
+                                <button 
+                                  onClick={() => deleteQuotation(quot.id)}
+                                  className="btn-secondary" 
+                                  style={{ padding: '3px 6px', fontSize: '0.72rem', color: '#ef4444' }}
+                                  title="Excluir"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* TAB: FINANCE */}
           {activeTab === 'finance' && (
             <div className="animate-fade-in">
@@ -757,7 +1258,7 @@ export default function AdminView() {
               {/* Receipt / Invoice Mock Box */}
               <div className="danfe-box">
                 <div className="danfe-header">
-                  <div className="danfe-title">HOTDOG CHAPEIRO E SUCOS LTDA</div>
+                  <div className="danfe-title">NUU PRENSADO E SUCOS LTDA</div>
                   <div>CNPJ: 12.345.678/0001-90</div>
                   <div>Rua das Chapa, 10 - Centro</div>
                   <div className="danfe-divider"></div>
@@ -1024,6 +1525,73 @@ export default function AdminView() {
         </div>
       )}
 
+      {/* MODAL: CADASTRO / EDIÇÃO DE COTAÇÃO */}
+      {isQuotModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '450px' }}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
+                {editingQuot ? 'Editar Cotação' : 'Cadastrar Nova Cotação'}
+              </h3>
+              <button onClick={() => setIsQuotModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveQuotation}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Produto / Insumo</label>
+                  <input type="text" required value={quotProductName} onChange={e => setQuotProductName(e.target.value)} placeholder="Ex: Queijo Mussarela Fatiado" />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Fornecedor</label>
+                    <input type="text" required value={quotSupplier} onChange={e => setQuotSupplier(e.target.value)} placeholder="Ex: Supermercado BH" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Marca</label>
+                    <input type="text" required value={quotBrand} onChange={e => setQuotBrand(e.target.value)} placeholder="Ex: Saboroso / Seara" />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Formato Embalagem</label>
+                    <input type="text" required value={quotPackage} onChange={e => setQuotPackage(e.target.value)} placeholder="Ex: Bisnaga 1,5 kg / Fardo c/ 6" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Preço Embalagem (R$)</label>
+                    <input type="number" step="0.01" required value={quotPackagePrice} onChange={e => setQuotPackagePrice(e.target.value)} placeholder="0.00" />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Custo Unitário (R$)</label>
+                    <input type="number" step="0.001" required value={quotUnitPrice} onChange={e => setQuotUnitPrice(e.target.value)} placeholder="Ex: 8.78" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Unidade de Medida</label>
+                    <select value={quotUnitType} onChange={e => setQuotUnitType(e.target.value)}>
+                      <option value="kg">por Quilo (kg)</option>
+                      <option value="un">por Unidade (un)</option>
+                      <option value="sachê">por Sachê</option>
+                      <option value="L">por Litro (L)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setIsQuotModalOpen(false)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="btn-primary">Salvar Cotação</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      </div>
     </div>
   );
 }

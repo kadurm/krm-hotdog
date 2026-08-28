@@ -192,10 +192,11 @@ function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer style={{ 
+      <footer className="app-footer" style={{ 
         borderTop: '1px solid var(--border-glass)', 
         padding: '1.5rem 0', 
-        backgroundColor: 'var(--bg-secondary)', 
+        backgroundColor: 'rgba(9, 13, 22, 0.85)', 
+        backdropFilter: 'blur(12px)',
         color: 'var(--text-muted)',
         fontSize: '0.85rem',
         textAlign: 'center'

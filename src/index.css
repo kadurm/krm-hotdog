@@ -673,7 +673,43 @@ input:focus, select:focus, textarea:focus {
   .float-pos-1 { top: 70%; left: 10%; }
   .float-pos-2 { top: 12%; left: 80%; }
 
-  .grid-view-container { padding: 1rem; }
+  /* ========================================= */
+  /* AJUSTES DA VISUALIZAÇÃO EM GRADE (MOBILE) */
+  /* ========================================= */
+  .grid-view-container {
+    padding: 5.5rem 1rem 2rem 1rem !important; /* Padding no topo desvia do cabeçalho flutuante */
+    display: flex !important;
+    flex-direction: column !important; /* Força 1 item por linha no celular */
+    gap: 1rem !important;
+  }
+
+  .grid-card {
+    padding: 1.2rem !important;
+  }
+
+  .grid-icon { 
+    font-size: 2.5rem !important; 
+    margin-bottom: 0.5rem !important; 
+  }
+
+  .grid-card h3 { font-size: 1.4rem !important; margin-bottom: 0.2rem !important; }
+  .grid-card p { font-size: 0.85rem !important; margin-bottom: 1rem !important; line-height: 1.2; }
+  .grid-price { font-size: 1.2rem !important; margin-bottom: 0.5rem !important; }
+  .grid-card button { padding: 10px !important; font-size: 0.95rem !important; }
+
+  /* ========================================= */
+  /* AJUSTES DO CARRINHO, MODAIS E CHECKOUT    */
+  /* ========================================= */
+  .cart-panel {
+    width: 100vw !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    right: 0 !important;
+  }
+
+  .checkout-container {
+    padding: 5.5rem 1rem 2rem 1rem !important;
+  }
 
   /* ======================================================== */
   /* NOVAS CLASSES: Controles Flutuantes (Logo e Carrinho)    */

@@ -234,7 +234,7 @@ export default function DeliveryView({
         position: 'fixed',
         top: 0,
         left: 0,
-        overflowY: viewMode === 'grid' ? 'auto' : 'hidden', // Permite rolar apenas na grade
+        overflowY: (viewMode === 'grid' || checkoutStep !== 'menu' || isCartOpen) ? 'auto' : 'hidden', 
         overflowX: 'hidden'
       }}
     >
@@ -429,7 +429,7 @@ export default function DeliveryView({
 
       {/* FORMULÁRIO DE CHECKOUT */}
       {checkoutStep === 'form' && (
-        <div style={{ maxWidth: '600px', margin: '2rem auto 4rem auto', width: '100%', padding: '0 1.5rem' }}>
+        <div className="checkout-container" style={{ maxWidth: '600px', margin: '2rem auto 4rem auto', width: '100%', padding: '0 1.5rem' }}>
           <div className="glass-panel" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
               <button onClick={() => setCheckoutStep('menu')} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -767,7 +767,7 @@ export default function DeliveryView({
       {isCartOpen && (
         <div className="modal-overlay" style={{ justifyContent: 'flex-end', padding: 0 }} onClick={() => setIsCartOpen(false)}>
           <div 
-            className="animate-slide-in-right" 
+            className="cart-panel animate-slide-in-right" 
             style={{ 
               backgroundColor: 'var(--bg-secondary)', 
               width: '100%', 

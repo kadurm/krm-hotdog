@@ -30,7 +30,7 @@ const INITIAL_PRODUCTS = [
   },
   {
     id: 3,
-    name: 'Prensadão',
+    name: 'Prensadão de Costela',
     price: 26.00,
     description: 'Base generosa com Costela suculenta que derrete na boca.',
     category: 'prensados',
@@ -42,7 +42,7 @@ const INITIAL_PRODUCTS = [
   },
   {
     id: 4,
-    name: 'Prensado de Pernil',
+    name: 'Prensadão de Pernil',
     price: 24.00,
     description: 'Base deliciosa com Pernil desfiado super temperado.',
     category: 'prensados',
@@ -54,7 +54,7 @@ const INITIAL_PRODUCTS = [
   },
   {
     id: 5,
-    name: 'Prensado Carne Seca',
+    name: 'Prensadão de Carne Seca',
     price: 28.00,
     description: 'O autêntico sabor da Carne Seca na nossa base perfeita.',
     category: 'prensados',

@@ -26,9 +26,9 @@ export default function DeliveryView() {
   const menuReal = [
     { id: 1, name: 'Prensadin', description: 'Nossa base tradicional perfeitamente prensada com muito Bacon.', price: 18.00, hasCustomOptions: false },
     { id: 2, name: 'Prensado', description: 'A base clássica recheada com Frango desfiado e bem temperado.', price: 20.00, hasCustomOptions: false },
-    { id: 3, name: 'Prensadão', description: 'Base generosa com Costela suculenta que derrete na boca.', price: 26.00, hasCustomOptions: true },
-    { id: 4, name: 'Prensado de Pernil', description: 'Base deliciosa com Pernil desfiado super temperado.', price: 24.00, hasCustomOptions: true },
-    { id: 5, name: 'Prensado Carne Seca', description: 'O autêntico sabor da Carne Seca na nossa base perfeita.', price: 28.00, hasCustomOptions: true },
+    { id: 3, name: 'Prensadão de Costela', description: 'Base generosa com Costela suculenta que derrete na boca.', price: 26.00, hasCustomOptions: true },
+    { id: 4, name: 'Prensadão de Pernil', description: 'Base deliciosa com Pernil desfiado super temperado.', price: 24.00, hasCustomOptions: true },
+    { id: 5, name: 'Prensadão de Carne Seca', description: 'O autêntico sabor da Carne Seca na nossa base perfeita.', price: 28.00, hasCustomOptions: true },
   ];
 
   // MAPEAMENTO VISUAL (Cores e Emojis para o efeito Imersivo)

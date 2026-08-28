@@ -227,7 +227,7 @@ export default function DeliveryView({
       style={{ 
         backgroundColor: backgroundColor,
         transition: 'background-color 0.8s ease-in-out',
-        minHeight: '100vh',
+        minHeight: '100dvh',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',

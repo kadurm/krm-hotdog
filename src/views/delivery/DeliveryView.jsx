@@ -167,9 +167,7 @@ export default function DeliveryView() {
     >
       {/* HEADER */}
       <header style={{ padding: '2rem 4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logoNuuPrensado-semfundo.png" alt="Nuu Prensado" style={{ height: '44px', objectFit: 'contain' }} />
-        </div>
+        <div />
         
         <nav style={{ display: 'flex', gap: '2rem', color: '#fff', fontSize: '0.9rem', fontWeight: 600, alignItems: 'center' }}>
           {/* BOTÃO DE ALTERNAR VISUALIZAÇÃO */}

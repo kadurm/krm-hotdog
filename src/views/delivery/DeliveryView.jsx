@@ -244,7 +244,7 @@ export default function DeliveryView({
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
-          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3rem 2rem 3rem', position: 'relative' }}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3rem 2rem 3rem', position: 'relative', height: 'calc(100vh - 80px)' }}
         >
           
           {/* Indicadores Laterais (001, 002, etc) */}

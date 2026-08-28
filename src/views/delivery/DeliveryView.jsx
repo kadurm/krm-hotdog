@@ -17,6 +17,35 @@ export default function DeliveryView() {
   const [extraCheese, setExtraCheese] = useState(false);
   const [productQty, setProductQty] = useState(1);
   
+  // NOVOS ESTADOS PARA AS OPÇÕES DO CARDÁPIO REAL
+  const [creamyCheese, setCreamyCheese] = useState('catupiry'); // 'catupiry' ou 'requeijao'
+  const [meltedCheese, setMeltedCheese] = useState('mussarela'); // 'mussarela' ou 'cheddar'
+  const [hasVinagrete, setHasVinagrete] = useState(false);
+
+  // SEUS PRODUTOS BASEADOS NA ANOTAÇÃO
+  const menuReal = [
+    { id: 1, name: 'Prensadin', description: 'Nossa base tradicional perfeitamente prensada com muito Bacon.', price: 18.00, hasCustomOptions: false },
+    { id: 2, name: 'Prensado', description: 'A base clássica recheada com Frango desfiado e bem temperado.', price: 20.00, hasCustomOptions: false },
+    { id: 3, name: 'Prensadão', description: 'Base generosa com Costela suculenta que derrete na boca.', price: 26.00, hasCustomOptions: true },
+    { id: 4, name: 'Prensado de Pernil', description: 'Base deliciosa com Pernil desfiado super temperado.', price: 24.00, hasCustomOptions: true },
+    { id: 5, name: 'Prensado Carne Seca', description: 'O autêntico sabor da Carne Seca na nossa base perfeita.', price: 28.00, hasCustomOptions: true },
+  ];
+
+  // MAPEAMENTO VISUAL (Cores e Emojis para o efeito Imersivo)
+  const sourceProducts = products && products.length > 0 ? products.filter(p => p.active) : menuReal;
+
+  const visualProducts = sourceProducts.map((p, index) => {
+    const themes = {
+      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] }, // Prensadin Bacon (Amarelo)
+      2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] }, // Prensado Frango (Laranja)
+      3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] }, // Prensadão Costela (Vermelho Escuro)
+      4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] }, // Pernil (Verde Limão)
+      5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] }, // Carne seca (Marrom/Dourado Escuro)
+    };
+    const theme = themes[p.id] || { color: '#333333', floaties: ['✨', '🍔', '🥤'] };
+    return { ...p, ...theme, slideIndex: index };
+  });
+
   // Checkout States
   const [checkoutStep, setCheckoutStep] = useState('menu'); // 'menu' | 'form' | 'tracking'
   const [customerName, setCustomerName] = useState('');
@@ -36,20 +65,6 @@ export default function DeliveryView() {
     }
   }, [orders, activeTrackingOrder]);
 
-  // Mapeamento visual dinâmico com cores e elementos 3D flutuantes
-  const visualProducts = products.filter(p => p.active).map((p, index) => {
-    const themes = {
-      1: { color: '#8b1313', floaties: ['🌭', '🥓', '🧀'] }, // Hot Dog Tradicional (Bordô Escuro)
-      2: { color: '#a84c19', floaties: ['🧀', '🥓', '🔥'] }, // Double Bacon Cheddar (Laranja/Amarelo Queimado)
-      3: { color: '#b8840c', floaties: ['🍊', '🧊', '🍹'] }, // Suco Laranja (Dourado/Amarelo)
-      4: { color: '#1b7a43', floaties: ['🥬', '🍏', '🧊'] }, // Suco Verde (Verde Esmeralda)
-      5: { color: '#a87e19', floaties: ['🍟', '🧂', '🔥'] }, // Batata Canoa (Amarelo Ocre)
-    };
-    const theme = themes[p.id] || { color: '#1a1a24', floaties: ['✨', '🍔', '🥤'] };
-    
-    return { ...p, ...theme, slideIndex: index };
-  });
-
   // Navegação do Slider
   const nextSlide = () => setActiveSlide((prev) => (prev === visualProducts.length - 1 ? 0 : prev + 1));
   const prevSlide = () => setActiveSlide((prev) => (prev === 0 ? visualProducts.length - 1 : prev - 1));
@@ -60,13 +75,24 @@ export default function DeliveryView() {
     setProductQty(1);
     setExtraBacon(false);
     setExtraCheese(false);
+    setCreamyCheese('catupiry');
+    setMeltedCheese('mussarela');
+    setHasVinagrete(false);
   };
 
   const handleAddToCart = () => {
     let price = selectedProduct.price;
     let nameDetails = [];
-    if (extraBacon) { price += 4.0; nameDetails.push('+ Bacon'); }
-    if (extraCheese) { price += 3.0; nameDetails.push('+ Catupiry/Cheddar'); }
+    
+    // Opções personalizadas para produtos que suportam
+    if (selectedProduct.hasCustomOptions !== false) {
+      nameDetails.push(creamyCheese === 'catupiry' ? 'Catupiry' : 'Requeijão');
+      nameDetails.push(meltedCheese === 'mussarela' ? 'Mussarela' : 'Cheddar');
+      if (hasVinagrete) nameDetails.push('Com Vinagrete');
+    }
+    
+    if (extraBacon) { price += 4.0; nameDetails.push('+ Extra Bacon'); }
+    if (extraCheese) { price += 3.0; nameDetails.push('+ Extra Queijo'); }
 
     const itemName = selectedProduct.name + (nameDetails.length > 0 ? ` (${nameDetails.join(', ')})` : '');
     const existingIndex = cart.findIndex(item => item.name === itemName);
@@ -439,13 +465,13 @@ export default function DeliveryView() {
               <h4 style={{ fontWeight: 600, color: '#fff', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Sparkles size={16} color="var(--color-brand)" /> 
                 {activeTrackingOrder.status === 'pending' && 'Aguardando confirmação...'}
-                {activeTrackingOrder.status === 'preparing' && 'Seu Hotdog já está na chapa!'}
+                {activeTrackingOrder.status === 'preparing' && 'Seu Prensado já está na chapa!'}
                 {activeTrackingOrder.status === 'shipping' && 'Saiu para entrega! O motoboy está a caminho.'}
                 {activeTrackingOrder.status === 'delivered' && 'Entregue! Bom apetite!'}
               </h4>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 {activeTrackingOrder.status === 'pending' && 'Seu pedido foi recebido pelo sistema e está aguardando para entrar na cozinha.'}
-                {activeTrackingOrder.status === 'preparing' && 'Nosso chapeiro está preparando seu pedido com ingredientes fresquinhos.'}
+                {activeTrackingOrder.status === 'preparing' && 'Nosso chapeiro está preparando seu lanche prensado com ingredientes selecionados.'}
                 {activeTrackingOrder.status === 'shipping' && `Endereço de envio: ${activeTrackingOrder.address}. Forma de pagamento: ${activeTrackingOrder.paymentMethod}.`}
                 {activeTrackingOrder.status === 'delivered' && 'Este pedido foi finalizado. Agradecemos a preferência!'}
               </p>
@@ -473,9 +499,9 @@ export default function DeliveryView() {
       {/* MODAL DETALHE DO PRODUTO */}
       {selectedProduct && (
         <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: '450px' }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '480px' }}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Adicionar ao Carrinho</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Personalizar Lanche</h3>
               <button onClick={() => setSelectedProduct(null)} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
@@ -490,38 +516,87 @@ export default function DeliveryView() {
                 </p>
               </div>
 
-              {/* Extras (apenas para hotdogs) */}
-              {selectedProduct.category === 'hotdogs' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
-                  <h5 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>Adicionais (Opcional)</h5>
+              {/* Opções Personalizáveis (para prensados que possuem customOptions) */}
+              {selectedProduct.hasCustomOptions !== false && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
                   
+                  {/* Queijo Cremoso */}
+                  <div>
+                    <h5 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Escolha o Queijo Cremoso:</h5>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: creamyCheese === 'catupiry' ? 'rgba(234, 179, 8, 0.15)' : 'transparent', borderColor: creamyCheese === 'catupiry' ? '#eab308' : 'var(--border-glass)' }}>
+                        <input type="radio" name="creamyCheese" value="catupiry" checked={creamyCheese === 'catupiry'} onChange={() => setCreamyCheese('catupiry')} style={{ accentColor: '#eab308' }} />
+                        <span>Catupiry</span>
+                      </label>
+                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: creamyCheese === 'requeijao' ? 'rgba(234, 179, 8, 0.15)' : 'transparent', borderColor: creamyCheese === 'requeijao' ? '#eab308' : 'var(--border-glass)' }}>
+                        <input type="radio" name="creamyCheese" value="requeijao" checked={creamyCheese === 'requeijao'} onChange={() => setCreamyCheese('requeijao')} style={{ accentColor: '#eab308' }} />
+                        <span>Requeijão</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Queijo Fatiado Derretido */}
+                  <div>
+                    <h5 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Escolha o Queijo Fatiado Derretido:</h5>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: meltedCheese === 'mussarela' ? 'rgba(249, 115, 22, 0.15)' : 'transparent', borderColor: meltedCheese === 'mussarela' ? '#f97316' : 'var(--border-glass)' }}>
+                        <input type="radio" name="meltedCheese" value="mussarela" checked={meltedCheese === 'mussarela'} onChange={() => setMeltedCheese('mussarela')} style={{ accentColor: '#f97316' }} />
+                        <span>Mussarela</span>
+                      </label>
+                      <label style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backgroundColor: meltedCheese === 'cheddar' ? 'rgba(249, 115, 22, 0.15)' : 'transparent', borderColor: meltedCheese === 'cheddar' ? '#f97316' : 'var(--border-glass)' }}>
+                        <input type="radio" name="meltedCheese" value="cheddar" checked={meltedCheese === 'cheddar'} onChange={() => setMeltedCheese('cheddar')} style={{ accentColor: '#f97316' }} />
+                        <span>Cheddar</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Vinagrete */}
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input 
                         type="checkbox" 
-                        checked={extraBacon}
-                        onChange={(e) => setExtraBacon(e.target.checked)}
+                        checked={hasVinagrete}
+                        onChange={(e) => setHasVinagrete(e.target.checked)}
                         style={{ accentColor: 'var(--color-brand)' }}
                       />
-                      <span style={{ fontSize: '0.9rem' }}>Bacon Extra Crocante</span>
+                      <span style={{ fontSize: '0.9rem' }}>Adicionar Vinagrete Fresco</span>
                     </div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-brand)', fontWeight: 600 }}>+ R$ 4,00</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Sem custo</span>
                   </label>
 
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={extraCheese}
-                        onChange={(e) => setExtraCheese(e.target.checked)}
-                        style={{ accentColor: 'var(--color-brand)' }}
-                      />
-                      <span style={{ fontSize: '0.9rem' }}>Cheddar/Catupiry Extra</span>
-                    </div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-brand)', fontWeight: 600 }}>+ R$ 3,00</span>
-                  </label>
                 </div>
               )}
+
+              {/* Extras de Adicionais Padrão */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
+                <h5 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>Adicionais Extras (Opcional):</h5>
+                
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={extraBacon}
+                      onChange={(e) => setExtraBacon(e.target.checked)}
+                      style={{ accentColor: 'var(--color-brand)' }}
+                    />
+                    <span style={{ fontSize: '0.9rem' }}>Extra Bacon Crocante</span>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-brand)', fontWeight: 600 }}>+ R$ 4,00</span>
+                </label>
+
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={extraCheese}
+                      onChange={(e) => setExtraCheese(e.target.checked)}
+                      style={{ accentColor: 'var(--color-brand)' }}
+                    />
+                    <span style={{ fontSize: '0.9rem' }}>Extra Queijo Derretido</span>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-brand)', fontWeight: 600 }}>+ R$ 3,00</span>
+                </label>
+              </div>
 
               {/* Quantidade */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>

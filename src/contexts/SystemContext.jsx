@@ -5,60 +5,63 @@ const SystemContext = createContext(null);
 const INITIAL_PRODUCTS = [
   {
     id: 1,
-    name: 'Hot Dog Tradicional',
-    price: 15.90,
-    description: 'Salsicha premium na chapa, molho artesanal, batata palha, milho, vinagrete e maionese da casa.',
-    category: 'hotdogs',
+    name: 'Prensadin',
+    price: 18.00,
+    description: 'Nossa base tradicional perfeitamente prensada com muito Bacon.',
+    category: 'prensados',
     active: true,
+    hasCustomOptions: false,
     recipe: [
-      { ingredientId: 1, quantity: 1 }, // 1 pão
-      { ingredientId: 2, quantity: 1 }  // 1 salsicha
+      { ingredientId: 1, quantity: 1 },
+      { ingredientId: 3, quantity: 1 }
     ]
   },
   {
     id: 2,
-    name: 'Double Bacon Cheddar',
-    price: 22.90,
-    description: 'Duas salsichas na chapa, bacon crocante, cheddar cremoso derretido, milho e batata palha.',
-    category: 'hotdogs',
+    name: 'Prensado',
+    price: 20.00,
+    description: 'A base clássica recheada com Frango desfiado e bem temperado.',
+    category: 'prensados',
     active: true,
+    hasCustomOptions: false,
     recipe: [
-      { ingredientId: 1, quantity: 1 }, // 1 pão
-      { ingredientId: 2, quantity: 2 }, // 2 salsichas
-      { ingredientId: 3, quantity: 1 }  // 1 porção de bacon
+      { ingredientId: 1, quantity: 1 }
     ]
   },
   {
     id: 3,
-    name: 'Suco de Laranja (Natural)',
-    price: 8.50,
-    description: 'Suco de laranja natural prensado na hora, gelado. 400ml.',
-    category: 'drinks',
+    name: 'Prensadão',
+    price: 26.00,
+    description: 'Base generosa com Costela suculenta que derrete na boca.',
+    category: 'prensados',
     active: true,
+    hasCustomOptions: true,
     recipe: [
-      { ingredientId: 4, quantity: 4 }  // 4 laranjas
+      { ingredientId: 1, quantity: 1 }
     ]
   },
   {
     id: 4,
-    name: 'Suco Verde Detox',
-    price: 10.00,
-    description: 'Couve fresca, limão, maçã e gengibre batidos na hora. 400ml.',
-    category: 'drinks',
+    name: 'Prensado de Pernil',
+    price: 24.00,
+    description: 'Base deliciosa com Pernil desfiado super temperado.',
+    category: 'prensados',
     active: true,
+    hasCustomOptions: true,
     recipe: [
-      { ingredientId: 5, quantity: 1 }  // 1 polpa detox
+      { ingredientId: 1, quantity: 1 }
     ]
   },
   {
     id: 5,
-    name: 'Batata Frita Canoa',
-    price: 13.90,
-    description: 'Porção individual de batatas fritas crocantes com tempero especial da casa.',
-    category: 'sides',
+    name: 'Prensado Carne Seca',
+    price: 28.00,
+    description: 'O autêntico sabor da Carne Seca na nossa base perfeita.',
+    category: 'prensados',
     active: true,
+    hasCustomOptions: true,
     recipe: [
-      { ingredientId: 6, quantity: 1 }  // 1 porção de batata
+      { ingredientId: 1, quantity: 1 }
     ]
   }
 ];

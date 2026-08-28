@@ -238,6 +238,37 @@ export default function DeliveryView({
         overflowX: 'hidden'
       }}
     >
+      {/* NOVO: CONTROLES FLUTUANTES PARA MOBILE */}
+      {checkoutStep === 'menu' && (
+        <div className="mobile-floating-header">
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontWeight: 800, fontSize: '1.2rem', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+            <Utensils size={20} /> NUU PRENSADO
+          </div>
+          
+          {/* Controles da direita (Grade e Carrinho) */}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
+              style={{ background: 'rgba(0,0,0,0.3)', border: 'none', color: '#fff', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)', cursor: 'pointer' }}
+            >
+              {viewMode === 'slider' ? <LayoutGrid size={20} /> : <MonitorPlay size={20} />}
+            </button>
+            
+            <button 
+              onClick={() => setIsCartOpen(true)}
+              style={{ background: 'rgba(0,0,0,0.3)', border: 'none', color: '#fff', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)', cursor: 'pointer', position: 'relative' }}
+            >
+              <ShoppingBag size={20} />
+              {cart.length > 0 && (
+                <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#eab308', color: '#000', borderRadius: '50%', width: '20px', height: '20px', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {cart.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* TELA PRINCIPAL (SLIDER IMERSIVO) */}
       {checkoutStep === 'menu' && viewMode === 'slider' && activeProduct && (

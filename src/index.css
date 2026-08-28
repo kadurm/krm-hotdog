@@ -587,46 +587,88 @@ input:focus, select:focus, textarea:focus {
 /* RESPONSIVIDADE MOBILE (Telas < 768px)     */
 /* ========================================= */
 @media (max-width: 768px) {
-  /* Proteção Absoluta do Cabeçalho */
-  .app-header { 
-    padding: 1rem; 
-    flex-direction: row; 
-    flex-wrap: wrap; 
-    justify-content: space-between; 
-    flex-shrink: 0; /* Garante que o cabeçalho NUNCA seja esmagado */
+  /* 1. Removemos o header e footer tradicionais */
+  .app-header, footer {
+    display: none !important;
   }
 
-  /* Ocultar navegação antiga do slider */
-  .slider-nav-arrows, .slider-indicator, .slider-nav-dots { display: none !important; }
-
-  /* Ajustes do Slider para caber na tela trancada */
-  .immersive-slider { 
-    flex-direction: column; 
-    padding: 0 1rem; 
-    justify-content: space-evenly; /* Distribui o espaço vazio de forma inteligente */
-    flex: 1; 
+  /* 2. O container principal toma 100% da tela real */
+  .app-container {
+    height: 100dvh !important; /* 100dvh evita a barra do Safari */
+    position: fixed; /* Trava a rolagem da página inteira */
+    top: 0;
+    left: 0;
+    width: 100vw;
   }
-  
-  /* Redução agressiva da foto para celulares */
-  .product-circle { width: 180px !important; height: 180px !important; }
-  
-  /* Ajuste de espaçamento e fontes dos textos */
-  .slider-text-area { margin-top: 1rem; width: 100%; text-align: center; }
-  .product-title { font-size: 1.8rem; margin-bottom: 0.5rem; }
+
+  /* 3. O Slider ocupa tudo e posiciona os itens ao centro */
+  .immersive-slider {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centraliza verticalmente */
+    padding: 0 1rem;
+    height: 100%;
+    touch-action: none; /* Mantém o swipe funcionando perfeitamente */
+  }
+
+  /* 4. Oculta os antigos controles do slider */
+  .slider-nav-arrows, .slider-indicator, .slider-nav-dots {
+    display: none !important;
+  }
+
+  /* 5. Ajustes de tamanho para caber no mobile */
+  .product-circle {
+    width: 220px !important;
+    height: 220px !important;
+    margin: 0 auto; /* Garante centralização horizontal */
+  }
+  .slider-text-area {
+    margin-top: 1.5rem;
+    width: 100%;
+    text-align: center;
+    align-items: center; /* Centraliza os itens flexíveis (botão/preço) */
+  }
+  .product-title { font-size: 2rem; margin-bottom: 0.5rem; }
   .product-title span { display: inline; margin-right: 5px; }
-  
-  .product-desc { font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.2; padding: 0 10px; }
-  
-  /* Ajuste do Preço e Botão Adicionar */
-  .slider-action-row { flex-direction: column; gap: 0.5rem; }
-  .product-price { font-size: 1.5rem; }
-  .add-btn { padding: 10px 30px; font-size: 1rem; width: 80%; max-width: 250px; }
+  .product-desc { font-size: 0.9rem; padding: 0 10px; margin-bottom: 1rem; }
+  .slider-action-row { flex-direction: column; gap: 0.5rem; width: 100%; align-items: center; }
+  .add-btn { width: 80%; max-width: 250px; padding: 12px; }
 
-  /* Elementos flutuantes menores no mobile */
+  /* Elementos flutuantes ajustados */
   .float-element { font-size: 2.5rem; }
-  .float-pos-0 { top: 0%; left: 5%; }
-  .float-pos-1 { top: 80%; left: 10%; }
-  .float-pos-2 { top: 10%; left: 80%; }
+  .float-pos-0 { top: 15%; left: 5%; }
+  .float-pos-1 { top: 75%; left: 10%; }
+  .float-pos-2 { top: 15%; left: 80%; }
 
   .grid-view-container { padding: 1rem; }
+
+  /* ======================================================== */
+  /* NOVAS CLASSES: Controles Flutuantes (Logo e Carrinho)    */
+  /* ======================================================== */
+  .mobile-floating-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    z-index: 100; /* Garante que fique acima da animação */
+    pointer-events: none; /* Deixa o swipe passar através das partes vazias */
+  }
+  
+  /* Reativa os eventos de clique apenas nos botões */
+  .mobile-floating-header > div,
+  .mobile-floating-header > button {
+    pointer-events: auto;
+  }
+}
+
+/* Oculta o cabeçalho flutuante no Desktop (onde o original já funciona) */
+@media (min-width: 769px) {
+  .mobile-floating-header {
+    display: none;
+  }
 }

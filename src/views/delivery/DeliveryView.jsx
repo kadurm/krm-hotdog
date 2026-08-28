@@ -143,45 +143,58 @@ export default function DeliveryView() {
     return 'step-inactive';
   };
 
-  const activeProduct = visualProducts[activeSlide] || visualProducts[0];
+  // Define a cor de fundo dependendo do modo
+  const backgroundColor = checkoutStep !== 'menu' ? 'var(--bg-primary)' 
+                        : viewMode === 'grid' ? '#121212' // Fundo escuro premium para a grade
+                        : (activeProduct ? activeProduct.color : '#121212');
 
   return (
     <div 
       style={{ 
-        backgroundColor: checkoutStep === 'menu' && activeProduct ? activeProduct.color : 'var(--bg-primary)',
+        backgroundColor: backgroundColor,
         transition: 'background-color 0.8s ease-in-out',
         minHeight: '100vh',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        overflow: 'hidden'
+        overflowY: viewMode === 'grid' ? 'auto' : 'hidden', // Permite rolar apenas na grade
+        overflowX: 'hidden'
       }}
     >
-      {/* HEADER MINIMALISTA */}
-      <header style={{ padding: '1.5rem 3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+      {/* HEADER */}
+      <header style={{ padding: '2rem 4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#fff', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '1px' }}>
-          <Utensils color="#fff" size={24} /> NUU PRENSADO
+          <Utensils /> NUU PRENSADO
         </div>
+        
         <nav style={{ display: 'flex', gap: '2rem', color: '#fff', fontSize: '0.9rem', fontWeight: 600, alignItems: 'center' }}>
-          <a 
-            href="#" 
-            style={{ cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '1px', color: '#fff', textDecoration: 'none' }} 
-            onClick={(e) => { e.preventDefault(); setCheckoutStep('menu'); }}
-          >
-            Catálogo
-          </a>
+          {/* BOTÃO DE ALTERNAR VISUALIZAÇÃO */}
+          {checkoutStep === 'menu' && (
+            <button 
+              onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
+              style={{ 
+                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', 
+                color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 16px', borderRadius: '99px', transition: '0.3s', backdropFilter: 'blur(5px)'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            >
+              {viewMode === 'slider' ? <LayoutGrid size={18} /> : <MonitorPlay size={18} />}
+              <span style={{ textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.8rem' }}>
+                {viewMode === 'slider' ? 'Ver em Grade' : 'Ver Imersivo'}
+              </span>
+            </button>
+          )}
+
+          <a href="#" style={{ cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '1px' }} onClick={() => setCheckoutStep('menu')}>Catálogo</a>
           <div 
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.15)', padding: '8px 16px', borderRadius: '99px', backdropFilter: 'blur(5px)' }}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             onClick={() => setIsCartOpen(true)}
           >
-            <ShoppingBag size={18} color="#fff" />
-            <span>Carrinho</span>
-            {cart.length > 0 && (
-              <span style={{ background: '#fff', color: '#000', padding: '2px 8px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800 }}>
-                {cart.reduce((a, b) => a + b.quantity, 0)}
-              </span>
-            )}
+            <ShoppingBag size={18} />
+            {cart.length > 0 && <span style={{ background: '#fff', color: '#000', padding: '2px 6px', borderRadius: '10px', fontSize: '0.75rem' }}>{cart.length}</span>}
           </div>
         </nav>
       </header>

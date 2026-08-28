@@ -3,66 +3,50 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const SystemContext = createContext(null);
 
 const INITIAL_PRODUCTS = [
-  {
-    id: 1,
-    name: 'Prensadinho',
-    price: 18.00,
-    description: 'Nossa base tradicional perfeitamente prensada com muito Bacon.',
-    category: 'prensados',
-    active: true,
-    hasCustomOptions: false,
-    recipe: [
-      { ingredientId: 1, quantity: 1 },
-      { ingredientId: 3, quantity: 1 }
-    ]
+  { 
+    id: 1, 
+    name: 'Prensadin', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e muito Bacon.', 
+    price: 18.00, 
+    active: true, 
+    category: 'prensados', 
+    hasCustomOptions: false 
   },
-  {
-    id: 2,
-    name: 'Prensado',
-    price: 20.00,
-    description: 'A base clássica recheada com Frango desfiado e bem temperado.',
-    category: 'prensados',
-    active: true,
-    hasCustomOptions: false,
-    recipe: [
-      { ingredientId: 1, quantity: 1 }
-    ]
+  { 
+    id: 2, 
+    name: 'Prensado', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e Frango desfiado bem temperado.', 
+    price: 20.00, 
+    active: true, 
+    category: 'prensados', 
+    hasCustomOptions: false 
   },
-  {
-    id: 3,
-    name: 'Prensadão de Costela',
-    price: 26.00,
-    description: 'Base generosa com Costela suculenta que derrete na boca.',
-    category: 'prensados',
-    active: true,
-    hasCustomOptions: true,
-    recipe: [
-      { ingredientId: 1, quantity: 1 }
-    ]
+  { 
+    id: 3, 
+    name: 'Prensadão de Costela', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e Costela suculenta que derrete na boca.', 
+    price: 26.00, 
+    active: true, 
+    category: 'prensados', 
+    hasCustomOptions: true 
   },
-  {
-    id: 4,
-    name: 'Prensadão de Pernil',
-    price: 24.00,
-    description: 'Base deliciosa com Pernil desfiado super temperado.',
-    category: 'prensados',
-    active: true,
-    hasCustomOptions: true,
-    recipe: [
-      { ingredientId: 1, quantity: 1 }
-    ]
+  { 
+    id: 4, 
+    name: 'Prensadão de Pernil', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e Pernil desfiado super temperado.', 
+    price: 24.00, 
+    active: true, 
+    category: 'prensados', 
+    hasCustomOptions: true 
   },
-  {
-    id: 5,
-    name: 'Prensadão de Carne Seca',
-    price: 28.00,
-    description: 'O autêntico sabor da Carne Seca na nossa base perfeita.',
-    category: 'prensados',
-    active: true,
-    hasCustomOptions: true,
-    recipe: [
-      { ingredientId: 1, quantity: 1 }
-    ]
+  { 
+    id: 5, 
+    name: 'Prensadão de Carne Seca', 
+    description: 'Pão, molho de tomate artesanal, milho, batata, salsicha, mussarela, molhos da casa e o autêntico sabor da Carne Seca.', 
+    price: 28.00, 
+    active: true, 
+    category: 'prensados', 
+    hasCustomOptions: true 
   }
 ];
 
@@ -237,7 +221,7 @@ export const SystemProvider = ({ children }) => {
       const parsed = JSON.parse(saved);
       const isPrensados = parsed.some(p => p.name === 'Prensadinho' || p.name === 'Prensadin' || p.category === 'prensados');
       if (!isPrensados) return INITIAL_PRODUCTS;
-      return parsed.map(p => p.name === 'Prensadin' ? { ...p, name: 'Prensadinho' } : p);
+      return parsed.map(p => p.name === 'Prensadinho' ? { ...p, name: 'Prensadin' } : p);
     } catch (e) {
       return INITIAL_PRODUCTS;
     }

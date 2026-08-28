@@ -80,6 +80,36 @@ export default function DeliveryView({
   const nextSlide = () => setActiveSlide((prev) => (prev === visualProducts.length - 1 ? 0 : prev + 1));
   const prevSlide = () => setActiveSlide((prev) => (prev === 0 ? visualProducts.length - 1 : prev - 1));
 
+  // Rastreamento de gestos de toque (Touch Swipe)
+  const [touchStartY, setTouchStartY] = useState(null);
+  const [touchEndY, setTouchEndY] = useState(null);
+
+  // Distância mínima (em pixels) para considerar que foi um "scroll/arraste" e não apenas um clique
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEndY(null); // Reseta o final do toque anterior
+    setTouchStartY(e.targetTouches[0].clientY);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEndY(e.targetTouches[0].clientY);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartY || !touchEndY) return;
+    
+    const distance = touchStartY - touchEndY;
+    const isUpSwipe = distance > minSwipeDistance;
+    const isDownSwipe = distance < -minSwipeDistance;
+
+    if (isUpSwipe) {
+      nextSlide(); // Arrastou para cima -> mostra o próximo lanche
+    } else if (isDownSwipe) {
+      prevSlide(); // Arrastou para baixo -> mostra o lanche anterior
+    }
+  };
+
   // Lógica do Carrinho
   const handleOpenProduct = (product) => {
     setSelectedProduct(product);
@@ -193,7 +223,13 @@ export default function DeliveryView({
 
       {/* TELA PRINCIPAL (SLIDER IMERSIVO) */}
       {checkoutStep === 'menu' && viewMode === 'slider' && activeProduct && (
-        <div className="immersive-slider" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3rem 2rem 3rem', position: 'relative' }}>
+        <div 
+          className="immersive-slider" 
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3rem 2rem 3rem', position: 'relative' }}
+        >
           
           {/* Indicadores Laterais (001, 002, etc) */}
           <div className="slider-indicator" style={{ position: 'absolute', bottom: '2rem', left: '3rem', color: 'rgba(255,255,255,0.7)', fontSize: '1.5rem', fontWeight: 300, letterSpacing: '2px' }}>

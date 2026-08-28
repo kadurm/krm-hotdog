@@ -80,33 +80,49 @@ export default function DeliveryView({
   const nextSlide = () => setActiveSlide((prev) => (prev === visualProducts.length - 1 ? 0 : prev + 1));
   const prevSlide = () => setActiveSlide((prev) => (prev === 0 ? visualProducts.length - 1 : prev - 1));
 
-  // Rastreamento de gestos de toque (Touch Swipe)
-  const [touchStartY, setTouchStartY] = useState(null);
-  const [touchEndY, setTouchEndY] = useState(null);
+  // Estados para gerenciar o "swipe" estilo Reels
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
-  // Distância mínima (em pixels) para considerar que foi um "scroll/arraste" e não apenas um clique
+  // Distância mínima (em pixels) para considerar um arraste válido
   const minSwipeDistance = 50;
 
   const onTouchStart = (e) => {
-    setTouchEndY(null); // Reseta o final do toque anterior
-    setTouchStartY(e.targetTouches[0].clientY);
+    // Captura apenas o primeiro dedo (evita bugs de multitoque)
+    setTouchEnd(null);
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
   };
 
   const onTouchMove = (e) => {
-    setTouchEndY(e.targetTouches[0].clientY);
+    // Atualiza a posição final do dedo enquanto ele se move
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
   };
 
   const onTouchEnd = () => {
-    if (!touchStartY || !touchEndY) return;
+    if (!touchStart || !touchEnd) return;
     
-    const distance = touchStartY - touchEndY;
-    const isUpSwipe = distance > minSwipeDistance;
-    const isDownSwipe = distance < -minSwipeDistance;
+    // Calcula a distância vertical
+    const distanceY = touchStart.y - touchEnd.y;
+    
+    // Verifica se arrastou o suficiente e se o movimento foi predominantemente vertical
+    const isUpSwipe = distanceY > minSwipeDistance;
+    const isDownSwipe = distanceY < -minSwipeDistance;
+    
+    // Garante que não foi um arraste horizontal (para evitar conflitos com sliders futuros)
+    const isVerticalSwipe = Math.abs(distanceY) > Math.abs(touchStart.x - touchEnd.x);
 
-    if (isUpSwipe) {
-      nextSlide(); // Arrastou para cima -> mostra o próximo lanche
-    } else if (isDownSwipe) {
-      prevSlide(); // Arrastou para baixo -> mostra o lanche anterior
+    if (isVerticalSwipe) {
+      if (isUpSwipe) {
+        nextSlide(); // Arrastou para cima -> Vai para o próximo lanche
+      } else if (isDownSwipe) {
+        prevSlide(); // Arrastou para baixo -> Volta pro lanche anterior
+      }
     }
   };
 

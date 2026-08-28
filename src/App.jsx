@@ -202,25 +202,6 @@ function AppContent() {
       }}>
         <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
           <p>© 2026 Nuu Prensado!! - Todos os direitos reservados.</p>
-          <p style={{ fontSize: '0.75rem' }}>
-            Protótipo de alta fidelidade para homologação de fluxo e funcionalidades de gestão.
-          </p>
-          <button 
-            onClick={handleOpenAdmin}
-            style={{ 
-              marginTop: '8px', 
-              fontSize: '0.75rem', 
-              color: 'var(--text-muted)', 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '4px',
-              opacity: 0.5,
-              cursor: 'pointer'
-            }}
-            title="Acesso Administrativo Restrito"
-          >
-            <Lock size={12} /> Acesso Restrito à Gestão
-          </button>
         </div>
       </footer>
     </>

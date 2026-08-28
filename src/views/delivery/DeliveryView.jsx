@@ -3,7 +3,8 @@ import { useSystem } from '../../contexts/SystemContext';
 import { 
   ShoppingBag, Plus, Minus, Trash2, 
   Clock, Utensils, ChevronRight, X, Sparkles,
-  ChevronUp, ChevronDown, CheckCircle
+  ChevronUp, ChevronDown, CheckCircle,
+  LayoutGrid, MonitorPlay
 } from 'lucide-react';
 
 export default function DeliveryView() {

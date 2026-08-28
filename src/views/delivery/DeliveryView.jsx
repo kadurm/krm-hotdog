@@ -191,7 +191,6 @@ export default function DeliveryView() {
             </button>
           )}
 
-          <a href="#" style={{ cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '1px' }} onClick={() => setCheckoutStep('menu')}>Catálogo</a>
           <div 
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             onClick={() => setIsCartOpen(true)}
@@ -351,7 +350,7 @@ export default function DeliveryView() {
           <div className="glass-panel" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
               <button onClick={() => setCheckoutStep('menu')} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                ← Voltar ao Catálogo
+                ← Voltar
               </button>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginLeft: 'auto' }}>Finalizar seu Pedido</h2>
             </div>

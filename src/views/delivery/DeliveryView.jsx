@@ -227,11 +227,13 @@ export default function DeliveryView({
       style={{ 
         backgroundColor: backgroundColor,
         transition: 'background-color 0.8s ease-in-out',
-        minHeight: '100dvh',
-        width: '100%',
+        height: '100dvh',
+        width: '100vw',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
+        position: 'fixed',
+        top: 0,
+        left: 0,
         overflowY: viewMode === 'grid' ? 'auto' : 'hidden', // Permite rolar apenas na grade
         overflowX: 'hidden'
       }}

@@ -93,13 +93,12 @@ function AppContent() {
         <div className="container flex justify-between items-center" style={{ padding: '0.75rem 1.5rem' }}>
           
           {/* Logo Oficial */}
-          <a 
-            href="#delivery" 
+          <span 
             className="nav-logo" 
-            onClick={(e) => { 
-              e.preventDefault(); 
+            style={{ cursor: 'pointer' }}
+            onClick={() => { 
               setCurrentMode('delivery'); 
-              window.location.hash = 'delivery'; 
+              setCheckoutStep('menu');
             }}
           >
             <img 
@@ -111,11 +110,19 @@ function AppContent() {
                 filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))'
               }} 
             />
-          </a>
+          </span>
 
           {/* Botões de Ação na Barra Superior Superior */}
           {currentMode === 'delivery' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              {checkoutStep !== 'menu' && (
+                <span 
+                  style={{ cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '1px', color: '#fff', fontSize: '0.8rem', fontWeight: 600 }} 
+                  onClick={() => setCheckoutStep('menu')}
+                >
+                  Catálogo
+                </span>
+              )}
               {checkoutStep === 'menu' && (
                 <button 
                   onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}

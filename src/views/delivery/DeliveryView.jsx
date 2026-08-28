@@ -44,6 +44,27 @@ export default function DeliveryView({
   const [meltedCheese, setMeltedCheese] = useState('mussarela'); // 'mussarela' ou 'cheddar'
   const [hasVinagrete, setHasVinagrete] = useState(false);
 
+  // 1. Cria um histórico falso sempre que o carrinho ou o modal do lanche abrirem
+  useEffect(() => {
+    if (isCartOpen || selectedProduct) {
+      window.history.pushState({ modalOpen: true }, '');
+    }
+  }, [isCartOpen, selectedProduct]);
+
+  // 2. Escuta o botão voltar do celular (evento 'popstate')
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isCartOpen) {
+        setIsCartOpen(false); // Fecha o carrinho
+      } else if (selectedProduct) {
+        setSelectedProduct(null); // Fecha o modal de montagem
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isCartOpen, selectedProduct]);
+
   // 2. Mapeamos as cores e emojis da animação usando os produtos do sistema!
   const visualProducts = products.filter(p => p.active).map((p, index) => {
     const themes = {

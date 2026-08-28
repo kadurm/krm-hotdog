@@ -606,10 +606,11 @@ input:focus, select:focus, textarea:focus {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Centraliza verticalmente */
-    padding: 5.5rem 1rem 1rem 1rem !important; /* Margem no topo desvia do cabeçalho flutuante */
+    justify-content: center; 
+    /* Reduzimos o padding superior para liberar mais espaço embaixo */
+    padding: 4.5rem 1rem 1rem 1rem !important; 
     height: 100%;
-    touch-action: none; /* Mantém o swipe funcionando perfeitamente */
+    touch-action: none; 
   }
 
   /* 4. Oculta os antigos controles do slider */
@@ -617,29 +618,60 @@ input:focus, select:focus, textarea:focus {
     display: none !important;
   }
 
-  /* 5. Ajustes de tamanho para caber no mobile */
+  /* Redução da foto */
   .product-circle {
-    width: 200px !important;
-    height: 200px !important;
-    margin: 0 auto; /* Garante centralização horizontal */
+    width: 160px !important; 
+    height: 160px !important;
+    margin: 0 auto; 
   }
+  
+  /* Compactação da área de texto */
   .slider-text-area {
-    margin-top: 1.5rem;
+    margin-top: 1rem !important; 
     width: 100%;
     text-align: center;
-    align-items: center; /* Centraliza os itens flexíveis (botão/preço) */
+    align-items: center; 
   }
-  .product-title { font-size: 2rem; margin-bottom: 0.5rem; }
+  
+  /* Redução do Título */
+  .product-title { 
+    font-size: 1.6rem !important; 
+    margin-bottom: 0.25rem !important; 
+  }
   .product-title span { display: inline; margin-right: 5px; }
-  .product-desc { font-size: 0.9rem; padding: 0 10px; margin-bottom: 1rem; }
-  .slider-action-row { flex-direction: column; gap: 0.5rem; width: 100%; align-items: center; }
-  .add-btn { width: 80%; max-width: 250px; padding: 12px; }
+  
+  /* Redução da Descrição (para caber textos longos) */
+  .product-desc { 
+    font-size: 0.8rem !important; 
+    padding: 0 10px; 
+    margin-bottom: 0.5rem !important; 
+    line-height: 1.2;
+  }
+  
+  /* Ajuste do Preço e Botão */
+  .slider-action-row { 
+    flex-direction: column; 
+    gap: 0.5rem !important; 
+    width: 100%; 
+    align-items: center; 
+  }
+  
+  .product-price { 
+    font-size: 1.4rem !important; 
+  }
+  
+  .add-btn { 
+    width: 80%; 
+    max-width: 250px; 
+    padding: 10px !important; 
+    font-size: 0.95rem !important;
+  }
 
-  /* Elementos flutuantes ajustados */
-  .float-element { font-size: 2.5rem; }
-  .float-pos-0 { top: 15%; left: 5%; }
-  .float-pos-1 { top: 75%; left: 10%; }
-  .float-pos-2 { top: 15%; left: 80%; }
+  /* Elementos flutuantes ajustados para o novo tamanho */
+  .float-element { font-size: 2rem !important; }
+  .float-pos-0 { top: 12%; left: 5%; }
+  .float-pos-1 { top: 70%; left: 10%; }
+  .float-pos-2 { top: 12%; left: 80%; }
 
   .grid-view-container { padding: 1rem; }
 

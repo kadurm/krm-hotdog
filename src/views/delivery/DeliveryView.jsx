@@ -11,6 +11,7 @@ export default function DeliveryView() {
   const { products, createOrder, orders } = useSystem();
   
   const [activeSlide, setActiveSlide] = useState(0);
+  const [viewMode, setViewMode] = useState('slider'); // NOVO: 'slider' ou 'grid'
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);

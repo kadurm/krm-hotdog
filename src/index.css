@@ -607,24 +607,9 @@ input:focus, select:focus, textarea:focus {
   
   /* Oculta os indicadores laterais que ocupam muito espaço e reposiciona as setas */
   .slider-indicator, .slider-nav-dots { display: none; }
-  /* Move as setas para o fluxo normal da página (abaixo do texto) e centraliza */
+  /* Esconde os botões completamente no celular */
   .slider-nav-arrows { 
-    position: relative; 
-    right: auto; 
-    top: auto; 
-    transform: none; 
-    flex-direction: row; 
-    justify-content: center; 
-    margin-top: 2rem; 
-    padding-bottom: 2rem;
-    gap: 3rem; 
-  }
-  
-  /* Remove a rotação, forçando as setas a apontarem para CIMA e BAIXO */
-  .slider-nav-arrows button { 
-    transform: none; 
-    width: 60px;
-    height: 60px;
+    display: none; 
   }
   
   .grid-view-container { padding: 1rem; }

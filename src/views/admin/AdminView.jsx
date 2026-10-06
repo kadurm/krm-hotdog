@@ -7,13 +7,13 @@ import {
   Utensils, X, Plus, Edit, PlusSquare, LogOut,
   ChevronLeft, ChevronRight, Menu, ShoppingBag, Sparkles,
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
-  Volume2, VolumeX
+  Volume2, VolumeX, Upload, Image
 } from 'lucide-react';
 
 export default function AdminView({ onLogout }) {
   const { 
     products, inventory, orders, transactions, invoices, quotations,
-    updateOrderStatus, adjustStock, registerInflowInvoice, 
+    updateOrderStatus, deleteOrder, adjustStock, manualStockInflow, registerInflowInvoice, 
     upsertProduct, deleteProduct, addTransaction,
     addQuotation, updateQuotation, deleteQuotation 
   } = useSystem();
@@ -57,9 +57,21 @@ export default function AdminView({ onLogout }) {
   const [prodName, setProdName] = useState('');
   const [prodPrice, setProdPrice] = useState('');
   const [prodDesc, setProdDesc] = useState('');
-  const [prodCat, setProdCat] = useState('hotdogs');
+  const [prodCat, setProdCat] = useState('prensados');
   const [prodActive, setProdActive] = useState(true);
+  const [prodImage, setProdImage] = useState('/images/prensadinho.png');
   const [prodRecipe, setProdRecipe] = useState([]);
+
+  // Manual Stock Entry Modal states
+  const [isManualStockModalOpen, setIsManualStockModalOpen] = useState(false);
+  const [manualEntryMode, setManualEntryMode] = useState('existing'); // 'existing' | 'new'
+  const [manualIngredientId, setManualIngredientId] = useState('');
+  const [manualNewName, setManualNewName] = useState('');
+  const [manualQty, setManualQty] = useState('');
+  const [manualUnit, setManualUnit] = useState('un');
+  const [manualMinQty, setManualMinQty] = useState('10');
+  const [manualCost, setManualCost] = useState('');
+  const [manualReason, setManualReason] = useState('');
 
   // Inflow NF form states
   const [isInflowModalOpen, setIsInflowModalOpen] = useState(false);
@@ -186,14 +198,16 @@ export default function AdminView({ onLogout }) {
       setProdDesc(product.description);
       setProdCat(product.category);
       setProdActive(product.active);
+      setProdImage(product.image || '/images/prensadinho.png');
       setProdRecipe(product.recipe || []);
     } else {
       setEditingProduct(null);
       setProdName('');
       setProdPrice('');
       setProdDesc('');
-      setProdCat('hotdogs');
+      setProdCat('prensados');
       setProdActive(true);
+      setProdImage('/images/prensadinho.png');
       setProdRecipe(inventory.map(i => ({ ingredientId: i.id, quantity: 0 })));
     }
     setIsProductModalOpen(true);
@@ -208,6 +222,7 @@ export default function AdminView({ onLogout }) {
       description: prodDesc,
       category: prodCat,
       active: prodActive,
+      image: prodImage || '/images/prensadinho.png',
       recipe: recipeClean
     };
     if (editingProduct) {
@@ -215,6 +230,64 @@ export default function AdminView({ onLogout }) {
     }
     upsertProduct(productData);
     setIsProductModalOpen(false);
+  };
+
+  const handleImageFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        if (loadEvent.target?.result) {
+          setProdImage(loadEvent.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Manual Stock Entry Handler
+  const handleSaveManualStock = (e) => {
+    e.preventDefault();
+    const qty = parseFloat(manualQty);
+    if (!qty || qty <= 0) {
+      alert('Por favor, informe uma quantidade válida maior que zero.');
+      return;
+    }
+
+    if (manualEntryMode === 'existing') {
+      const selected = inventory.find(i => i.id === parseInt(manualIngredientId));
+      if (!selected) {
+        alert('Selecione um insumo da lista.');
+        return;
+      }
+      manualStockInflow({
+        ingredientId: selected.id,
+        name: selected.name,
+        quantity: qty,
+        unit: selected.unit,
+        cost: parseFloat(manualCost) || 0,
+        reason: manualReason
+      });
+    } else {
+      if (!manualNewName.trim()) {
+        alert('Informe o nome do novo insumo.');
+        return;
+      }
+      manualStockInflow({
+        name: manualNewName.trim(),
+        quantity: qty,
+        minQuantity: parseFloat(manualMinQty) || 10,
+        unit: manualUnit,
+        cost: parseFloat(manualCost) || 0,
+        reason: manualReason
+      });
+    }
+
+    setIsManualStockModalOpen(false);
+    setManualQty('');
+    setManualCost('');
+    setManualReason('');
+    setManualNewName('');
   };
 
   const handleRecipeQtyChange = (ingredientId, qty) => {
@@ -748,7 +821,16 @@ export default function AdminView({ onLogout }) {
                         <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
                           {/* Cabeçalho do Card */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                              <button 
+                                onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                title="Excluir este pedido"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Clock size={13} />
                               {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -859,7 +941,16 @@ export default function AdminView({ onLogout }) {
                         <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
                           {/* Cabeçalho do Card */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                              <button 
+                                onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                title="Excluir este pedido"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Clock size={13} />
                               {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -964,7 +1055,16 @@ export default function AdminView({ onLogout }) {
                         <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
                           {/* Cabeçalho do Card */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                              <button 
+                                onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                title="Excluir este pedido"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Clock size={13} />
                               {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -1045,7 +1145,16 @@ export default function AdminView({ onLogout }) {
                     {finishedOrders.slice(0, 6).map(order => (
                       <div key={order.id} className="glass-panel" style={{ padding: '10px 14px', backgroundColor: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>#{order.id} - {order.customerName}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>#{order.id} - {order.customerName}</span>
+                            <button 
+                              onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
+                              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                              title="Excluir este pedido"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                             {order.type === 'delivery' ? '🛵 Delivery' : '🏪 Balcão'} • {order.paymentMethod}
                           </div>
@@ -1065,11 +1174,32 @@ export default function AdminView({ onLogout }) {
           {/* TAB: INVENTORY */}
           {activeTab === 'inventory' && (
             <div className="animate-fade-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Controle de Estoque (Insumos)</h2>
-                <button onClick={() => setIsInflowModalOpen(true)} className="btn-primary" style={{ fontSize: '0.85rem' }}>
-                  <PlusSquare size={16} /> Nota Fiscal de Entrada
-                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={() => {
+                      setManualIngredientId(inventory[0]?.id?.toString() || '');
+                      setManualEntryMode('existing');
+                      setManualQty('');
+                      setManualCost('');
+                      setManualReason('');
+                      setManualNewName('');
+                      setIsManualStockModalOpen(true);
+                    }} 
+                    className="btn-primary" 
+                    style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <PlusCircle size={16} /> Entrada Manual de Estoque
+                  </button>
+                  <button 
+                    onClick={() => setIsInflowModalOpen(true)} 
+                    className="btn-secondary" 
+                    style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <PlusSquare size={16} /> Nota Fiscal de Entrada
+                  </button>
+                </div>
               </div>
 
               <div className="admin-table-container">
@@ -1141,7 +1271,7 @@ export default function AdminView({ onLogout }) {
           {/* TAB: PRODUCTS */}
           {activeTab === 'products' && (
             <div className="animate-fade-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Cadastro de Produtos (Cardápio)</h2>
                 <button onClick={() => handleOpenProductModal(null)} className="btn-primary" style={{ fontSize: '0.85rem' }}>
                   <Plus size={16} /> Cadastrar Produto
@@ -1152,6 +1282,7 @@ export default function AdminView({ onLogout }) {
                 <table className="admin-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '60px' }}>Foto</th>
                       <th>Produto</th>
                       <th>Categoria</th>
                       <th>Preço</th>
@@ -1162,6 +1293,14 @@ export default function AdminView({ onLogout }) {
                   <tbody>
                     {products.map(prod => (
                       <tr key={prod.id}>
+                        <td>
+                          <img 
+                            src={prod.image || '/images/prensadinho.png'} 
+                            alt={prod.name} 
+                            style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'contain', backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-glass)', padding: '2px' }}
+                            onError={(e) => { e.currentTarget.src = '/images/prensadinho.png'; }}
+                          />
+                        </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{prod.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{prod.description}</div>
@@ -1184,6 +1323,7 @@ export default function AdminView({ onLogout }) {
                             <button 
                               onClick={() => handleOpenProductModal(prod)}
                               style={{ padding: '6px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-info)', border: '1px solid var(--border-glass)' }}
+                              title="Editar Produto e Foto"
                             >
                               <Edit size={14} />
                             </button>
@@ -1194,6 +1334,7 @@ export default function AdminView({ onLogout }) {
                                 }
                               }}
                               style={{ padding: '6px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-danger)', border: '1px solid var(--border-glass)' }}
+                              title="Excluir Produto"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -1605,8 +1746,8 @@ export default function AdminView({ onLogout }) {
 
       {/* MODAL: CADASTRO/EDIÇÃO DE PRODUTO */}
       {isProductModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: '500px' }}>
+        <div className="modal-overlay" onClick={() => setIsProductModalOpen(false)}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
                 {editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
@@ -1616,7 +1757,7 @@ export default function AdminView({ onLogout }) {
               </button>
             </div>
             <form onSubmit={handleSaveProduct}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '72vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nome do Produto</label>
                   <input type="text" required value={prodName} onChange={e => setProdName(e.target.value)} placeholder="Ex: X-Salada Premium" />
@@ -1630,7 +1771,7 @@ export default function AdminView({ onLogout }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Categoria</label>
                     <select value={prodCat} onChange={e => setProdCat(e.target.value)}>
-                      <option value="hotdogs">Hotdogs na Chapa</option>
+                      <option value="prensados">Lanches Prensados</option>
                       <option value="drinks">Sucos & Bebidas</option>
                       <option value="sides">Acompanhamentos</option>
                     </select>
@@ -1642,6 +1783,106 @@ export default function AdminView({ onLogout }) {
                   <textarea rows="2" value={prodDesc} onChange={e => setProdDesc(e.target.value)} placeholder="Descrição dos ingredientes no cardápio" />
                 </div>
 
+                {/* Foto do Produto */}
+                <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Image size={16} color="var(--color-brand-yellow)" /> Foto do Produto (Cardápio)
+                  </label>
+                  
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {/* Prévia da Imagem */}
+                    <div style={{ 
+                      width: '76px', 
+                      height: '76px', 
+                      borderRadius: '10px', 
+                      backgroundColor: 'rgba(0,0,0,0.3)', 
+                      border: '2px dashed var(--border-glass)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      overflow: 'hidden',
+                      flexShrink: 0
+                    }}>
+                      {prodImage ? (
+                        <img 
+                          src={prodImage} 
+                          alt="Prévia" 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                          onError={(e) => { e.currentTarget.src = '/images/prensadinho.png'; }}
+                        />
+                      ) : (
+                        <Image size={24} color="var(--text-muted)" />
+                      )}
+                    </div>
+
+                    {/* Controles de Upload e URL */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                      <label 
+                        className="btn-secondary" 
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '6px', 
+                          cursor: 'pointer', 
+                          fontSize: '0.78rem', 
+                          padding: '6px 12px',
+                          width: 'fit-content'
+                        }}
+                      >
+                        <Upload size={14} /> Enviar Foto do Dispositivo
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleImageFileUpload} 
+                          style={{ display: 'none' }} 
+                        />
+                      </label>
+                      
+                      <input 
+                        type="text" 
+                        value={prodImage} 
+                        onChange={e => setProdImage(e.target.value)} 
+                        placeholder="Ou digite a URL/caminho da foto (ex: /images/prensado.png)" 
+                        style={{ fontSize: '0.78rem', padding: '6px 10px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sugestões de Fotos Existentes */}
+                  <div style={{ marginTop: '2px' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fotos Prontas no Sistema (Clique para selecionar):</span>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                      {[
+                        { name: 'Bacon', path: '/images/prensadinho.png' },
+                        { name: 'Frango', path: '/images/prensado.png' },
+                        { name: 'Costela', path: '/images/costela.png' },
+                        { name: 'Pernil', path: '/images/pernil.png' },
+                        { name: 'Carne Seca', path: '/images/carne-seca.png' },
+                        { name: 'Real Costela', path: '/Produtos/Prensadão de Costela.jpeg' },
+                        { name: 'Real Frango', path: '/Produtos/Prensadão de Frango.jpeg' },
+                        { name: 'Real Pernil', path: '/Produtos/Prensadão de Pernil.jpeg' },
+                      ].map(preset => (
+                        <button
+                          key={preset.path}
+                          type="button"
+                          onClick={() => setProdImage(preset.path)}
+                          style={{
+                            fontSize: '0.7rem',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: prodImage === preset.path ? 'var(--color-brand)' : 'var(--bg-tertiary)',
+                            color: '#fff',
+                            border: '1px solid var(--border-glass)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {preset.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Recipe Mapping to Inventory */}
                 <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
                   <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '8px' }}>
@@ -1650,7 +1891,7 @@ export default function AdminView({ onLogout }) {
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
                     Indique a quantidade de cada insumo necessária para produzir 1 unidade deste produto. A baixa do estoque é realizada automaticamente.
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto' }}>
                     {inventory.map(invItem => {
                       const recipeItem = prodRecipe.find(r => r.ingredientId === invItem.id);
                       const currentVal = recipeItem ? recipeItem.quantity : 0;
@@ -1679,6 +1920,178 @@ export default function AdminView({ onLogout }) {
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn-secondary">Cancelar</button>
                 <button type="submit" className="btn-primary">Salvar Produto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ENTRADA MANUAL DE PRODUTOS NO ESTOQUE */}
+      {isManualStockModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsManualStockModalOpen(false)}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Package size={20} color="var(--color-brand)" /> Entrada Manual no Estoque
+              </h3>
+              <button onClick={() => setIsManualStockModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveManualStock}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                
+                {/* Seletor de Modo: Existente ou Novo */}
+                <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-tertiary)', padding: '4px', borderRadius: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setManualEntryMode('existing')}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      backgroundColor: manualEntryMode === 'existing' ? 'var(--color-brand)' : 'transparent',
+                      color: '#fff',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: '0.2s'
+                    }}
+                  >
+                    Insumo Existente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualEntryMode('new')}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      backgroundColor: manualEntryMode === 'new' ? 'var(--color-brand)' : 'transparent',
+                      color: '#fff',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: '0.2s'
+                    }}
+                  >
+                    + Cadastrar Novo Insumo
+                  </button>
+                </div>
+
+                {manualEntryMode === 'existing' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Selecione o Insumo</label>
+                    <select 
+                      value={manualIngredientId} 
+                      onChange={e => setManualIngredientId(e.target.value)}
+                      style={{ padding: '8px', fontSize: '0.9rem' }}
+                      required
+                    >
+                      {inventory.map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} (Atual: {item.quantity} {item.unit})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="animate-fade-in">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nome do Insumo</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="Ex: Queijo Catupiry Bisnaga" 
+                        value={manualNewName} 
+                        onChange={e => setManualNewName(e.target.value)} 
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Unidade de Medida</label>
+                        <select value={manualUnit} onChange={e => setManualUnit(e.target.value)}>
+                          <option value="un">un (Unidades)</option>
+                          <option value="kg">kg (Quilos)</option>
+                          <option value="g">g (Gramas)</option>
+                          <option value="porção">porção</option>
+                          <option value="lata">lata</option>
+                          <option value="sachê">sachê</option>
+                          <option value="pacote">pacote</option>
+                          <option value="litro">litro</option>
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Estoque Mínimo</label>
+                        <input 
+                          type="number" 
+                          value={manualMinQty} 
+                          onChange={e => setManualMinQty(e.target.value)} 
+                          placeholder="10" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quantidade a dar entrada */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      Quantidade de Entrada *
+                    </label>
+                    <input 
+                      type="number" 
+                      step="any" 
+                      required 
+                      placeholder="Ex: 25" 
+                      value={manualQty} 
+                      onChange={e => setManualQty(e.target.value)} 
+                      style={{ fontSize: '1rem', fontWeight: 700 }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      Custo Total R$ (Opcional)
+                    </label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="0.00" 
+                      value={manualCost} 
+                      onChange={e => setManualCost(e.target.value)} 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Motivo / Observação
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Compra avulsa de emergência no Atacado" 
+                    value={manualReason} 
+                    onChange={e => setManualReason(e.target.value)} 
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Se o Custo Total for informado, será lançado automaticamente como despesa de Estoque no financeiro.
+                  </span>
+                </div>
+
+              </div>
+
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-glass)', padding: '1rem 1.5rem' }}>
+                <button type="button" onClick={() => setIsManualStockModalOpen(false)} className="btn-secondary">
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Check size={16} /> Confirmar Entrada
+                </button>
               </div>
             </form>
           </div>

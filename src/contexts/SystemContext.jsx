@@ -91,82 +91,11 @@ const INITIAL_INVENTORY = [
   { id: 6, name: 'Batata Canoa Congelada', quantity: 18, minQuantity: 6, unit: 'porção' }
 ];
 
-const INITIAL_ORDERS = [
-  {
-    id: '1001',
-    customerName: 'Carlos Eduardo',
-    phone: '(11) 98888-7777',
-    type: 'delivery',
-    address: 'Rua das Flores, 123 - Apt 42',
-    paymentMethod: 'Pix',
-    items: [
-      { productId: 2, name: 'Double Bacon Cheddar', quantity: 2, price: 22.90 },
-      { productId: 3, name: 'Suco de Laranja (Natural)', quantity: 2, price: 8.50 }
-    ],
-    status: 'delivered',
-    total: 62.80,
-    date: new Date(Date.now() - 3600000 * 4).toISOString() // 4h atrás
-  },
-  {
-    id: '1002',
-    customerName: 'Mariana Santos',
-    phone: '(11) 97777-6666',
-    type: 'pickup',
-    address: 'Retirada no Balcão',
-    paymentMethod: 'Cartão de Crédito',
-    items: [
-      { productId: 1, name: 'Hot Dog Tradicional', quantity: 1, price: 15.90 },
-      { productId: 5, name: 'Batata Frita Canoa', quantity: 1, price: 13.90 }
-    ],
-    status: 'preparing',
-    total: 29.80,
-    date: new Date(Date.now() - 1800000).toISOString() // 30min atrás
-  }
-];
+const INITIAL_ORDERS = [];
 
-const INITIAL_TRANSACTIONS = [
-  {
-    id: 't-1',
-    date: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
-    type: 'expense',
-    category: 'Estoque',
-    value: 150.00,
-    description: 'Compra de pães e salsichas do distribuidor'
-  },
-  {
-    id: 't-2',
-    date: new Date(Date.now() - 3600000 * 24).toISOString(),
-    type: 'expense',
-    category: 'Infraestrutura',
-    value: 85.00,
-    description: 'Gás de cozinha reserva'
-  },
-  {
-    id: 't-3',
-    date: new Date(Date.now() - 3600000 * 4).toISOString(),
-    type: 'income',
-    category: 'Vendas',
-    value: 62.80,
-    description: 'Pedido #1001'
-  }
-];
+const INITIAL_TRANSACTIONS = [];
 
-const INITIAL_INVOICES = [
-  {
-    id: 'NF-1001',
-    type: 'saida',
-    referenceId: '1001',
-    customerName: 'Carlos Eduardo',
-    customerCpf: '123.456.789-00',
-    date: new Date(Date.now() - 3600000 * 4).toISOString(),
-    total: 62.80,
-    items: [
-      { name: 'Double Bacon Cheddar', quantity: 2, price: 22.90 },
-      { name: 'Suco de Laranja (Natural)', quantity: 2, price: 8.50 }
-    ],
-    key: '35260612345678901234550010000010011234567890'
-  }
-];
+const INITIAL_INVOICES = [];
 
 const INITIAL_QUOTATIONS = [
   { id: 'q-1', productName: 'Molho Barbecue', supplier: 'Supermercado BH', brand: 'Saboroso', package: 'Balde 3,5 kg', packagePrice: 32.90, unitPrice: 9.40, unitType: 'kg', lastUpdated: '2026-08-25' },
@@ -253,7 +182,10 @@ export const SystemProvider = ({ children }) => {
         const parsed = JSON.parse(saved);
         return parsed.map(p => {
           const init = INITIAL_PRODUCTS.find(i => i.id === p.id);
-          return init ? { ...p, image: init.image } : p;
+          return {
+            ...p,
+            image: p.image || init?.image || '/images/prensadinho.png'
+          };
         });
       } catch (e) {
         return INITIAL_PRODUCTS;
@@ -269,17 +201,49 @@ export const SystemProvider = ({ children }) => {
 
   const [orders, setOrders] = useState(() => {
     const saved = localStorage.getItem('hd_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Filtrar e remover permanentemente pedidos falsos/de exemplos (#1001, #1002)
+        const cleaned = parsed.filter(o => o.id !== '1001' && o.id !== '1002' && o.customerName !== 'Carlos Eduardo' && o.customerName !== 'Mariana Santos');
+        localStorage.setItem('hd_orders', JSON.stringify(cleaned));
+        return cleaned;
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem('hd_transactions');
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Remover transações de pedidos de exemplo que inflavam o faturamento
+        const cleaned = parsed.filter(t => t.id !== 't-3' && !t.description?.includes('#1001') && !t.description?.includes('#1002') && !t.description?.includes('Carlos Eduardo'));
+        localStorage.setItem('hd_transactions', JSON.stringify(cleaned));
+        return cleaned;
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [invoices, setInvoices] = useState(() => {
     const saved = localStorage.getItem('hd_invoices');
-    return saved ? JSON.parse(saved) : INITIAL_INVOICES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const cleaned = parsed.filter(i => i.id !== 'NF-1001' && i.referenceId !== '1001');
+        localStorage.setItem('hd_invoices', JSON.stringify(cleaned));
+        return cleaned;
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [quotations, setQuotations] = useState(() => {
@@ -595,7 +559,7 @@ export const SystemProvider = ({ children }) => {
   // Product actions
   const upsertProduct = (productData) => {
     if (productData.id) {
-      setProducts(prev => prev.map(p => p.id === productData.id ? productData : p));
+      setProducts(prev => prev.map(p => p.id === productData.id ? { ...p, ...productData } : p));
     } else {
       const newId = Math.max(...products.map(p => p.id), 0) + 1;
       setProducts(prev => [...prev, { ...productData, id: newId }]);
@@ -604,6 +568,87 @@ export const SystemProvider = ({ children }) => {
 
   const deleteProduct = (id) => {
     setProducts(prev => prev.filter(p => p.id !== id));
+  };
+
+  const deleteOrder = (orderId) => {
+    let nextOrders = [];
+    setOrders(prev => {
+      nextOrders = prev.filter(o => o.id !== orderId);
+      return nextOrders;
+    });
+    localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
+
+    setTransactions(prev => {
+      const next = prev.filter(t => !t.description?.includes(`#${orderId}`));
+      localStorage.setItem('hd_transactions', JSON.stringify(next));
+      return next;
+    });
+
+    setInvoices(prev => {
+      const next = prev.filter(i => i.referenceId !== orderId && i.id !== `NF-${orderId}`);
+      localStorage.setItem('hd_invoices', JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'ORDERS_SYNC', orders: nextOrders, isNewOrder: false });
+        ch.close();
+      }
+    } catch (e) {}
+  };
+
+  const manualStockInflow = ({ ingredientId, name, quantity, minQuantity, unit, cost, reason }) => {
+    const qty = parseFloat(quantity) || 0;
+    const itemCost = parseFloat(cost) || 0;
+    let targetName = name;
+
+    setInventory(prev => {
+      let updated;
+      const existing = prev.find(i => (ingredientId && i.id === ingredientId) || (name && i.name.toLowerCase() === name.trim().toLowerCase()));
+      if (existing) {
+        targetName = existing.name;
+        updated = prev.map(item => item.id === existing.id ? { ...item, quantity: item.quantity + qty } : item);
+      } else {
+        const newId = Math.max(...prev.map(i => i.id), 0) + 1;
+        const newItem = {
+          id: newId,
+          name: name ? name.trim() : 'Novo Insumo',
+          quantity: qty,
+          minQuantity: parseFloat(minQuantity) || 10,
+          unit: unit || 'un'
+        };
+        targetName = newItem.name;
+        updated = [...prev, newItem];
+      }
+      localStorage.setItem('hd_inventory', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (itemCost > 0) {
+      const newTransaction = {
+        id: 't-' + Date.now(),
+        date: new Date().toISOString(),
+        type: 'expense',
+        category: 'Estoque',
+        value: itemCost,
+        description: `Entrada Manual: ${qty} ${unit || 'un'} de ${targetName}${reason ? ` (${reason})` : ''}`
+      };
+      setTransactions(prev => {
+        const next = [newTransaction, ...prev];
+        localStorage.setItem('hd_transactions', JSON.stringify(next));
+        return next;
+      });
+    }
+
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'INVENTORY_SYNC' });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   // Financial actions
@@ -626,7 +671,9 @@ export const SystemProvider = ({ children }) => {
       quotations,
       createOrder,
       updateOrderStatus,
+      deleteOrder,
       adjustStock,
+      manualStockInflow,
       registerInflowInvoice,
       upsertProduct,
       deleteProduct,

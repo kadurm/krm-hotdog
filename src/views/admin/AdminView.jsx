@@ -2362,7 +2362,7 @@ export default function AdminView({ onLogout }) {
                       <div key={bairro} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{bairro}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--color-brand)' }}>R$ {Number(fee).toFixed(2)}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--color-brand)' }}>R$ {Number(fee || 0).toFixed(2)}</span>
                           <button
                             onClick={() => {
                               const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
@@ -2388,7 +2388,16 @@ export default function AdminView({ onLogout }) {
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                     Arraste o pin da loja no mapa para recalcular o centro de operação e os raios de entrega concêntricos.
                   </p>
-                  <DeliveryMap />
+                  <DeliveryMap 
+                    storeLat={storeSettings?.storeLat || -19.916681}
+                    storeLng={storeSettings?.storeLng || -43.934493}
+                    radiuses={storeSettings?.deliveryRadius || [
+                      { id: 'rad-1', maxKm: 3, fee: 5.00, active: true },
+                      { id: 'rad-2', maxKm: 6, fee: 8.00, active: true },
+                      { id: 'rad-3', maxKm: 10, fee: 12.00, active: true }
+                    ]}
+                    onLocationChange={(lat, lng) => updateStoreSettings({ storeLat: lat, storeLng: lng })}
+                  />
                 </div>
               </div>
 
@@ -2417,25 +2426,29 @@ export default function AdminView({ onLogout }) {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {coupons.map(cp => (
-                      <div key={cp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: '8px' }}>
-                        <div>
-                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fde047', letterSpacing: '0.5px' }}>{cp.code}</div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                            {cp.type === 'fixed' ? `R$ ${cp.discount.toFixed(2)} OFF` : `${cp.discount}% OFF`} • Mínimo: R$ {Number(cp.minOrder || 0).toFixed(2)}
+                    {coupons.map(cp => {
+                      const discountVal = Number(cp.discount ?? cp.value ?? 0);
+                      const minVal = Number(cp.minOrder || 0);
+                      return (
+                        <div key={cp.id || cp.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: '8px' }}>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fde047', letterSpacing: '0.5px' }}>{cp.code}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                              {cp.type === 'fixed' ? `R$ ${discountVal.toFixed(2)} OFF` : `${discountVal}% OFF`} • Mínimo: R$ {minVal.toFixed(2)}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{cp.usesCount || 0} usos</span>
+                            <button
+                              onClick={() => { if (confirm(`Excluir cupom ${cp.code}?`)) deleteCoupon(cp.code || cp.id); }}
+                              style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{cp.usesCount || 0} usos</span>
-                          <button
-                            onClick={() => { if (confirm(`Excluir cupom ${cp.code}?`)) deleteCoupon(cp.id); }}
-                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 

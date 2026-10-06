@@ -240,7 +240,29 @@ const INITIAL_STORE_SETTINGS = {
   loyaltyTargetStamps: 10,
   loyaltyMinOrder: 20.00,
   loyaltyRewardText: '1 Prensadinho Grátis ou R$ 20 OFF',
-  autoPackagingDeduction: true
+  autoPackagingDeduction: true,
+  deliveryFeesByNeighborhood: {
+    'Centro': 5.00,
+    'Bela Vista': 7.00,
+    'São José': 8.00,
+    'Industrial': 10.00,
+    'Planalto': 12.00
+  },
+  deliveryRadius: [
+    { id: 'rad-1', maxKm: 3, fee: 5.00, active: true },
+    { id: 'rad-2', maxKm: 6, fee: 8.00, active: true },
+    { id: 'rad-3', maxKm: 10, fee: 12.00, active: true }
+  ],
+  paymentFeeRates: {
+    credit: 3.5,
+    debit: 1.5,
+    pix: 0,
+    cash: 0
+  },
+  loyalty: {
+    requiredOrders: 10,
+    rewardValue: 20
+  }
 };
 
 // 5. BAIRROS DE ENTREGA
@@ -261,9 +283,9 @@ const INITIAL_RADIUSES = [
 
 // 7. CUPONS DE DESCONTO
 const INITIAL_COUPONS = [
-  { code: 'BEMVINDO10', type: 'percent', value: 10, minOrder: 20.00, usesCount: 0, active: true },
-  { code: 'NUU5', type: 'fixed', value: 5.00, minOrder: 25.00, usesCount: 0, active: true },
-  { code: 'FRETENUU', type: 'free_delivery', value: 0, minOrder: 45.00, usesCount: 0, active: true }
+  { id: 'cp-1', code: 'BEMVINDO10', type: 'percent', value: 10, discount: 10, minOrder: 20.00, usesCount: 0, active: true },
+  { id: 'cp-2', code: 'NUU5', type: 'fixed', value: 5.00, discount: 5.00, minOrder: 25.00, usesCount: 0, active: true },
+  { id: 'cp-3', code: 'FRETENUU', type: 'free_delivery', value: 0, discount: 0, minOrder: 45.00, usesCount: 0, active: true }
 ];
 
 // 8. MOTOBOYS CADASTRADOS
@@ -607,10 +629,11 @@ export const SystemProvider = ({ children }) => {
     }
 
     let discount = 0;
+    const couponVal = Number(coupon.value ?? coupon.discount ?? 0);
     if (coupon.type === 'percent') {
-      discount = (subtotal * coupon.value) / 100;
+      discount = (subtotal * couponVal) / 100;
     } else if (coupon.type === 'fixed') {
-      discount = Math.min(coupon.value, subtotal);
+      discount = Math.min(couponVal, subtotal);
     } else if (coupon.type === 'free_delivery') {
       discount = deliveryFee;
     }
@@ -626,18 +649,25 @@ export const SystemProvider = ({ children }) => {
   const upsertCoupon = (couponData) => {
     setCoupons(prev => {
       const upper = couponData.code.trim().toUpperCase();
-      const existing = prev.findIndex(c => c.code.toUpperCase() === upper);
+      const numVal = parseFloat(couponData.value ?? couponData.discount ?? 0);
+      const existing = prev.findIndex(c => (c.id && c.id === couponData.id) || c.code.toUpperCase() === upper);
+      const normalized = {
+        ...couponData,
+        code: upper,
+        value: numVal,
+        discount: numVal
+      };
       if (existing > -1) {
         const copy = [...prev];
-        copy[existing] = { ...copy[existing], ...couponData, code: upper };
+        copy[existing] = { ...copy[existing], ...normalized };
         return copy;
       }
-      return [...prev, { ...couponData, code: upper, usesCount: 0 }];
+      return [...prev, { ...normalized, id: couponData.id || 'cp-' + Date.now(), usesCount: 0 }];
     });
   };
 
-  const deleteCoupon = (code) => {
-    setCoupons(prev => prev.filter(c => c.code.toUpperCase() !== code.toUpperCase()));
+  const deleteCoupon = (identifier) => {
+    setCoupons(prev => prev.filter(c => c.id !== identifier && c.code.toUpperCase() !== String(identifier).toUpperCase()));
   };
 
   // --- Gestão de Bairros de Entrega ---

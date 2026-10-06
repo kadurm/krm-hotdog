@@ -17,64 +17,91 @@ export default function DeliveryMap({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Inicializa o mapa Leaflet
-    const map = L.map(mapContainerRef.current, {
-      center: [storeLat, storeLng],
-      zoom: 13,
-      zoomControl: true
-    });
+    // Garante limpeza de instâncias anteriores e _leaflet_id
+    if (mapContainerRef.current._leaflet_id) {
+      delete mapContainerRef.current._leaflet_id;
+    }
+    if (mapInstanceRef.current) {
+      try {
+        mapInstanceRef.current.remove();
+      } catch (e) {}
+      mapInstanceRef.current = null;
+    }
 
-    mapInstanceRef.current = map;
+    try {
+      // Inicializa o mapa Leaflet
+      const map = L.map(mapContainerRef.current, {
+        center: [storeLat, storeLng],
+        zoom: 13,
+        zoomControl: true
+      });
 
-    // Camada de mapa OpenStreetMap (gratuita e sem API key)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19
-    }).addTo(map);
+      mapInstanceRef.current = map;
 
-    // Ícone personalizado para a loja
-    const storeIcon = L.divIcon({
-      className: 'store-map-icon',
-      html: `
-        <div style="background-color: #eab308; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 2px solid #fff; font-size: 18px;">
-          🌭
+      // Camada de mapa OpenStreetMap (gratuita e sem API key)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Ícone personalizado para a loja
+      const storeIcon = L.divIcon({
+        className: 'store-map-icon',
+        html: `
+          <div style="background-color: #eab308; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 2px solid #fff; font-size: 18px;">
+            🌭
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+
+      // Marcador da loja
+      const marker = L.marker([storeLat, storeLng], {
+        icon: storeIcon,
+        draggable: isEditable
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div style="text-align: center; color: #000; font-family: sans-serif;">
+          <strong>Nuu Prensado</strong><br/>
+          <span style="font-size: 0.8rem; color: #666;">Localização da Loja</span>
         </div>
-      `,
-      iconSize: [36, 36],
-      iconAnchor: [18, 18]
-    });
+      `);
 
-    // Marcador da loja
-    const marker = L.marker([storeLat, storeLng], {
-      icon: storeIcon,
-      draggable: isEditable
-    }).addTo(map);
+      markerRef.current = marker;
 
-    marker.bindPopup(`
-      <div style="text-align: center; color: #000; font-family: sans-serif;">
-        <strong>Nuu Prensado</strong><br/>
-        <span style="font-size: 0.8rem; color: #666;">Localização da Loja</span>
-      </div>
-    `);
+      if (isEditable && onLocationChange) {
+        marker.on('dragend', (e) => {
+          const { lat, lng } = e.target.getLatLng();
+          onLocationChange(lat, lng);
+        });
 
-    markerRef.current = marker;
+        map.on('click', (e) => {
+          const { lat, lng } = e.latlng;
+          marker.setLatLng([lat, lng]);
+          onLocationChange(lat, lng);
+        });
+      }
 
-    if (isEditable && onLocationChange) {
-      marker.on('dragend', (e) => {
-        const { lat, lng } = e.target.getLatLng();
-        onLocationChange(lat, lng);
-      });
+      // Requisita recalculo de tamanho após renderizar
+      setTimeout(() => {
+        try {
+          map.invalidateSize();
+        } catch (e) {}
+      }, 200);
 
-      map.on('click', (e) => {
-        const { lat, lng } = e.latlng;
-        marker.setLatLng([lat, lng]);
-        onLocationChange(lat, lng);
-      });
+    } catch (err) {
+      console.warn('Erro ao inicializar mapa Leaflet:', err);
     }
 
     return () => {
-      map.remove();
-      mapInstanceRef.current = null;
+      try {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+      } catch (e) {}
     };
   }, []);
 
@@ -83,36 +110,45 @@ export default function DeliveryMap({
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Atualiza marcador
-    if (markerRef.current) {
-      markerRef.current.setLatLng([storeLat, storeLng]);
-    }
+    try {
+      // Atualiza marcador
+      if (markerRef.current) {
+        markerRef.current.setLatLng([storeLat, storeLng]);
+      }
 
-    // Limpa círculos antigos
-    circlesRef.current.forEach(c => map.removeLayer(c));
-    circlesRef.current = [];
-
-    // Cores para os raios
-    const colors = ['#22c55e', '#eab308', '#f97316', '#ef4444', '#a855f7'];
-
-    // Adiciona círculos de raio concêntricos
-    radiuses.filter(r => r.active).forEach((radius, idx) => {
-      const color = colors[idx % colors.length];
-      const circle = L.circle([storeLat, storeLng], {
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.12,
-        weight: 2,
-        radius: radius.maxKm * 1000 // metros
-      }).addTo(map);
-
-      circle.bindTooltip(`Raio de até ${radius.maxKm} km • Taxa: R$ ${radius.fee.toFixed(2)}`, {
-        permanent: false,
-        direction: 'top'
+      // Limpa círculos antigos
+      circlesRef.current.forEach(c => {
+        try { map.removeLayer(c); } catch (e) {}
       });
+      circlesRef.current = [];
 
-      circlesRef.current.push(circle);
-    });
+      // Cores para os raios
+      const colors = ['#22c55e', '#eab308', '#f97316', '#ef4444', '#a855f7'];
+
+      // Adiciona círculos de raio concêntricos
+      (radiuses || []).filter(r => r && r.active).forEach((radius, idx) => {
+        const color = colors[idx % colors.length];
+        const km = Number(radius.maxKm) || 1;
+        const fee = Number(radius.fee || 0);
+
+        const circle = L.circle([storeLat, storeLng], {
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.12,
+          weight: 2,
+          radius: km * 1000 // metros
+        }).addTo(map);
+
+        circle.bindTooltip(`Raio de até ${km} km • Taxa: R$ ${fee.toFixed(2)}`, {
+          permanent: false,
+          direction: 'top'
+        });
+
+        circlesRef.current.push(circle);
+      });
+    } catch (err) {
+      console.warn('Erro ao atualizar raios no mapa:', err);
+    }
   }, [storeLat, storeLng, radiuses]);
 
   return (

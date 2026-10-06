@@ -391,13 +391,15 @@ export default function DeliveryView({
             {/* IMAGEM PRINCIPAL DO PRODUTO */}
             <div className="product-image-container animate-product-enter" key={activeProduct.id}>
                 <div 
-                  className="product-circle" 
+                  className="product-circle product-mockup" 
                   style={{ 
-                    width: '420px', 
-                    height: '420px', 
-                    borderRadius: '50%', 
-                    backgroundColor: 'rgba(0,0,0,0.25)', 
-                    boxShadow: '0 30px 60px rgba(0,0,0,0.45), inset 0 0 20px rgba(0,0,0,0.3)', 
+                    width: '480px', 
+                    maxWidth: '90vw',
+                    aspectRatio: '4 / 3', 
+                    height: 'auto', 
+                    borderRadius: '24px', 
+                    backgroundColor: '#0a0a0a', 
+                    boxShadow: `0 30px 60px rgba(0,0,0,0.5), 0 0 35px ${activeProduct.color}35`, 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
@@ -414,10 +416,9 @@ export default function DeliveryView({
                     style={{ 
                       width: '100%', 
                       height: '100%', 
-                      objectFit: 'cover',
+                      objectFit: 'contain',
                       objectPosition: 'center',
-                      display: 'block',
-                      borderRadius: '50%'
+                      display: 'block'
                     }} 
                   />
                 </div>
@@ -474,7 +475,7 @@ export default function DeliveryView({
                 border: `1px solid rgba(255,255,255,0.1)`, 
                 borderTop: `4px solid ${product.color}`,
                 borderRadius: '16px', 
-                padding: '2rem', 
+                padding: '1.5rem', 
                 display: 'flex', 
                 flexDirection: 'column', 
                 alignItems: 'center', 
@@ -485,9 +486,55 @@ export default function DeliveryView({
               onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-10px)'}
               onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
-              {/* Ícone representando o prato na grade */}
-              <div className="grid-icon" style={{ fontSize: '4rem', marginBottom: '1rem', filter: 'drop-shadow(0 10px 10px rgba(0,0,0,0.5))' }}>
-                {product.floaties[0]} 
+              {/* Foto Real do Produto na Grade */}
+              <div 
+                className="grid-card-image"
+                style={{ 
+                  width: '100%', 
+                  height: '190px', 
+                  borderRadius: '12px', 
+                  overflow: 'hidden', 
+                  marginBottom: '1.25rem',
+                  position: 'relative',
+                  backgroundColor: '#0a0a0a',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                  border: '1px solid rgba(255,255,255,0.08)'
+                }}
+              >
+                {product.image ? (
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover', 
+                      objectPosition: 'center',
+                      display: 'block',
+                      transition: 'transform 0.4s ease'
+                    }} 
+                    className="grid-card-img"
+                  />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>
+                    {product.floaties?.[0] || '🌭'}
+                  </div>
+                )}
+                <span 
+                  style={{ 
+                    position: 'absolute', 
+                    top: '8px', 
+                    right: '8px', 
+                    background: 'rgba(0,0,0,0.65)', 
+                    backdropFilter: 'blur(6px)', 
+                    padding: '4px 8px', 
+                    borderRadius: '20px', 
+                    fontSize: '1rem',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  {product.floaties?.[0] || '🌭'}
+                </span>
               </div>
               
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: product.color }}>
@@ -899,6 +946,11 @@ export default function DeliveryView({
               </button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {selectedProduct.image && (
+                <div style={{ width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 20px rgba(0,0,0,0.3)' }}>
+                  <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
               <div>
                 <h4 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
                   {selectedProduct.name}

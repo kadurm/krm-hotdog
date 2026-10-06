@@ -215,7 +215,7 @@ export default function AdminView({ onLogout }) {
       setProdDesc(product.description);
       setProdCat(product.category);
       setProdActive(product.active);
-      setProdImage(product.image || '/images/prensadinho.png');
+      setProdImage(product.image || '/logoNuuPrensado-semfundo.png');
       setProdRecipe(product.recipe || []);
     } else {
       setEditingProduct(null);
@@ -224,7 +224,7 @@ export default function AdminView({ onLogout }) {
       setProdDesc('');
       setProdCat('prensados');
       setProdActive(true);
-      setProdImage('/images/prensadinho.png');
+      setProdImage('/logoNuuPrensado-semfundo.png');
       setProdRecipe(inventory.map(i => ({ ingredientId: i.id, quantity: 0 })));
     }
     setIsProductModalOpen(true);
@@ -1363,10 +1363,13 @@ export default function AdminView({ onLogout }) {
                       <tr key={prod.id}>
                         <td>
                           <img 
-                            src={prod.image || '/images/prensadinho.png'} 
+                            src={prod.image || '/logoNuuPrensado-semfundo.png'} 
                             alt={prod.name} 
                             style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'contain', backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-glass)', padding: '2px' }}
-                            onError={(e) => { e.currentTarget.src = '/images/prensadinho.png'; }}
+                            onError={(e) => { 
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/logoNuuPrensado-semfundo.png'; 
+                            }}
                           />
                         </td>
                         <td>
@@ -1944,17 +1947,17 @@ export default function AdminView({ onLogout }) {
       {/* MODAL: CADASTRO/EDIÇÃO DE PRODUTO */}
       {isProductModalOpen && (
         <div className="modal-overlay" onClick={() => setIsProductModalOpen(false)}>
-          <div className="modal-content animate-fade-in" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
                 {editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
               </h3>
-              <button onClick={() => setIsProductModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+              <button type="button" onClick={() => setIsProductModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSaveProduct}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '72vh', overflowY: 'auto' }}>
+            <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nome do Produto</label>
                   <input type="text" required value={prodName} onChange={e => setProdName(e.target.value)} placeholder="Ex: X-Salada Premium" />
@@ -2005,7 +2008,10 @@ export default function AdminView({ onLogout }) {
                           src={prodImage} 
                           alt="Prévia" 
                           style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
-                          onError={(e) => { e.currentTarget.src = '/images/prensadinho.png'; }}
+                          onError={(e) => { 
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/logoNuuPrensado-semfundo.png'; 
+                          }}
                         />
                       ) : (
                         <Image size={24} color="var(--text-muted)" />
@@ -2039,7 +2045,7 @@ export default function AdminView({ onLogout }) {
                         type="text" 
                         value={prodImage} 
                         onChange={e => setProdImage(e.target.value)} 
-                        placeholder="Ou digite a URL/caminho da foto (ex: /images/prensado.png)" 
+                        placeholder="Ou digite a URL/caminho da foto (ex: /Produtos/Prensadão de Costela.jpeg)" 
                         style={{ fontSize: '0.78rem', padding: '6px 10px' }}
                       />
                     </div>
@@ -2050,14 +2056,10 @@ export default function AdminView({ onLogout }) {
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fotos Prontas no Sistema (Clique para selecionar):</span>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
                       {[
-                        { name: 'Bacon', path: '/images/prensadinho.png' },
-                        { name: 'Frango', path: '/images/prensado.png' },
-                        { name: 'Costela', path: '/images/costela.png' },
-                        { name: 'Pernil', path: '/images/pernil.png' },
-                        { name: 'Carne Seca', path: '/images/carne-seca.png' },
-                        { name: 'Real Costela', path: '/Produtos/Prensadão de Costela.jpeg' },
-                        { name: 'Real Frango', path: '/Produtos/Prensadão de Frango.jpeg' },
-                        { name: 'Real Pernil', path: '/Produtos/Prensadão de Pernil.jpeg' },
+                        { name: 'Costela', path: '/Produtos/Prensadão de Costela.jpeg' },
+                        { name: 'Frango', path: '/Produtos/Prensadão de Frango.jpeg' },
+                        { name: 'Pernil', path: '/Produtos/Prensadão de Pernil.jpeg' },
+                        { name: 'Logo Nuu', path: '/logoNuuPrensado-semfundo.png' },
                       ].map(preset => (
                         <button
                           key={preset.path}

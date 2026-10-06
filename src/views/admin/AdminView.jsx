@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSystem, playNotificationChime } from '../../contexts/SystemContext';
+import ThermalPrintReceipt from '../../components/ThermalPrintReceipt';
+import SupabaseConfigModal from '../../components/SupabaseConfigModal';
+import CashShiftModal from '../../components/CashShiftModal';
+import DeliveryMap from '../../components/DeliveryMap';
+import OrderTimerBadge from '../../components/OrderTimerBadge';
+import { isSupabaseConfigured } from '../../services/supabase';
 import { 
   LayoutDashboard, ChefHat, Package, BadgeDollarSign, 
   FileText, PlusCircle, Trash2, AlertTriangle, 
@@ -7,13 +13,24 @@ import {
   Utensils, X, Plus, Edit, PlusSquare, LogOut,
   ChevronLeft, ChevronRight, Menu, ShoppingBag, Sparkles,
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
-  Volume2, VolumeX, Upload, Image, Pause, Play
+  Volume2, VolumeX, Upload, Image, Pause, Play,
+  MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag
 } from 'lucide-react';
 
 export default function AdminView({ onLogout }) {
   const { 
     products, inventory, orders, transactions, invoices, quotations,
     complements = [],
+    motoboys = [],
+    upsertMotoboy,
+    assignOrderMotoboy,
+    settleMotoboyPayments,
+    storeSettings = {},
+    updateStoreSettings,
+    coupons = [],
+    upsertCoupon,
+    deleteCoupon,
+    currentShift,
     updateOrderStatus, deleteOrder, adjustStock, manualStockInflow, registerInflowInvoice, 
     upsertProduct, deleteProduct, toggleProductStatus,
     toggleComplementStatus, upsertComplement, deleteComplement,
@@ -24,11 +41,37 @@ export default function AdminView({ onLogout }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  // Estados dos novos modais
+  const [receiptOrder, setReceiptOrder] = useState(null);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+
+  // Estados para Gestão de Motoboy
+  const [isMotoboyModalOpen, setIsMotoboyModalOpen] = useState(false);
+  const [editingMotoboy, setEditingMotoboy] = useState(null);
+  const [motoboyName, setMotoboyName] = useState('');
+  const [motoboyPhone, setMotoboyPhone] = useState('');
+  const [motoboyVehicle, setMotoboyVehicle] = useState('Moto Honda CG 160');
+  const [motoboyPix, setMotoboyPix] = useState('');
+  const [motoboyFee, setMotoboyFee] = useState('6.00');
+
+  // Estados para Gestão de Cupons
+  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponType, setCouponType] = useState('fixed');
+  const [couponDiscount, setCouponDiscount] = useState('10');
+  const [couponMinOrder, setCouponMinOrder] = useState('30');
+
+  // Estados para Bairros de Entrega
+  const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
+  const [newNeighborhoodFee, setNewNeighborhoodFee] = useState('7.00');
+
   const getTabFromHash = () => {
     const hash = window.location.hash;
     if (hash.startsWith('#admin/')) {
       const tab = hash.replace('#admin/', '');
-      if (['dashboard', 'orders', 'inventory', 'products', 'cotacao', 'finance', 'nfe'].includes(tab)) {
+      if (['dashboard', 'orders', 'inventory', 'products', 'logistics', 'store', 'cotacao', 'finance', 'nfe'].includes(tab)) {
         return tab;
       }
     }
@@ -477,7 +520,7 @@ export default function AdminView({ onLogout }) {
   const tabDetails = {
     dashboard: { label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     orders: { 
-      label: 'Cozinha & Pedidos', 
+      label: 'Cozinha & Pedidos (KDS)', 
       icon: <ChefHat size={20} />, 
       badge: (pendingOrders.length + preparingOrders.length + shippingOrders.length) > 0 ? (pendingOrders.length + preparingOrders.length + shippingOrders.length) : null,
       badgeColor: 'var(--color-brand)' 
@@ -488,7 +531,19 @@ export default function AdminView({ onLogout }) {
       badge: criticalStockCount > 0 ? criticalStockCount : null,
       badgeColor: 'var(--color-danger)' 
     },
-    products: { label: 'Cardápio / Produtos', icon: <Utensils size={20} /> },
+    products: { label: 'Cardápio & CMV', icon: <Utensils size={20} /> },
+    logistics: { 
+      label: 'Logística & Motoboys', 
+      icon: <Bike size={20} />,
+      badge: shippingOrders.length > 0 ? shippingOrders.length : null,
+      badgeColor: 'var(--color-info)'
+    },
+    store: { 
+      label: 'Loja & Entregas', 
+      icon: <Store size={20} />,
+      badge: !storeSettings?.isOpen ? 'Fechada' : null,
+      badgeColor: 'var(--color-danger)'
+    },
     cotacao: { label: 'Cotações', icon: <ShoppingBag size={20} /> },
     finance: { label: 'Financeiro', icon: <BadgeDollarSign size={20} /> },
     nfe: { label: 'Notas Fiscais (NF-e)', icon: <FileText size={20} /> }
@@ -687,10 +742,75 @@ export default function AdminView({ onLogout }) {
                 justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
                 padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
               }}
-              title="Cardápio / Produtos"
+              title="Cardápio & CMV"
             >
               <Utensils size={20} />
-              {!isSidebarCollapsed && <span>Cardápio / Produtos</span>}
+              {!isSidebarCollapsed && <span>Cardápio & CMV</span>}
+            </button>
+
+            {/* Logística & Motoboys */}
+            <button 
+              onClick={() => changeTab('logistics')} 
+              className={`nav-link ${activeTab === 'logistics' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                position: 'relative',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Logística & Motoboys"
+            >
+              <Bike size={20} />
+              {!isSidebarCollapsed && <span>Logística & Motoboys</span>}
+              {shippingOrders.length > 0 && (
+                <span style={{ 
+                  position: 'absolute', 
+                  top: isSidebarCollapsed ? '2px' : '50%',
+                  right: isSidebarCollapsed ? '2px' : '12px',
+                  transform: isSidebarCollapsed ? 'none' : 'translateY(-50%)',
+                  backgroundColor: 'var(--color-info)', 
+                  color: '#fff', 
+                  fontSize: '0.7rem', 
+                  padding: '2px 5px', 
+                  borderRadius: '99px',
+                  fontWeight: 'bold',
+                  minWidth: '18px',
+                  textAlign: 'center'
+                }}>
+                  {shippingOrders.length}
+                </span>
+              )}
+            </button>
+
+            {/* Loja & Entregas */}
+            <button 
+              onClick={() => changeTab('store')} 
+              className={`nav-link ${activeTab === 'store' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Loja & Entregas"
+            >
+              <Store size={20} />
+              {!isSidebarCollapsed && <span>Loja & Entregas</span>}
+              {!storeSettings?.isOpen && (
+                <span style={{ 
+                  position: 'absolute', 
+                  top: isSidebarCollapsed ? '2px' : '50%',
+                  right: isSidebarCollapsed ? '2px' : '12px',
+                  transform: isSidebarCollapsed ? 'none' : 'translateY(-50%)',
+                  backgroundColor: 'var(--color-danger)', 
+                  color: '#fff', 
+                  fontSize: '0.65rem', 
+                  padding: '1px 5px', 
+                  borderRadius: '4px',
+                  fontWeight: 'bold'
+                }}>
+                  OFF
+                </span>
+              )}
             </button>
 
             {/* Cotações */}
@@ -738,6 +858,53 @@ export default function AdminView({ onLogout }) {
               <FileText size={20} />
               {!isSidebarCollapsed && <span>Notas Fiscais (NF-e)</span>}
             </button>
+
+            {/* BOTÕES DE ATALHO RÁPIDO: CAIXA E SUPABASE */}
+            <div style={{ marginTop: '1rem', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.15)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setIsCashModalOpen(true)}
+                className="btn-secondary"
+                style={{
+                  width: '100%',
+                  justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                  padding: isSidebarCollapsed ? '10px' : '7px 10px',
+                  fontSize: '0.78rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: currentShift ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                  borderColor: currentShift ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)',
+                  color: currentShift ? '#4ade80' : '#f87171'
+                }}
+                title={currentShift ? "Caixa Aberto" : "Caixa Fechado"}
+              >
+                <DollarSign size={16} />
+                {!isSidebarCollapsed && <span>{currentShift ? 'Caixa: Aberto' : 'Caixa: Fechado'}</span>}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsSupabaseModalOpen(true)}
+                className="btn-secondary"
+                style={{
+                  width: '100%',
+                  justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                  padding: isSidebarCollapsed ? '10px' : '7px 10px',
+                  fontSize: '0.78rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.1)' : 'rgba(245,158,11,0.1)',
+                  borderColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.3)' : 'rgba(245,158,11,0.3)',
+                  color: isSupabaseConfigured() ? '#3ecf8e' : '#f59e0b'
+                }}
+                title="Conexão com Supabase"
+              >
+                <Database size={16} />
+                {!isSidebarCollapsed && <span>{isSupabaseConfigured() ? 'Supabase: Nuvem' : 'Supabase: Local'}</span>}
+              </button>
+            </div>
 
             {/* Sair do Painel */}
             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-glass)' }}>
@@ -948,10 +1115,11 @@ export default function AdminView({ onLogout }) {
                       const cleanPhone = order.phone ? order.phone.replace(/\D/g, '') : '';
                       return (
                         <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                          {/* Cabeçalho do Card */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {/* Cabeçalho do Card com Cronômetro e Ações */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                              <OrderTimerBadge orderDate={order.date} />
                               <button 
                                 onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
                                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
@@ -960,10 +1128,31 @@ export default function AdminView({ onLogout }) {
                                 <Trash2 size={13} />
                               </button>
                             </div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Clock size={13} />
-                              {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                onClick={() => setReceiptOrder(order)}
+                                style={{
+                                  background: 'rgba(56,189,248,0.15)',
+                                  border: '1px solid rgba(56,189,248,0.3)',
+                                  color: '#38bdf8',
+                                  borderRadius: '4px',
+                                  padding: '3px 8px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Imprimir Comanda Térmica 58mm/80mm"
+                              >
+                                <Printer size={12} /> Comanda
+                              </button>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={13} />
+                                {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            </div>
                           </div>
 
                           {/* Cliente e WhatsApp */}
@@ -983,7 +1172,7 @@ export default function AdminView({ onLogout }) {
                           </div>
 
                           {/* Badges de Tipo e Pagamento */}
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
                             <span style={{ 
                               fontSize: '0.72rem', 
                               padding: '2px 8px', 
@@ -1015,8 +1204,18 @@ export default function AdminView({ onLogout }) {
 
                           {/* Endereço de entrega se for delivery */}
                           {order.type === 'delivery' && order.address && (
-                            <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '10px', backgroundColor: 'rgba(0,0,0,0.25)', padding: '6px 8px', borderRadius: '4px', lineHeight: '1.3' }}>
-                              📍 {order.address}
+                            <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '8px', backgroundColor: 'rgba(0,0,0,0.25)', padding: '6px 8px', borderRadius: '4px', lineHeight: '1.3' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>📍 {order.address}</span>
+                                <a 
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#38bdf8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }}
+                                >
+                                  <MapPin size={11} /> GPS
+                                </a>
+                              </div>
                             </div>
                           )}
 
@@ -1026,6 +1225,7 @@ export default function AdminView({ onLogout }) {
                               {order.items.map((item, idx) => (
                                 <li key={idx} style={{ marginBottom: '4px' }}>
                                   <strong>{item.quantity}x</strong> {item.name}
+                                  {item.notes && <div style={{ fontSize: '0.75rem', color: '#fde047', fontStyle: 'italic' }}>Obs: {item.notes}</div>}
                                 </li>
                               ))}
                             </ul>
@@ -1069,9 +1269,10 @@ export default function AdminView({ onLogout }) {
                       return (
                         <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
                           {/* Cabeçalho do Card */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                              <OrderTimerBadge orderDate={order.date} />
                               <button 
                                 onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
                                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
@@ -1080,10 +1281,31 @@ export default function AdminView({ onLogout }) {
                                 <Trash2 size={13} />
                               </button>
                             </div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Clock size={13} />
-                              {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                onClick={() => setReceiptOrder(order)}
+                                style={{
+                                  background: 'rgba(56,189,248,0.15)',
+                                  border: '1px solid rgba(56,189,248,0.3)',
+                                  color: '#38bdf8',
+                                  borderRadius: '4px',
+                                  padding: '3px 8px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Imprimir Comanda Térmica"
+                              >
+                                <Printer size={12} /> Comanda
+                              </button>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={13} />
+                                {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            </div>
                           </div>
 
                           {/* Cliente e WhatsApp */}
@@ -1103,7 +1325,7 @@ export default function AdminView({ onLogout }) {
                           </div>
 
                           {/* Badges */}
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
                             <span style={{ 
                               fontSize: '0.72rem', 
                               padding: '2px 8px', 
@@ -1133,18 +1355,46 @@ export default function AdminView({ onLogout }) {
                             </span>
                           </div>
 
+                          {/* Atribuição de Motoboy se for Delivery */}
+                          {order.type === 'delivery' && (
+                            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(0,0,0,0.25)', padding: '5px 8px', borderRadius: '6px' }}>
+                              <span style={{ fontSize: '0.72rem', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <Bike size={12} /> Entregador:
+                              </span>
+                              <select
+                                value={order.motoboyId || ''}
+                                onChange={(e) => assignOrderMotoboy(order.id, e.target.value)}
+                                style={{
+                                  flex: 1,
+                                  fontSize: '0.72rem',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: 'rgba(0,0,0,0.5)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255,255,255,0.15)'
+                                }}
+                              >
+                                <option value="">Atribuir Motoboy...</option>
+                                {motoboys.map(m => (
+                                  <option key={m.id} value={m.id}>{m.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
                           {/* Itens do Pedido */}
                           <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: '8px 10px', borderRadius: '6px', margin: '8px 0' }}>
                             <ul style={{ paddingLeft: '15px', fontSize: '0.82rem', color: '#e2e8f0', margin: 0 }}>
                               {order.items.map((item, idx) => (
                                 <li key={idx} style={{ marginBottom: '4px' }}>
                                   <strong>{item.quantity}x</strong> {item.name}
+                                  {item.notes && <div style={{ fontSize: '0.75rem', color: '#fde047', fontStyle: 'italic' }}>Obs: {item.notes}</div>}
                                 </li>
                               ))}
                             </ul>
                           </div>
 
-                          {/* Rodapé: Total e Ação (SEMPRE move para Entrega/Retirada) */}
+                          {/* Rodapé: Total e Ação */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-glass)' }}>
                             <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-brand)' }}>R$ {order.total.toFixed(2)}</span>
                             <button 
@@ -1180,12 +1430,14 @@ export default function AdminView({ onLogout }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {shippingOrders.map(order => {
                       const cleanPhone = order.phone ? order.phone.replace(/\D/g, '') : '';
+                      const assignedMotoboy = motoboys.find(m => m.id === order.motoboyId);
                       return (
                         <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
                           {/* Cabeçalho do Card */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                              <OrderTimerBadge orderDate={order.date} />
                               <button 
                                 onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
                                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
@@ -1194,10 +1446,31 @@ export default function AdminView({ onLogout }) {
                                 <Trash2 size={13} />
                               </button>
                             </div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Clock size={13} />
-                              {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                onClick={() => setReceiptOrder(order)}
+                                style={{
+                                  background: 'rgba(56,189,248,0.15)',
+                                  border: '1px solid rgba(56,189,248,0.3)',
+                                  color: '#38bdf8',
+                                  borderRadius: '4px',
+                                  padding: '3px 8px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Imprimir Comanda"
+                              >
+                                <Printer size={12} /> Comanda
+                              </button>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={13} />
+                                {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            </div>
                           </div>
 
                           {/* Cliente e WhatsApp */}
@@ -1219,8 +1492,18 @@ export default function AdminView({ onLogout }) {
                           {/* Status de Destino */}
                           {order.type === 'delivery' ? (
                             <div style={{ fontSize: '0.78rem', color: '#93c5fd', backgroundColor: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', padding: '8px', borderRadius: '6px', marginBottom: '10px', lineHeight: '1.4' }}>
-                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
-                                <Bike size={14} /> Saiu para Entrega
+                              <div style={{ fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Bike size={14} /> {assignedMotoboy ? `Entregador: ${assignedMotoboy.name}` : 'Aguardando Entregador'}
+                                </span>
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#38bdf8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }}
+                                >
+                                  <MapPin size={11} /> GPS Rota
+                                </a>
                               </div>
                               <div>📍 {order.address}</div>
                             </div>
@@ -1502,13 +1785,21 @@ export default function AdminView({ onLogout }) {
                           <th style={{ width: '60px' }}>Foto</th>
                           <th>Produto</th>
                           <th>Categoria</th>
-                          <th>Preço</th>
+                          <th>Preço Venda</th>
+                          <th>CMV & Margem</th>
                           <th style={{ textAlign: 'center' }}>Disponibilidade (1-Clique)</th>
                           <th style={{ textAlign: 'center' }}>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {products.map(prod => (
+                        {products.map(prod => {
+                          const cmv = (prod.recipe || []).reduce((acc, r) => {
+                            const ing = inventory.find(i => i.id === r.ingredientId);
+                            return acc + ((ing?.unitCost || 0) * (r.quantity || 0));
+                          }, 0);
+                          const margem = prod.price > 0 ? (((prod.price - cmv) / prod.price) * 100).toFixed(0) : 0;
+
+                          return (
                           <tr key={prod.id} style={{ opacity: prod.active ? 1 : 0.75, transition: 'opacity 0.2s' }}>
                             <td>
                               <img 
@@ -1537,6 +1828,19 @@ export default function AdminView({ onLogout }) {
                             </td>
                             <td style={{ fontWeight: 700, color: 'var(--color-brand)' }}>
                               R$ {prod.price.toFixed(2)}
+                            </td>
+                            <td>
+                              <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>CMV: R$ {cmv.toFixed(2)}</div>
+                              <span style={{
+                                fontSize: '0.7rem',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: margem >= 50 ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)',
+                                color: margem >= 50 ? '#4ade80' : '#fde047',
+                                fontWeight: 700
+                              }}>
+                                Margem: {margem}%
+                              </span>
                             </td>
                             <td style={{ textAlign: 'center' }}>
                               <button
@@ -1613,7 +1917,8 @@ export default function AdminView({ onLogout }) {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        );
+                      })}
                       </tbody>
                     </table>
                   </div>
@@ -1752,6 +2057,431 @@ export default function AdminView({ onLogout }) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: LOGÍSTICA & GESTÃO DE MOTOBOYS */}
+          {activeTab === 'logistics' && (
+            <div className="animate-fade-in">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Bike size={24} color="var(--color-brand)" /> Logística & Gestão de Motoboys
+                  </h2>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Controle de entregadores, taxas por corrida, acertos diários e rotas GPS em tempo real.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setEditingMotoboy(null);
+                    setMotoboyName('');
+                    setMotoboyPhone('');
+                    setMotoboyVehicle('Moto Honda CG 160');
+                    setMotoboyPix('');
+                    setMotoboyFee('6.00');
+                    setIsMotoboyModalOpen(true);
+                  }}
+                  className="btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                >
+                  <Plus size={16} /> Cadastrar Entregador
+                </button>
+              </div>
+
+              {/* Resumo Rápido de Logística */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="glass-panel" style={{ padding: '14px', borderLeft: '4px solid #38bdf8' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Entregadores Ativos</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>{motoboys.filter(m => m.active).length}</div>
+                </div>
+                <div className="glass-panel" style={{ padding: '14px', borderLeft: '4px solid #f59e0b' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Entregas em Rota Agora</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>{shippingOrders.length}</div>
+                </div>
+                <div className="glass-panel" style={{ padding: '14px', borderLeft: '4px solid #4ade80' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total a Pagar aos Motoboys</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4ade80' }}>
+                    R$ {motoboys.reduce((acc, m) => acc + (m.pendingBalance || 0), 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabela de Motoboys Cadastrados */}
+              <div className="admin-table-container" style={{ marginBottom: '2rem' }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Telefone / WhatsApp</th>
+                      <th>Veículo</th>
+                      <th>Chave Pix</th>
+                      <th>Taxa/Corrida</th>
+                      <th>Entregas</th>
+                      <th>Saldo Pendente</th>
+                      <th style={{ textAlign: 'center' }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {motoboys.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                          Nenhum entregador cadastrado ainda. Clique em "Cadastrar Entregador".
+                        </td>
+                      </tr>
+                    ) : (
+                      motoboys.map(mb => {
+                        const cleanPhone = mb.phone ? mb.phone.replace(/\D/g, '') : '';
+                        return (
+                          <tr key={mb.id}>
+                            <td style={{ fontWeight: 700, color: '#fff' }}>{mb.name}</td>
+                            <td>
+                              {cleanPhone ? (
+                                <a 
+                                  href={`https://wa.me/55${cleanPhone}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#25D366', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}
+                                >
+                                  <Phone size={13} /> {mb.phone}
+                                </a>
+                              ) : mb.phone}
+                            </td>
+                            <td style={{ fontSize: '0.85rem' }}>{mb.vehicle || 'Moto'}</td>
+                            <td style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>{mb.pixKey || 'Não informada'}</td>
+                            <td style={{ fontWeight: 700 }}>R$ {Number(mb.feePerDelivery || 6).toFixed(2)}</td>
+                            <td style={{ fontWeight: 700 }}>{mb.completedDeliveries || 0}</td>
+                            <td style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.95rem' }}>
+                              R$ {Number(mb.pendingBalance || 0).toFixed(2)}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                {mb.pendingBalance > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Confirmar acerto de R$ ${Number(mb.pendingBalance).toFixed(2)} com ${mb.name}?`)) {
+                                        settleMotoboyPayments(mb.id);
+                                      }
+                                    }}
+                                    className="btn-primary"
+                                    style={{ padding: '4px 8px', fontSize: '0.72rem', backgroundColor: '#22c55e' }}
+                                    title="Realizar Acerto Financeiro"
+                                  >
+                                    Acertar R$
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setEditingMotoboy(mb);
+                                    setMotoboyName(mb.name);
+                                    setMotoboyPhone(mb.phone);
+                                    setMotoboyVehicle(mb.vehicle || '');
+                                    setMotoboyPix(mb.pixKey || '');
+                                    setMotoboyFee(String(mb.feePerDelivery || 6));
+                                    setIsMotoboyModalOpen(true);
+                                  }}
+                                  className="btn-secondary"
+                                  style={{ padding: '4px 8px', fontSize: '0.72rem' }}
+                                  title="Editar"
+                                >
+                                  <Edit size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Entregas em Rota no Momento */}
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Bike size={18} color="#38bdf8" /> Pedidos em Rota de Entrega ({shippingOrders.length})
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+                  {shippingOrders.map(order => {
+                    const mb = motoboys.find(m => m.id === order.motoboyId);
+                    return (
+                      <div key={order.id} className="glass-panel" style={{ padding: '14px', borderLeft: '4px solid #38bdf8' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--color-brand)' }}>#{order.id}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#93c5fd', fontWeight: 600 }}>
+                            {mb ? `🛵 ${mb.name}` : 'Aguardando Entregador'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>{order.customerName}</div>
+                        <div style={{ fontSize: '0.78rem', color: '#cbd5e1', margin: '4px 0 8px 0' }}>📍 {order.address}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px' }}>
+                          <span style={{ fontWeight: 800, color: '#fff' }}>R$ {order.total.toFixed(2)}</span>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-secondary"
+                            style={{ textDecoration: 'none', padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <MapPin size={12} /> Abrir GPS
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: CONTROLE DE LOJA, TAXAS, MAPA & FIDELIDADE */}
+          {activeTab === 'store' && (
+            <div className="animate-fade-in">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Store size={24} color="var(--color-brand)" /> Controle de Loja, Taxas & Fidelidade
+                  </h2>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Defina o status da loja, horários, taxas por bairro com raio no mapa, cupons de desconto e regras de fidelidade.
+                  </p>
+                </div>
+              </div>
+
+              {/* Bloco 1: Controle Liga/Desliga da Loja & Horários */}
+              <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sliders size={18} color="var(--color-brand)" /> Status de Atendimento & Horários
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', alignItems: 'center' }}>
+                  {/* Toggle Aberta/Fechada */}
+                  <div style={{
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: `1px solid ${storeSettings?.isOpen ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '1rem', color: storeSettings?.isOpen ? '#4ade80' : '#f87171' }}>
+                        {storeSettings?.isOpen ? '🟢 LOJA ABERTA' : '🔴 LOJA FECHADA'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {storeSettings?.isOpen ? 'Recebendo novos pedidos' : 'Pedidos temporariamente pausados'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => updateStoreSettings({ isOpen: !storeSettings?.isOpen })}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        backgroundColor: storeSettings?.isOpen ? '#ef4444' : '#22c55e',
+                        color: '#fff'
+                      }}
+                    >
+                      {storeSettings?.isOpen ? 'Fechar Loja' : 'Abrir Loja'}
+                    </button>
+                  </div>
+
+                  {/* Tempo Estimado e Frete Grátis */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Tempo Médio de Espera</label>
+                    <input
+                      type="text"
+                      value={storeSettings?.estimatedTime || '30 - 50 min'}
+                      onChange={(e) => updateStoreSettings({ estimatedTime: e.target.value })}
+                      placeholder="Ex: 35 - 50 min"
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Frete Grátis Acima de (R$)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      value={storeSettings?.freeDeliveryThreshold || 70}
+                      onChange={(e) => updateStoreSettings({ freeDeliveryThreshold: parseFloat(e.target.value) || 0 })}
+                      placeholder="Ex: 70"
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloco 2: Mapa de Entrega & Taxas por Bairro */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                {/* Tabela de Taxas por Bairro */}
+                <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MapPin size={18} color="#38bdf8" /> Taxas por Bairro
+                  </h3>
+
+                  {/* Formulário para adicionar bairro */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Nome do Bairro"
+                      value={newNeighborhoodName}
+                      onChange={(e) => setNewNeighborhoodName(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                    <input
+                      type="number"
+                      step="0.50"
+                      placeholder="Taxa R$"
+                      value={newNeighborhoodFee}
+                      onChange={(e) => setNewNeighborhoodFee(e.target.value)}
+                      style={{ width: '90px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (!newNeighborhoodName.trim()) return alert('Digite o nome do bairro');
+                        const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
+                        fees[newNeighborhoodName.trim()] = parseFloat(newNeighborhoodFee) || 0;
+                        updateStoreSettings({ deliveryFeesByNeighborhood: fees });
+                        setNewNeighborhoodName('');
+                      }}
+                      className="btn-primary"
+                      style={{ padding: '8px 14px', fontSize: '0.8rem' }}
+                    >
+                      Adicionar
+                    </button>
+                  </div>
+
+                  <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                    {Object.entries(storeSettings?.deliveryFeesByNeighborhood || {}).map(([bairro, fee]) => (
+                      <div key={bairro} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{bairro}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-brand)' }}>R$ {Number(fee).toFixed(2)}</span>
+                          <button
+                            onClick={() => {
+                              const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
+                              delete fees[bairro];
+                              updateStoreSettings({ deliveryFeesByNeighborhood: fees });
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px' }}
+                            title="Remover Bairro"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mapa Interativo de Raios de Entrega */}
+                <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MapPin size={18} color="var(--color-brand)" /> Raio de Entrega da Loja
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                    Arraste o pin da loja no mapa para recalcular o centro de operação e os raios de entrega concêntricos.
+                  </p>
+                  <DeliveryMap />
+                </div>
+              </div>
+
+              {/* Bloco 3: Cupons de Desconto & Regras de Fidelidade */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+                {/* Cupons de Desconto */}
+                <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Tag size={18} color="#f59e0b" /> Cupons de Desconto
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setEditingCoupon(null);
+                        setCouponCode('');
+                        setCouponType('fixed');
+                        setCouponDiscount('10');
+                        setCouponMinOrder('30');
+                        setIsCouponModalOpen(true);
+                      }}
+                      className="btn-primary"
+                      style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+                    >
+                      + Criar Cupom
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {coupons.map(cp => (
+                      <div key={cp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: '8px' }}>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fde047', letterSpacing: '0.5px' }}>{cp.code}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                            {cp.type === 'fixed' ? `R$ ${cp.discount.toFixed(2)} OFF` : `${cp.discount}% OFF`} • Mínimo: R$ {Number(cp.minOrder || 0).toFixed(2)}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{cp.usesCount || 0} usos</span>
+                          <button
+                            onClick={() => { if (confirm(`Excluir cupom ${cp.code}?`)) deleteCoupon(cp.id); }}
+                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Regras de Fidelidade Virtual */}
+                <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Award size={18} color="#eab308" /> Regras do Cartão Fidelidade Virtual
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                    Os selos são carimbados automaticamente a cada pedido concluído vinculado ao telefone do cliente.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                        Quantidade de Pedidos para Recompensa
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={storeSettings?.loyalty?.requiredOrders || 10}
+                        onChange={(e) => updateStoreSettings({
+                          loyalty: { ...storeSettings?.loyalty, requiredOrders: parseInt(e.target.value) || 10 }
+                        })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.9rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                        Valor do Desconto ao Completar os Selos (R$)
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        value={storeSettings?.loyalty?.rewardValue || 20}
+                        onChange={(e) => updateStoreSettings({
+                          loyalty: { ...storeSettings?.loyalty, rewardValue: parseFloat(e.target.value) || 20 }
+                        })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.9rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1978,6 +2708,13 @@ export default function AdminView({ onLogout }) {
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button 
+                    onClick={() => setIsCashModalOpen(true)}
+                    className="btn-primary"
+                    style={{ fontSize: '0.85rem', backgroundColor: '#38bdf8', color: '#000', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <DollarSign size={16} /> {currentShift?.isOpen ? 'Frente de Caixa (Aberto)' : 'Abrir Caixa'}
+                  </button>
+                  <button 
                     onClick={() => handleOpenTransactionModal(null, 'income')} 
                     className="btn-primary" 
                     style={{ fontSize: '0.85rem', backgroundColor: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -1991,6 +2728,88 @@ export default function AdminView({ onLogout }) {
                   >
                     <Plus size={16} /> Lançar Despesa
                   </button>
+                </div>
+              </div>
+
+              {/* Painel de Turno de Caixa & Taxas de Maquininha */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                {/* 1. Turno de Caixa */}
+                <div className="glass-panel" style={{ padding: '16px', borderLeft: `4px solid ${currentShift?.isOpen ? '#22c55e' : '#ef4444'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Frente de Caixa</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: currentShift?.isOpen ? '#4ade80' : '#f87171' }}>
+                        {currentShift?.isOpen ? '🟢 Turno Aberto' : '🔴 Caixa Fechado'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsCashModalOpen(true)}
+                      className="btn-secondary"
+                      style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                    >
+                      {currentShift?.isOpen ? 'Sangria / Fechar' : 'Abrir Turno'}
+                    </button>
+                  </div>
+                  {currentShift?.isOpen ? (
+                    <div style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div>Operador: <strong>{currentShift.operatorName}</strong></div>
+                      <div>Fundo de Troco: <strong>R$ {Number(currentShift.initialCash || 0).toFixed(2)}</strong></div>
+                      <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                        <span style={{ color: '#ef4444' }}>
+                          Sangrias: R$ {(currentShift.bleeds || []).reduce((acc, b) => acc + (b.value || 0), 0).toFixed(2)}
+                        </span>
+                        <span style={{ color: '#38bdf8' }}>
+                          Suprimentos: R$ {(currentShift.supplies || []).reduce((acc, s) => acc + (s.value || 0), 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      Inicie um turno com operador e troco inicial para registrar sangrias e conferência de fechamento cego.
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Taxas de Cartão & Adquirentes */}
+                <div className="glass-panel" style={{ padding: '16px', borderLeft: '4px solid #f59e0b' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Taxas de Maquininha</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>Desconto de Cartão</div>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(251,191,36,0.3)' }}>
+                      Configurável
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Taxa Crédito (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={storeSettings?.paymentFeeRates?.credit || 3.5}
+                        onChange={(e) => updateStoreSettings({
+                          paymentFeeRates: { ...(storeSettings?.paymentFeeRates || {}), credit: parseFloat(e.target.value) || 0 }
+                        })}
+                        style={{ padding: '4px 8px', fontSize: '0.8rem', width: '100%', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: '#fff', border: '1px solid var(--border-glass)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Taxa Débito (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={storeSettings?.paymentFeeRates?.debit || 1.5}
+                        onChange={(e) => updateStoreSettings({
+                          paymentFeeRates: { ...(storeSettings?.paymentFeeRates || {}), debit: parseFloat(e.target.value) || 0 }
+                        })}
+                        style={{ padding: '4px 8px', fontSize: '0.8rem', width: '100%', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: '#fff', border: '1px solid var(--border-glass)' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Aplicado nas vendas em cartão para obter o faturamento líquido real.
+                  </div>
                 </div>
               </div>
 
@@ -3117,6 +3936,202 @@ export default function AdminView({ onLogout }) {
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsQuotModalOpen(false)} className="btn-secondary">Cancelar</button>
                 <button type="submit" className="btn-primary">Salvar Cotação</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: IMPRESSÃO DE COMANDA TÉRMICA */}
+      {receiptOrder && (
+        <ThermalPrintReceipt 
+          order={receiptOrder} 
+          onClose={() => setReceiptOrder(null)} 
+        />
+      )}
+
+      {/* MODAL: CONFIGURAÇÃO / SINCRONIZAÇÃO SUPABASE */}
+      {isSupabaseModalOpen && (
+        <SupabaseConfigModal 
+          onClose={() => setIsSupabaseModalOpen(false)} 
+        />
+      )}
+
+      {/* MODAL: TURNO DE CAIXA (ABERTURA, SANGRIA, FECHAMENTO) */}
+      {isCashModalOpen && (
+        <CashShiftModal 
+          onClose={() => setIsCashModalOpen(false)} 
+        />
+      )}
+
+      {/* MODAL: CADASTRO / EDIÇÃO DE MOTOBOY */}
+      {isMotoboyModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '460px' }}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Bike size={20} color="var(--color-brand)" />
+                {editingMotoboy ? 'Editar Entregador' : 'Cadastrar Novo Entregador'}
+              </h3>
+              <button onClick={() => setIsMotoboyModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!motoboyName.trim()) return alert('Informe o nome do entregador');
+              upsertMotoboy({
+                id: editingMotoboy?.id,
+                name: motoboyName.trim(),
+                phone: motoboyPhone.trim(),
+                vehicle: motoboyVehicle.trim(),
+                pixKey: motoboyPix.trim(),
+                feePerDelivery: parseFloat(motoboyFee) || 6.00
+              });
+              setIsMotoboyModalOpen(false);
+            }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Nome Completo *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Carlos Oliveira"
+                    value={motoboyName}
+                    onChange={e => setMotoboyName(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>WhatsApp / Telefone</label>
+                    <input
+                      type="text"
+                      placeholder="(31) 99999-9999"
+                      value={motoboyPhone}
+                      onChange={e => setMotoboyPhone(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Veículo</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Honda CG 160"
+                      value={motoboyVehicle}
+                      onChange={e => setMotoboyVehicle(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Taxa por Corrida (R$)</label>
+                    <input
+                      type="number"
+                      step="0.50"
+                      required
+                      placeholder="6.00"
+                      value={motoboyFee}
+                      onChange={e => setMotoboyFee(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chave Pix</label>
+                    <input
+                      type="text"
+                      placeholder="CPF / Tel / Chave"
+                      value={motoboyPix}
+                      onChange={e => setMotoboyPix(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setIsMotoboyModalOpen(false)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="btn-primary">Salvar Entregador</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CADASTRO / EDIÇÃO DE CUPOM */}
+      {isCouponModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '420px' }}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Tag size={20} color="#f59e0b" />
+                {editingCoupon ? 'Editar Cupom' : 'Criar Novo Cupom de Desconto'}
+              </h3>
+              <button onClick={() => setIsCouponModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!couponCode.trim()) return alert('Informe o código do cupom');
+              upsertCoupon({
+                id: editingCoupon?.id,
+                code: couponCode.trim().toUpperCase(),
+                type: couponType,
+                discount: parseFloat(couponDiscount) || 0,
+                minOrder: parseFloat(couponMinOrder) || 0,
+                active: true
+              });
+              setIsCouponModalOpen(false);
+            }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Código do Cupom *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: NUU10, BEMVINDO, VIP"
+                    value={couponCode}
+                    onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                    style={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tipo de Desconto</label>
+                    <select value={couponType} onChange={e => setCouponType(e.target.value)}>
+                      <option value="fixed">Valor Fixo (R$)</option>
+                      <option value="percent">Porcentagem (%)</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Valor do Desconto *</label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      placeholder={couponType === 'fixed' ? '10.00' : '10'}
+                      value={couponDiscount}
+                      onChange={e => setCouponDiscount(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pedido Mínimo (R$)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    placeholder="30.00"
+                    value={couponMinOrder}
+                    onChange={e => setCouponMinOrder(e.target.value)}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    O cliente só poderá aplicar este cupom se o carrinho atingir este valor.
+                  </span>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setIsCouponModalOpen(false)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="btn-primary">Salvar Cupom</button>
               </div>
             </form>
           </div>

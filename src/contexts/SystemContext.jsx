@@ -1,4 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  getSupabaseClient, 
+  getSupabaseCredentials, 
+  saveSupabaseCredentials, 
+  isSupabaseConfigured,
+  SUPABASE_SCHEMA_SQL 
+} from '../services/supabase';
 
 // Campainha sonora para novos pedidos na cozinha
 export const playNotificationChime = () => {
@@ -29,7 +36,9 @@ export const playNotificationChime = () => {
 
 const SystemContext = createContext(null);
 
+// 1. PRODUTOS INICIAIS (Lanches, Bebidas e Acompanhamentos)
 const INITIAL_PRODUCTS = [
+  // --- Prensados ---
   { 
     id: 1, 
     name: 'Prensadinho', 
@@ -38,7 +47,14 @@ const INITIAL_PRODUCTS = [
     image: '/images/prensadinho.png',
     active: true, 
     category: 'prensados', 
-    hasCustomOptions: false 
+    hasCustomOptions: false,
+    recipe: [
+      { ingredientId: 1, quantity: 1 }, // Pão
+      { ingredientId: 2, quantity: 1 }, // Salsicha
+      { ingredientId: 3, quantity: 1 }, // Bacon
+      { ingredientId: 101, quantity: 1 }, // Embalagem Térmica
+      { ingredientId: 102, quantity: 2 }  // Guardanapos
+    ]
   },
   { 
     id: 2, 
@@ -48,7 +64,14 @@ const INITIAL_PRODUCTS = [
     image: '/images/prensado.png',
     active: true, 
     category: 'prensados', 
-    hasCustomOptions: false 
+    hasCustomOptions: false,
+    recipe: [
+      { ingredientId: 1, quantity: 1 },
+      { ingredientId: 2, quantity: 1 },
+      { ingredientId: 3, quantity: 1 },
+      { ingredientId: 101, quantity: 1 },
+      { ingredientId: 102, quantity: 2 }
+    ]
   },
   { 
     id: 3, 
@@ -58,7 +81,14 @@ const INITIAL_PRODUCTS = [
     image: '/images/costela.png',
     active: true, 
     category: 'prensados', 
-    hasCustomOptions: true 
+    hasCustomOptions: true,
+    recipe: [
+      { ingredientId: 1, quantity: 1 },
+      { ingredientId: 2, quantity: 1 },
+      { ingredientId: 3, quantity: 1 },
+      { ingredientId: 101, quantity: 1 },
+      { ingredientId: 102, quantity: 2 }
+    ]
   },
   { 
     id: 4, 
@@ -68,7 +98,14 @@ const INITIAL_PRODUCTS = [
     image: '/images/pernil.png',
     active: true, 
     category: 'prensados', 
-    hasCustomOptions: true 
+    hasCustomOptions: true,
+    recipe: [
+      { ingredientId: 1, quantity: 1 },
+      { ingredientId: 2, quantity: 1 },
+      { ingredientId: 3, quantity: 1 },
+      { ingredientId: 101, quantity: 1 },
+      { ingredientId: 102, quantity: 2 }
+    ]
   },
   { 
     id: 5, 
@@ -78,130 +115,187 @@ const INITIAL_PRODUCTS = [
     image: '/images/carne-seca.png',
     active: true, 
     category: 'prensados', 
-    hasCustomOptions: true 
+    hasCustomOptions: true,
+    recipe: [
+      { ingredientId: 1, quantity: 1 },
+      { ingredientId: 2, quantity: 1 },
+      { ingredientId: 3, quantity: 1 },
+      { ingredientId: 101, quantity: 1 },
+      { ingredientId: 102, quantity: 2 }
+    ]
+  },
+  // --- Bebidas Geladas ---
+  {
+    id: 6,
+    name: 'Coca-Cola Lata 350ml',
+    description: 'Refrigerante Coca-Cola original estupidamente gelada.',
+    price: 6.00,
+    image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 104, quantity: 1 }]
+  },
+  {
+    id: 7,
+    name: 'Guaraná Antarctica Lata 350ml',
+    description: 'Refrigerante Guaraná Antarctica bem gelado.',
+    price: 6.00,
+    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 105, quantity: 1 }]
+  },
+  {
+    id: 8,
+    name: 'Coca-Cola 2 Litros',
+    description: 'Garrafa pet 2 litros para toda a família.',
+    price: 14.00,
+    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: []
+  },
+  {
+    id: 9,
+    name: 'Suco Natural de Laranja 500ml',
+    description: 'Suco de laranja natural feito na hora, 100% fruta.',
+    price: 9.00,
+    image: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 4, quantity: 4 }] // 4 laranjas
+  },
+  {
+    id: 10,
+    name: 'Água Mineral sem Gás 500ml',
+    description: 'Água mineral natural sem gás gelada.',
+    price: 4.00,
+    image: 'https://images.unsplash.com/photo-1559839914-17aae19cec71?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: []
+  },
+  // --- Acompanhamentos & Porções ---
+  {
+    id: 11,
+    name: 'Batata Frita Canoa Especial',
+    description: 'Porção de batata canoa crocante com toque de páprica e molho especial da casa.',
+    price: 15.00,
+    image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'acompanhamentos',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 6, quantity: 1 }]
   }
 ];
 
+// 2. COMPLEMENTOS E ADICIONAIS
 const INITIAL_COMPLEMENTS = [
-  // Adicionais Pagos (Extras)
   { id: 'extra-bacon', name: 'Extra Bacon Crocante', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
   { id: 'extra-cheese', name: 'Extra Queijo Derretido', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 3.00, active: true },
-  
-  // Complementos do Lanche (Queijos e Acompanhamentos)
   { id: 'creamy-catupiry', name: 'Catupiry Original', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
   { id: 'creamy-requeijao', name: 'Requeijão Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
-  
   { id: 'melted-mussarela', name: 'Queijo Mussarela', category: 'complement', group: 'melted', groupName: 'Queijo Fatiado', price: 0, active: true },
   { id: 'melted-cheddar', name: 'Queijo Cheddar', category: 'complement', group: 'melted', groupName: 'Queijo Fatiado', price: 0, active: true },
-  
   { id: 'side-vinagrete', name: 'Vinagrete Artesanal', category: 'complement', group: 'side', groupName: 'Acompanhamento', price: 0, active: true }
 ];
 
+// 3. ESTOQUE & EMBALAGENS
 const INITIAL_INVENTORY = [
-  { id: 1, name: 'Pão de Hot Dog', quantity: 42, minQuantity: 15, unit: 'un' },
-  { id: 2, name: 'Salsicha Premium', quantity: 38, minQuantity: 15, unit: 'un' },
-  { id: 3, name: 'Bacon Fatiado', quantity: 25, minQuantity: 8, unit: 'porção' },
-  { id: 4, name: 'Laranja (Fruta)', quantity: 95, minQuantity: 30, unit: 'un' },
+  { id: 1, name: 'Pão de Hot Dog', quantity: 60, minQuantity: 20, unit: 'un' },
+  { id: 2, name: 'Salsicha Premium', quantity: 50, minQuantity: 20, unit: 'un' },
+  { id: 3, name: 'Bacon Fatiado', quantity: 30, minQuantity: 10, unit: 'porção' },
+  { id: 4, name: 'Laranja (Fruta)', quantity: 80, minQuantity: 25, unit: 'un' },
   { id: 5, name: 'Polpa Verde Detox', quantity: 12, minQuantity: 5, unit: 'un' },
-  { id: 6, name: 'Batata Canoa Congelada', quantity: 18, minQuantity: 6, unit: 'porção' }
+  { id: 6, name: 'Batata Canoa Congelada', quantity: 20, minQuantity: 6, unit: 'porção' },
+  // Embalagens automáticas
+  { id: 101, name: 'Embalagem Térmica Prensado', quantity: 150, minQuantity: 40, unit: 'un' },
+  { id: 102, name: 'Guardanapo Sachê', quantity: 300, minQuantity: 100, unit: 'un' },
+  { id: 103, name: 'Sacola Delivery Kraft', quantity: 80, minQuantity: 25, unit: 'un' },
+  { id: 104, name: 'Lata Coca-Cola 350ml', quantity: 48, minQuantity: 12, unit: 'un' },
+  { id: 105, name: 'Lata Guaraná 350ml', quantity: 36, minQuantity: 12, unit: 'un' }
 ];
 
-const INITIAL_ORDERS = [];
+// 4. CONFIGURAÇÕES DA LOJA, HORÁRIOS, TAXAS E FIDELIDADE
+const INITIAL_STORE_SETTINGS = {
+  isOpen: true,
+  autoSchedule: true,
+  openTime: '18:00',
+  closeTime: '23:30',
+  openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
+  estimatedTime: '35 a 50 min',
+  storeAddress: 'Rua Principal, 100 - Centro',
+  storeLat: -19.916681,
+  storeLng: -43.934493,
+  deliveryMode: 'hybrid', // 'neighborhood' | 'radius' | 'hybrid'
+  freeDeliveryThreshold: 65.00,
+  cardDebitFee: 1.99,
+  cardCreditFee: 3.49,
+  pixFee: 0.00,
+  loyaltyTargetStamps: 10,
+  loyaltyMinOrder: 20.00,
+  loyaltyRewardText: '1 Prensadinho Grátis ou R$ 20 OFF',
+  autoPackagingDeduction: true
+};
 
-const INITIAL_TRANSACTIONS = [];
+// 5. BAIRROS DE ENTREGA
+const INITIAL_NEIGHBORHOODS = [
+  { id: 'nb-1', name: 'Centro', fee: 5.00, active: true },
+  { id: 'nb-2', name: 'Bela Vista', fee: 7.00, active: true },
+  { id: 'nb-3', name: 'São José', fee: 8.00, active: true },
+  { id: 'nb-4', name: 'Industrial', fee: 10.00, active: true },
+  { id: 'nb-5', name: 'Planalto', fee: 12.00, active: true }
+];
 
-const INITIAL_INVOICES = [];
+// 6. ZONAS DE RAIO (KM)
+const INITIAL_RADIUSES = [
+  { id: 'rad-1', maxKm: 3, fee: 5.00, active: true },
+  { id: 'rad-2', maxKm: 6, fee: 8.00, active: true },
+  { id: 'rad-3', maxKm: 10, fee: 12.00, active: true }
+];
 
+// 7. CUPONS DE DESCONTO
+const INITIAL_COUPONS = [
+  { code: 'BEMVINDO10', type: 'percent', value: 10, minOrder: 20.00, usesCount: 0, active: true },
+  { code: 'NUU5', type: 'fixed', value: 5.00, minOrder: 25.00, usesCount: 0, active: true },
+  { code: 'FRETENUU', type: 'free_delivery', value: 0, minOrder: 45.00, usesCount: 0, active: true }
+];
+
+// 8. MOTOBOYS CADASTRADOS
+const INITIAL_MOTOBOYS = [
+  { id: 'mb-1', name: 'Carlos Santos (Motoboy 1)', phone: '(31) 99881-1122', vehicle: 'Honda CG 160 (ABC-1234)', pixKey: 'carlos@pix.com', feePerDelivery: 6.00, dailyFee: 40.00, active: true },
+  { id: 'mb-2', name: 'Lucas Silva (Motoboy 2)', phone: '(31) 99772-3344', vehicle: 'Yamaha Fazer (XYZ-9876)', pixKey: 'lucas@pix.com', feePerDelivery: 6.00, dailyFee: 40.00, active: true }
+];
+
+// 9. CLIENTES E MEMÓRIA DE FIDELIDADE
+const INITIAL_CUSTOMERS = [
+  { phone: '31999998888', name: 'Cliente Demonstração', address: 'Rua das Flores, 123 - Centro', neighborhood: 'Centro', stampsCount: 4, totalOrders: 4, lastOrderAt: '2026-09-20' }
+];
+
+// Cotações de Fornecedores
 const INITIAL_QUOTATIONS = [
   { id: 'q-1', productName: 'Molho Barbecue', supplier: 'Supermercado BH', brand: 'Saboroso', package: 'Balde 3,5 kg', packagePrice: 32.90, unitPrice: 9.40, unitType: 'kg', lastUpdated: '2026-08-25' },
   { id: 'q-2', productName: 'Molho de Tomate', supplier: 'Supermercado BH', brand: 'Colonial', package: 'Sachê 2 kg', packagePrice: 15.98, unitPrice: 7.99, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-3', productName: 'Molho de Tomate', supplier: 'Supermercado BH', brand: 'Colonial', package: 'Caixa c/ 6 (12 kg)', packagePrice: 89.88, unitPrice: 7.49, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-4', productName: 'Óleo PET 900ml', supplier: 'Supermercado BH', brand: 'Veleiro', package: 'Fardo c/ 6 un', packagePrice: 41.28, unitPrice: 6.88, unitType: 'un', lastUpdated: '2026-08-25' },
-  { id: 'q-5', productName: 'Óleo PET 900ml', supplier: 'Supermercado BH', brand: 'ABC', package: 'Fardo c/ 30 un', packagePrice: 137.60, unitPrice: 4.586, unitType: 'un', lastUpdated: '2026-08-25' },
   { id: 'q-6', productName: 'Queijo Mussarela Fatiado', supplier: 'Supermercado BH', brand: 'Saboroso', package: 'Quilo (kg)', packagePrice: 51.80, unitPrice: 51.80, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-7', productName: 'Queijo Mussarela Fatiado', supplier: 'Supermercado BH', brand: 'Porto Alegre', package: 'Quilo (kg)', packagePrice: 52.00, unitPrice: 52.00, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-8', productName: 'Queijo Mussarela Fatiado', supplier: 'Supermercado BH', brand: 'Presidente', package: 'Quilo (kg)', packagePrice: 54.90, unitPrice: 54.90, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-9', productName: 'Cheddar Fatiado', supplier: 'Supermercado BH', brand: 'Polenghi', package: 'Quilo (kg)', packagePrice: 57.80, unitPrice: 57.80, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-10', productName: 'Cheddar Fatiado', supplier: 'Supermercado BH', brand: 'Vigor', package: 'Quilo (kg)', packagePrice: 59.88, unitPrice: 59.88, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-11', productName: 'Costela Suína', supplier: 'Supermercado BH', brand: 'In Natura', package: 'Quilo (kg)', packagePrice: 30.80, unitPrice: 30.80, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-12', productName: 'Pernil Suíno', supplier: 'Supermercado BH', brand: 'In Natura', package: 'Quilo (kg)', packagePrice: 18.00, unitPrice: 18.00, unitType: 'kg', lastUpdated: '2026-08-25' },
   { id: 'q-13', productName: 'Salsicha Premium', supplier: 'Supermercado BH', brand: 'Seara', package: 'Quilo (kg)', packagePrice: 8.78, unitPrice: 8.78, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-14', productName: 'Salsicha Premium', supplier: 'Supermercado BH', brand: 'Pif Paf', package: 'Quilo (kg)', packagePrice: 8.98, unitPrice: 8.98, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-15', productName: 'Salsicha Premium', supplier: 'Supermercado BH', brand: 'Perdigão', package: 'Quilo (kg)', packagePrice: 9.98, unitPrice: 9.98, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-16', productName: 'Salsicha Premium', supplier: 'Supermercado BH', brand: 'Sadia', package: 'Quilo (kg)', packagePrice: 10.98, unitPrice: 10.98, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-17', productName: 'Bacon Fatiado', supplier: 'Supermercado BH', brand: 'Dona Carne', package: 'Quilo (kg)', packagePrice: 33.38, unitPrice: 33.38, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-18', productName: 'Bacon Fatiado', supplier: 'Supermercado BH', brand: 'Saudali', package: 'Quilo (kg)', packagePrice: 34.78, unitPrice: 34.78, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-19', productName: 'Requeijão Bisnaga', supplier: 'Supermercado BH', brand: 'Roseli', package: 'Bisnaga 1,5 kg', packagePrice: 52.80, unitPrice: 35.20, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-20', productName: 'Requeijão Bisnaga', supplier: 'Supermercado BH', brand: 'Allora', package: 'Bisnaga 1,5 kg', packagePrice: 59.90, unitPrice: 39.93, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-21', productName: 'Requeijão Bisnaga', supplier: 'Supermercado BH', brand: 'Vigor', package: 'Bisnaga 1,5 kg', packagePrice: 64.98, unitPrice: 43.32, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-22', productName: 'Catupiry Bisnaga', supplier: 'Supermercado BH', brand: 'Catupiry Original', package: 'Bisnaga 1,5 kg', packagePrice: 63.71, unitPrice: 42.47, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-23', productName: 'Cream Cheese', supplier: 'Supermercado BH', brand: 'Porto Alegre', package: 'Pote 1,0 kg', packagePrice: 38.99, unitPrice: 38.99, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-24', productName: 'Cream Cheese', supplier: 'Supermercado BH', brand: 'Polenghi', package: 'Balde 1,5 kg', packagePrice: 72.98, unitPrice: 48.65, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-25', productName: 'Cheddar Bisnaga', supplier: 'Supermercado BH', brand: 'Polenghi', package: 'Bisnaga 1,5 kg', packagePrice: 62.98, unitPrice: 41.98, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-26', productName: 'Cheddar Bisnaga', supplier: 'Supermercado BH', brand: 'Scala', package: 'Bisnaga 1,5 kg', packagePrice: 68.90, unitPrice: 45.93, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-27', productName: 'Cheddar Bisnaga', supplier: 'Supermercado BH', brand: 'Vigor', package: 'Bisnaga 1,5 kg', packagePrice: 78.98, unitPrice: 52.65, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-28', productName: 'Milho Verde', supplier: 'Villefort', brand: 'Villefort', package: 'Lata 1,7 kg', packagePrice: 18.90, unitPrice: 11.11, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-29', productName: 'Milho Verde', supplier: 'Supermercado BH', brand: 'Minas', package: 'Lata 1,5 kg', packagePrice: 21.90, unitPrice: 14.60, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-30', productName: 'Batata Palha', supplier: 'Supermercado BH', brand: 'Raízes de Minas', package: 'Pacote 800 g', packagePrice: 20.90, unitPrice: 26.13, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-31', productName: 'Batata Palha', supplier: 'Villefort', brand: 'Villefort', package: 'Pacote 800 g', packagePrice: 23.90, unitPrice: 29.88, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-32', productName: 'Batata Palha', supplier: 'Supermercado BH', brand: 'Aliança', package: 'Pacote 800 g', packagePrice: 29.90, unitPrice: 37.38, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-33', productName: 'Batata Palha', supplier: 'Supermercado BH', brand: 'Aliança', package: 'Pacote 300 g', packagePrice: 13.48, unitPrice: 44.93, unitType: 'kg', lastUpdated: '2026-08-25' },
-  { id: 'q-34', productName: 'Ketchup Sachê', supplier: 'Supermercado BH', brand: 'Predileta', package: 'Caixa c/ 144 un', packagePrice: 10.90, unitPrice: 0.075, unitType: 'sachê', lastUpdated: '2026-08-25' },
-  { id: 'q-35', productName: 'Ketchup Sachê', supplier: 'Supermercado BH', brand: 'Colonial', package: 'Caixa c/ 144 un', packagePrice: 11.98, unitPrice: 0.083, unitType: 'sachê', lastUpdated: '2026-08-25' },
-  { id: 'q-36', productName: 'Ketchup Sachê', supplier: 'Supermercado BH', brand: 'Heinz', package: 'Caixa c/ 144 un', packagePrice: 23.90, unitPrice: 0.166, unitType: 'sachê', lastUpdated: '2026-08-25' },
-  { id: 'q-37', productName: 'Mostarda Sachê', supplier: 'Supermercado BH', brand: 'Predileta', package: 'Caixa c/ 144 un', packagePrice: 13.90, unitPrice: 0.096, unitType: 'sachê', lastUpdated: '2026-08-25' },
-  { id: 'q-38', productName: 'Mostarda Sachê', supplier: 'Supermercado BH', brand: 'Heinz', package: 'Caixa c/ 144 un', packagePrice: 28.90, unitPrice: 0.200, unitType: 'sachê', lastUpdated: '2026-08-25' },
-  // Cotação Astral
-  { id: 'q-39', productName: 'Queijo Mussarela Fatiado', supplier: 'Astral', brand: 'Saboroso', package: 'Quilo (kg) - Varejo', packagePrice: 49.90, unitPrice: 49.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-40', productName: 'Queijo Mussarela Fatiado', supplier: 'Astral', brand: 'Saboroso', package: 'Quilo (kg) - Atacado', packagePrice: 48.90, unitPrice: 48.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-41', productName: 'Queijo Mussarela Fatiado', supplier: 'Astral', brand: 'Nova Esperança', package: 'Quilo (kg) - Varejo', packagePrice: 46.90, unitPrice: 46.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-42', productName: 'Queijo Mussarela Fatiado', supplier: 'Astral', brand: 'Nova Esperança', package: 'Quilo (kg) - Atacado', packagePrice: 42.90, unitPrice: 42.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-43', productName: 'Cheddar Fatiado', supplier: 'Astral', brand: 'Vigor', package: 'Quilo (kg)', packagePrice: 108.88, unitPrice: 108.88, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-44', productName: 'Cheddar Fatiado', supplier: 'Astral', brand: 'Polenghi', package: 'Quilo (kg)', packagePrice: 110.90, unitPrice: 110.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-45', productName: 'Salsicha Premium', supplier: 'Astral', brand: 'Pif Paf', package: 'Quilo (kg) - Varejo', packagePrice: 31.90, unitPrice: 31.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-46', productName: 'Salsicha Premium', supplier: 'Astral', brand: 'Pif Paf', package: 'Quilo (kg) - Atacado', packagePrice: 29.90, unitPrice: 29.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-47', productName: 'Salsicha Premium', supplier: 'Astral', brand: 'Seara', package: 'Pacote 3 kg', packagePrice: 29.90, unitPrice: 9.97, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-48', productName: 'Salsicha Premium', supplier: 'Astral', brand: 'Perdigão', package: 'Pacote 5 kg - Varejo', packagePrice: 52.90, unitPrice: 10.58, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-49', productName: 'Salsicha Premium', supplier: 'Astral', brand: 'Perdigão', package: 'Pacote 5 kg - Atacado', packagePrice: 49.90, unitPrice: 9.98, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-50', productName: 'Bacon Fatiado', supplier: 'Astral', brand: 'Santiere', package: 'Quilo (kg) - Varejo', packagePrice: 26.90, unitPrice: 26.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-51', productName: 'Bacon Fatiado', supplier: 'Astral', brand: 'Santiere', package: 'Quilo (kg) - Atacado', packagePrice: 23.90, unitPrice: 23.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-52', productName: 'Bacon Fatiado', supplier: 'Astral', brand: 'Matoso', package: 'Quilo (kg) - Varejo', packagePrice: 26.90, unitPrice: 26.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-53', productName: 'Bacon Fatiado', supplier: 'Astral', brand: 'Matoso', package: 'Quilo (kg) - Atacado', packagePrice: 23.90, unitPrice: 23.90, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-54', productName: 'Requeijão Bisnaga', supplier: 'Astral', brand: 'Dallora', package: 'Bisnaga 1,5 kg - Varejo', packagePrice: 26.98, unitPrice: 17.99, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-55', productName: 'Requeijão Bisnaga', supplier: 'Astral', brand: 'Dallora', package: 'Bisnaga 1,5 kg - Atacado', packagePrice: 25.98, unitPrice: 17.32, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-56', productName: 'Requeijão Bisnaga', supplier: 'Astral', brand: 'Saboroso', package: 'Bisnaga 1,5 kg - Varejo', packagePrice: 38.90, unitPrice: 25.93, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-57', productName: 'Requeijão Bisnaga', supplier: 'Astral', brand: 'Saboroso', package: 'Bisnaga 1,5 kg - Atacado', packagePrice: 37.90, unitPrice: 25.27, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-58', productName: 'Requeijão Bisnaga', supplier: 'Astral', brand: 'Amarilis', package: 'Bisnaga 1,8 kg', packagePrice: 12.98, unitPrice: 7.21, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-59', productName: 'Cream Cheese', supplier: 'Astral', brand: 'Scala', package: 'Pote 1,2 kg', packagePrice: 46.98, unitPrice: 39.15, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-60', productName: 'Cream Cheese', supplier: 'Astral', brand: 'Santa Maria', package: 'Pote 1,0 kg', packagePrice: 40.98, unitPrice: 40.98, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-61', productName: 'Milho Verde', supplier: 'Astral', brand: 'Minas', package: 'Lata 1,5 kg - Varejo', packagePrice: 22.45, unitPrice: 14.97, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-62', productName: 'Milho Verde', supplier: 'Astral', brand: 'Minas', package: 'Lata 1,5 kg - Atacado', packagePrice: 19.90, unitPrice: 13.27, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-63', productName: 'Batata Palha', supplier: 'Astral', brand: 'Aliança', package: 'Pacote 300 g', packagePrice: 15.90, unitPrice: 53.00, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-64', productName: 'Batata Palha', supplier: 'Astral', brand: 'Aliança', package: 'Pacote 800 g', packagePrice: 32.90, unitPrice: 41.13, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-65', productName: 'Batata Palha', supplier: 'Astral', brand: 'Astro', package: 'Pacote 800 g', packagePrice: 26.90, unitPrice: 33.63, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-66', productName: 'Batata Palha', supplier: 'Astral', brand: 'Kigostosa', package: 'Pacote 800 g', packagePrice: 17.90, unitPrice: 22.38, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-67', productName: 'Batata Palha', supplier: 'Astral', brand: 'Raízes de Minas', package: 'Pacote 800 g - Varejo', packagePrice: 21.90, unitPrice: 27.38, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-68', productName: 'Batata Palha', supplier: 'Astral', brand: 'Raízes de Minas', package: 'Pacote 800 g - Atacado', packagePrice: 19.90, unitPrice: 24.88, unitType: 'kg', lastUpdated: '2026-08-26' },
-  { id: 'q-69', productName: 'Ketchup Sachê', supplier: 'Astral', brand: 'Heinz', package: 'Caixa c/ 144 un', packagePrice: 29.90, unitPrice: 0.208, unitType: 'sachê', lastUpdated: '2026-08-26' },
-  { id: 'q-70', productName: 'Ketchup Sachê', supplier: 'Astral', brand: 'Predileta', package: 'Caixa c/ 144 un - Varejo', packagePrice: 13.49, unitPrice: 0.094, unitType: 'sachê', lastUpdated: '2026-08-26' },
-  { id: 'q-71', productName: 'Ketchup Sachê', supplier: 'Astral', brand: 'Predileta', package: 'Caixa c/ 144 un - Atacado', packagePrice: 11.99, unitPrice: 0.083, unitType: 'sachê', lastUpdated: '2026-08-26' },
-  { id: 'q-72', productName: 'Ketchup Sachê', supplier: 'Astral', brand: 'Colonial', package: 'Caixa c/ 144 un', packagePrice: 10.90, unitPrice: 0.076, unitType: 'sachê', lastUpdated: '2026-08-26' },
-  { id: 'q-73', productName: 'Mostarda Sachê', supplier: 'Astral', brand: 'Colonial', package: 'Caixa c/ 144 un', packagePrice: 14.90, unitPrice: 0.103, unitType: 'sachê', lastUpdated: '2026-08-26' }
+  { id: 'q-17', productName: 'Bacon Fatiado', supplier: 'Supermercado BH', brand: 'Dona Carne', package: 'Quilo (kg)', packagePrice: 33.38, unitPrice: 33.38, unitType: 'kg', lastUpdated: '2026-08-25' }
 ];
 
 export const SystemProvider = ({ children }) => {
+  // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v4');
+    const saved = localStorage.getItem('nuu_products_v6');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed.map(p => {
-          const init = INITIAL_PRODUCTS.find(i => i.id === p.id);
-          return {
-            ...p,
-            image: p.image || init?.image || '/images/prensadinho.png'
-          };
-        });
+        const existingIds = new Set(parsed.map(p => p.id));
+        const missing = INITIAL_PRODUCTS.filter(p => !existingIds.has(p.id));
+        return missing.length > 0 ? [...parsed, ...missing] : parsed;
       } catch (e) {
         return INITIAL_PRODUCTS;
       }
@@ -210,19 +304,25 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [inventory, setInventory] = useState(() => {
-    const saved = localStorage.getItem('hd_inventory');
-    return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
+    const saved = localStorage.getItem('hd_inventory_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const existingIds = new Set(parsed.map(i => i.id));
+        const missing = INITIAL_INVENTORY.filter(i => !existingIds.has(i.id));
+        return missing.length > 0 ? [...parsed, ...missing] : parsed;
+      } catch (e) {
+        return INITIAL_INVENTORY;
+      }
+    }
+    return INITIAL_INVENTORY;
   });
 
   const [orders, setOrders] = useState(() => {
     const saved = localStorage.getItem('hd_orders');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // Filtrar e remover permanentemente pedidos falsos/de exemplos (#1001, #1002)
-        const cleaned = parsed.filter(o => o.id !== '1001' && o.id !== '1002' && o.customerName !== 'Carlos Eduardo' && o.customerName !== 'Mariana Santos');
-        localStorage.setItem('hd_orders', JSON.stringify(cleaned));
-        return cleaned;
+        return JSON.parse(saved);
       } catch (e) {
         return [];
       }
@@ -234,11 +334,7 @@ export const SystemProvider = ({ children }) => {
     const saved = localStorage.getItem('hd_transactions');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // Remover transações de pedidos de exemplo que inflavam o faturamento
-        const cleaned = parsed.filter(t => t.id !== 't-3' && !t.description?.includes('#1001') && !t.description?.includes('#1002') && !t.description?.includes('Carlos Eduardo'));
-        localStorage.setItem('hd_transactions', JSON.stringify(cleaned));
-        return cleaned;
+        return JSON.parse(saved);
       } catch (e) {
         return [];
       }
@@ -250,10 +346,7 @@ export const SystemProvider = ({ children }) => {
     const saved = localStorage.getItem('hd_invoices');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        const cleaned = parsed.filter(i => i.id !== 'NF-1001' && i.referenceId !== '1001');
-        localStorage.setItem('hd_invoices', JSON.stringify(cleaned));
-        return cleaned;
+        return JSON.parse(saved);
       } catch (e) {
         return [];
       }
@@ -263,111 +356,61 @@ export const SystemProvider = ({ children }) => {
 
   const [quotations, setQuotations] = useState(() => {
     const saved = localStorage.getItem('hd_quotations');
-    if (!saved) return INITIAL_QUOTATIONS;
-    try {
-      const parsed = JSON.parse(saved);
-      const existingIds = new Set(parsed.map(q => q.id));
-      const missingDefaults = INITIAL_QUOTATIONS.filter(q => !existingIds.has(q.id));
-      return missingDefaults.length > 0 ? [...parsed, ...missingDefaults] : parsed;
-    } catch (e) {
-      return INITIAL_QUOTATIONS;
-    }
+    return saved ? JSON.parse(saved) : INITIAL_QUOTATIONS;
   });
 
   const [complements, setComplements] = useState(() => {
     const saved = localStorage.getItem('nuu_complements_v2');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const existingIds = new Set(parsed.map(c => c.id));
-        const missingDefaults = INITIAL_COMPLEMENTS.filter(c => !existingIds.has(c.id));
-        return missingDefaults.length > 0 ? [...parsed, ...missingDefaults] : parsed;
-      } catch (e) {
-        return INITIAL_COMPLEMENTS;
-      }
-    }
-    return INITIAL_COMPLEMENTS;
+    return saved ? JSON.parse(saved) : INITIAL_COMPLEMENTS;
   });
 
-  // Sincronização em tempo real entre abas (Cliente <-> Cozinha/Admin)
+  const [storeSettings, setStoreSettings] = useState(() => {
+    const saved = localStorage.getItem('nuu_store_settings_v2');
+    return saved ? { ...INITIAL_STORE_SETTINGS, ...JSON.parse(saved) } : INITIAL_STORE_SETTINGS;
+  });
+
+  const [deliveryNeighborhoods, setDeliveryNeighborhoods] = useState(() => {
+    const saved = localStorage.getItem('nuu_neighborhoods');
+    return saved ? JSON.parse(saved) : INITIAL_NEIGHBORHOODS;
+  });
+
+  const [deliveryRadiuses, setDeliveryRadiuses] = useState(() => {
+    const saved = localStorage.getItem('nuu_radiuses');
+    return saved ? JSON.parse(saved) : INITIAL_RADIUSES;
+  });
+
+  const [coupons, setCoupons] = useState(() => {
+    const saved = localStorage.getItem('nuu_coupons');
+    return saved ? JSON.parse(saved) : INITIAL_COUPONS;
+  });
+
+  const [motoboys, setMotoboys] = useState(() => {
+    const saved = localStorage.getItem('nuu_motoboys');
+    return saved ? JSON.parse(saved) : INITIAL_MOTOBOYS;
+  });
+
+  const [customers, setCustomers] = useState(() => {
+    const saved = localStorage.getItem('nuu_customers');
+    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+  });
+
+  const [cashShifts, setCashShifts] = useState(() => {
+    const saved = localStorage.getItem('nuu_cash_shifts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [supabaseActive, setSupabaseActive] = useState(isSupabaseConfigured);
+
+  // Turno de caixa aberto ativo (se houver)
+  const activeShift = cashShifts.find(s => s.status === 'open') || null;
+
+  // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
-    let channel = null;
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        channel = new BroadcastChannel('nuu_system_channel');
-      }
-    } catch (e) {}
-
-    const handleStorageChange = (e) => {
-      if (e.key === 'hd_orders' && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          setOrders(parsed);
-        } catch (err) {}
-      }
-      if (e.key === 'hd_inventory' && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          setInventory(parsed);
-        } catch (err) {}
-      }
-      if (e.key === 'nuu_products_v4' && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          setProducts(parsed);
-        } catch (err) {}
-      }
-      if (e.key === 'nuu_complements_v2' && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          setComplements(parsed);
-        } catch (err) {}
-      }
-    };
-
-    const handleBroadcast = (e) => {
-      if (e.data?.type === 'ORDERS_SYNC' && Array.isArray(e.data.orders)) {
-        setOrders(e.data.orders);
-        if (e.data.isNewOrder) {
-          playNotificationChime();
-        }
-      }
-      if (e.data?.type === 'INVENTORY_SYNC' && Array.isArray(e.data.inventory)) {
-        setInventory(e.data.inventory);
-      }
-      if (e.data?.type === 'PRODUCTS_SYNC' && Array.isArray(e.data.products)) {
-        setProducts(e.data.products);
-      }
-      if (e.data?.type === 'COMPLEMENTS_SYNC' && Array.isArray(e.data.complements)) {
-        setComplements(e.data.complements);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    if (channel) {
-      channel.addEventListener('message', handleBroadcast);
-    }
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      if (channel) {
-        channel.removeEventListener('message', handleBroadcast);
-        channel.close();
-      }
-    };
-  }, []);
-
-  // Sync to localStorage
-  useEffect(() => {
-    localStorage.setItem('nuu_products_v4', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v6', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('nuu_complements_v2', JSON.stringify(complements));
-  }, [complements]);
-
-  useEffect(() => {
-    localStorage.setItem('hd_inventory', JSON.stringify(inventory));
+    localStorage.setItem('hd_inventory_v2', JSON.stringify(inventory));
   }, [inventory]);
 
   useEffect(() => {
@@ -386,7 +429,410 @@ export const SystemProvider = ({ children }) => {
     localStorage.setItem('hd_quotations', JSON.stringify(quotations));
   }, [quotations]);
 
-  // Actions
+  useEffect(() => {
+    localStorage.setItem('nuu_complements_v2', JSON.stringify(complements));
+  }, [complements]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_store_settings_v2', JSON.stringify(storeSettings));
+  }, [storeSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_neighborhoods', JSON.stringify(deliveryNeighborhoods));
+  }, [deliveryNeighborhoods]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_radiuses', JSON.stringify(deliveryRadiuses));
+  }, [deliveryRadiuses]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_coupons', JSON.stringify(coupons));
+  }, [coupons]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_motoboys', JSON.stringify(motoboys));
+  }, [motoboys]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_customers', JSON.stringify(customers));
+  }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_cash_shifts', JSON.stringify(cashShifts));
+  }, [cashShifts]);
+
+  // Sincronização em tempo real entre abas (BroadcastChannel) e Supabase
+  useEffect(() => {
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('nuu_system_channel');
+      }
+    } catch (e) {}
+
+    const handleBroadcast = (e) => {
+      if (e.data?.type === 'ORDERS_SYNC' && Array.isArray(e.data.orders)) {
+        setOrders(e.data.orders);
+        if (e.data.isNewOrder) playNotificationChime();
+      }
+      if (e.data?.type === 'SETTINGS_SYNC' && e.data.settings) {
+        setStoreSettings(e.data.settings);
+      }
+    };
+
+    if (channel) {
+      channel.addEventListener('message', handleBroadcast);
+    }
+
+    // Se o Supabase estiver configurado, escuta mudanças no banco na nuvem!
+    const supabase = getSupabaseClient();
+    let supabaseSub = null;
+    if (supabase) {
+      try {
+        supabaseSub = supabase
+          .channel('public:orders')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setOrders(prev => {
+                if (prev.some(o => o.id === payload.new.id)) return prev;
+                playNotificationChime();
+                return [payload.new, ...prev];
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+            }
+          })
+          .subscribe();
+      } catch (err) {
+        console.warn('Supabase Realtime subscription error:', err);
+      }
+    }
+
+    return () => {
+      if (channel) {
+        channel.removeEventListener('message', handleBroadcast);
+        channel.close();
+      }
+      if (supabase && supabaseSub) {
+        supabase.removeChannel(supabaseSub);
+      }
+    };
+  }, [supabaseActive]);
+
+  // --- Função para Salvar/Conectar Supabase ---
+  const saveSupabaseConfig = (url, key) => {
+    saveSupabaseCredentials(url, key);
+    const configured = Boolean(url && key);
+    setSupabaseActive(configured);
+    return configured;
+  };
+
+  // --- Controle de Loja e Horários ---
+  const updateStoreSettings = (newSettings) => {
+    const updated = { ...storeSettings, ...newSettings };
+    setStoreSettings(updated);
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'SETTINGS_SYNC', settings: updated });
+        ch.close();
+      }
+    } catch (e) {}
+  };
+
+  // Verifica se a loja está aberta considerando o toggle manual ou horário automático
+  const isStoreOpenNow = () => {
+    if (!storeSettings.isOpen) return false;
+    if (!storeSettings.autoSchedule) return true;
+
+    try {
+      const now = new Date();
+      const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+      const currentDay = days[now.getDay()];
+      if (!storeSettings.openDays.includes(currentDay)) return false;
+
+      const [openHour, openMin] = storeSettings.openTime.split(':').map(Number);
+      const [closeHour, closeMin] = storeSettings.closeTime.split(':').map(Number);
+
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const openMinutes = openHour * 60 + openMin;
+      const closeMinutes = closeHour * 60 + closeMin;
+
+      if (closeMinutes >= openMinutes) {
+        return nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
+      } else {
+        // Passa da meia-noite (ex: 18:00 às 01:00)
+        return nowMinutes >= openMinutes || nowMinutes <= closeMinutes;
+      }
+    } catch (e) {
+      return storeSettings.isOpen;
+    }
+  };
+
+  // --- Cálculo Dinâmico de Frete (Bairro / Raio / Frete Grátis) ---
+  const calculateDeliveryFee = ({ neighborhoodName, distanceKm, subtotal = 0 }) => {
+    if (subtotal >= storeSettings.freeDeliveryThreshold) {
+      return { fee: 0, isFree: true, reason: 'Frete Grátis por valor atingido!' };
+    }
+
+    if (storeSettings.deliveryMode === 'neighborhood' || (!distanceKm && neighborhoodName)) {
+      const found = deliveryNeighborhoods.find(n => n.name.toLowerCase() === (neighborhoodName || '').toLowerCase() && n.active);
+      if (found) return { fee: found.fee, isFree: false, reason: `Taxa do Bairro ${found.name}` };
+    }
+
+    if (distanceKm !== undefined && distanceKm !== null) {
+      const sortedRadiuses = [...deliveryRadiuses].sort((a, b) => a.maxKm - b.maxKm);
+      const match = sortedRadiuses.find(r => distanceKm <= r.maxKm && r.active);
+      if (match) {
+        return { fee: match.fee, isFree: false, reason: `Até ${match.maxKm} km da loja` };
+      }
+    }
+
+    // Padrão fallback
+    return { fee: 7.00, isFree: false, reason: 'Taxa Padrão' };
+  };
+
+  // --- Cupons de Desconto ---
+  const validateCoupon = (code, subtotal, deliveryFee = 0) => {
+    if (!code) return { valid: false, message: 'Digite um cupom' };
+    const cleanCode = code.trim().toUpperCase();
+    const coupon = coupons.find(c => c.code.toUpperCase() === cleanCode && c.active);
+
+    if (!coupon) {
+      return { valid: false, message: 'Cupom inválido ou expirado' };
+    }
+
+    if (subtotal < coupon.minOrder) {
+      return { valid: false, message: `Pedido mínimo de R$ ${coupon.minOrder.toFixed(2)} para este cupom` };
+    }
+
+    let discount = 0;
+    if (coupon.type === 'percent') {
+      discount = (subtotal * coupon.value) / 100;
+    } else if (coupon.type === 'fixed') {
+      discount = Math.min(coupon.value, subtotal);
+    } else if (coupon.type === 'free_delivery') {
+      discount = deliveryFee;
+    }
+
+    return {
+      valid: true,
+      coupon,
+      discount: parseFloat(discount.toFixed(2)),
+      message: `Cupom ${coupon.code} aplicado com sucesso!`
+    };
+  };
+
+  const upsertCoupon = (couponData) => {
+    setCoupons(prev => {
+      const upper = couponData.code.trim().toUpperCase();
+      const existing = prev.findIndex(c => c.code.toUpperCase() === upper);
+      if (existing > -1) {
+        const copy = [...prev];
+        copy[existing] = { ...copy[existing], ...couponData, code: upper };
+        return copy;
+      }
+      return [...prev, { ...couponData, code: upper, usesCount: 0 }];
+    });
+  };
+
+  const deleteCoupon = (code) => {
+    setCoupons(prev => prev.filter(c => c.code.toUpperCase() !== code.toUpperCase()));
+  };
+
+  // --- Gestão de Bairros de Entrega ---
+  const upsertNeighborhood = (nbData) => {
+    setDeliveryNeighborhoods(prev => {
+      if (nbData.id) {
+        return prev.map(n => n.id === nbData.id ? { ...n, ...nbData } : n);
+      }
+      return [...prev, { ...nbData, id: 'nb-' + Date.now() }];
+    });
+  };
+
+  const deleteNeighborhood = (id) => {
+    setDeliveryNeighborhoods(prev => prev.filter(n => n.id !== id));
+  };
+
+  const upsertRadius = (radData) => {
+    setDeliveryRadiuses(prev => {
+      if (radData.id) {
+        return prev.map(r => r.id === radData.id ? { ...r, ...radData } : r);
+      }
+      return [...prev, { ...radData, id: 'rad-' + Date.now() }];
+    });
+  };
+
+  const deleteRadius = (id) => {
+    setDeliveryRadiuses(prev => prev.filter(r => r.id !== id));
+  };
+
+  // --- Gestão de Motoboys ---
+  const upsertMotoboy = (mbData) => {
+    setMotoboys(prev => {
+      if (mbData.id) {
+        return prev.map(m => m.id === mbData.id ? { ...m, ...mbData } : m);
+      }
+      return [...prev, { ...mbData, id: 'mb-' + Date.now() }];
+    });
+  };
+
+  const deleteMotoboy = (id) => {
+    setMotoboys(prev => prev.filter(m => m.id !== id));
+  };
+
+  const assignOrderMotoboy = (orderId, motoboyId) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, motoboyId } : o));
+  };
+
+  const settleMotoboyPayments = ({ motoboyId, orderIds, totalAmount, notes = '' }) => {
+    const mb = motoboys.find(m => m.id === motoboyId);
+    if (!mb) return;
+
+    // Registra despesa no fluxo de caixa
+    const newTrans = {
+      id: 't-' + Date.now(),
+      date: new Date().toISOString(),
+      type: 'expense',
+      category: 'Logística / Motoboy',
+      value: parseFloat(totalAmount.toFixed(2)),
+      description: `Acerto Motoboy ${mb.name} (${orderIds.length} entregas)${notes ? ' - ' + notes : ''}`
+    };
+    setTransactions(t => [newTrans, ...t]);
+
+    // Marca pedidos como quitados na entrega
+    setOrders(prev => prev.map(o => orderIds.includes(o.id) ? { ...o, motoboySettled: true } : o));
+  };
+
+  // --- Clientes & Programa Fidelidade ---
+  const lookupCustomer = (phone) => {
+    if (!phone) return null;
+    const clean = phone.replace(/\D/g, '');
+    return customers.find(c => c.phone.replace(/\D/g, '') === clean) || null;
+  };
+
+  const saveCustomer = (customerData) => {
+    if (!customerData.phone) return;
+    const cleanPhone = customerData.phone.replace(/\D/g, '');
+    setCustomers(prev => {
+      const idx = prev.findIndex(c => c.phone.replace(/\D/g, '') === cleanPhone);
+      if (idx > -1) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], ...customerData, phone: cleanPhone };
+        return copy;
+      }
+      return [...prev, { ...customerData, phone: cleanPhone, stampsCount: 0, totalOrders: 0 }];
+    });
+  };
+
+  // --- Turnos de Caixa (Abertura, Sangria, Fechamento) ---
+  const openCashShift = ({ operatorName = 'Operador', initialFloat = 100.00 }) => {
+    const newShift = {
+      id: 'shift-' + Date.now(),
+      openedAt: new Date().toISOString(),
+      closedAt: null,
+      operatorName,
+      initialFloat: parseFloat(initialFloat) || 0,
+      bleedTotal: 0,
+      supplyTotal: 0,
+      bleeds: [],
+      supplies: [],
+      status: 'open'
+    };
+    setCashShifts(prev => [newShift, ...prev]);
+    return newShift;
+  };
+
+  const addShiftBleed = ({ amount, reason }) => {
+    if (!activeShift) return;
+    const val = parseFloat(amount) || 0;
+    const bleedEntry = { id: 'bleed-' + Date.now(), amount: val, reason, date: new Date().toISOString() };
+    
+    setCashShifts(prev => prev.map(s => {
+      if (s.id === activeShift.id) {
+        return {
+          ...s,
+          bleedTotal: (s.bleedTotal || 0) + val,
+          bleeds: [...(s.bleeds || []), bleedEntry]
+        };
+      }
+      return s;
+    }));
+
+    // Registra no fluxo de caixa
+    setTransactions(t => [{
+      id: 't-' + Date.now(),
+      date: new Date().toISOString(),
+      type: 'bleed',
+      category: 'Sangria de Caixa',
+      value: val,
+      description: `Sangria: ${reason}`
+    }, ...t]);
+  };
+
+  const addShiftSupply = ({ amount, reason }) => {
+    if (!activeShift) return;
+    const val = parseFloat(amount) || 0;
+    const supplyEntry = { id: 'supply-' + Date.now(), amount: val, reason, date: new Date().toISOString() };
+
+    setCashShifts(prev => prev.map(s => {
+      if (s.id === activeShift.id) {
+        return {
+          ...s,
+          supplyTotal: (s.supplyTotal || 0) + val,
+          supplies: [...(s.supplies || []), supplyEntry]
+        };
+      }
+      return s;
+    }));
+
+    setTransactions(t => [{
+      id: 't-' + Date.now(),
+      date: new Date().toISOString(),
+      type: 'supply',
+      category: 'Suprimento de Caixa',
+      value: val,
+      description: `Suprimento (Troco): ${reason}`
+    }, ...t]);
+  };
+
+  const closeCashShift = ({ countedCash, countedCard, notes = '' }) => {
+    if (!activeShift) return;
+    
+    // Calcula vendas no turno
+    const shiftOrders = orders.filter(o => 
+      o.status === 'delivered' && 
+      new Date(o.date) >= new Date(activeShift.openedAt)
+    );
+
+    const cashSales = shiftOrders.filter(o => o.paymentMethod?.toLowerCase().includes('dinheiro')).reduce((acc, o) => acc + o.total, 0);
+    const pixSales = shiftOrders.filter(o => o.paymentMethod?.toLowerCase().includes('pix')).reduce((acc, o) => acc + o.total, 0);
+    const cardSales = shiftOrders.filter(o => o.paymentMethod?.toLowerCase().includes('cartão') || o.paymentMethod?.toLowerCase().includes('cartao')).reduce((acc, o) => acc + o.total, 0);
+
+    const expectedCash = activeShift.initialFloat + cashSales + (activeShift.supplyTotal || 0) - (activeShift.bleedTotal || 0);
+    const diff = (parseFloat(countedCash) || 0) - expectedCash;
+
+    setCashShifts(prev => prev.map(s => {
+      if (s.id === activeShift.id) {
+        return {
+          ...s,
+          status: 'closed',
+          closedAt: new Date().toISOString(),
+          cashSales,
+          pixSales,
+          cardSales,
+          countedCash: parseFloat(countedCash) || 0,
+          countedCard: parseFloat(countedCard) || 0,
+          expectedCash,
+          difference: diff,
+          notes
+        };
+      }
+      return s;
+    }));
+  };
+
+  // --- Criação de Pedidos e Baixa Automática de Insumos/Embalagens ---
   const createOrder = (orderData) => {
     const newId = (Math.max(...orders.map(o => parseInt(o.id) || 0), 1000) + 1).toString();
     const newOrder = {
@@ -396,9 +842,14 @@ export const SystemProvider = ({ children }) => {
       ...orderData
     };
 
-    // 1. Deduct inventory (Check if stock is sufficient first)
-    let stockValid = true;
+    // 1. Baixa automática de ingredientes e embalagens
     const updatedInventory = [...inventory];
+
+    // Dedução de sacola kraft por pedido (se entrega)
+    if (newOrder.type === 'delivery' && storeSettings.autoPackagingDeduction) {
+      const bag = updatedInventory.find(i => i.id === 103);
+      if (bag) bag.quantity = Math.max(0, bag.quantity - 1);
+    }
 
     newOrder.items.forEach(item => {
       const prod = products.find(p => p.id === item.productId);
@@ -407,9 +858,6 @@ export const SystemProvider = ({ children }) => {
           const invItem = updatedInventory.find(i => i.id === recipeItem.ingredientId);
           if (invItem) {
             const requiredQty = recipeItem.quantity * item.quantity;
-            if (invItem.quantity < requiredQty) {
-              stockValid = false;
-            }
             invItem.quantity = Math.max(0, invItem.quantity - requiredQty);
           }
         });
@@ -420,9 +868,65 @@ export const SystemProvider = ({ children }) => {
     setInventory(updatedInventory);
     setOrders(nextOrders);
 
-    localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
-    localStorage.setItem('hd_inventory', JSON.stringify(updatedInventory));
+    // Incrementa cupom se foi usado
+    if (newOrder.couponCode) {
+      setCoupons(prev => prev.map(c => c.code.toUpperCase() === newOrder.couponCode.toUpperCase() ? { ...c, usesCount: (c.usesCount || 0) + 1 } : c));
+    }
 
+    // Grava/atualiza memória do cliente
+    if (newOrder.phone) {
+      const clean = newOrder.phone.replace(/\D/g, '');
+      setCustomers(prev => {
+        const found = prev.find(c => c.phone.replace(/\D/g, '') === clean);
+        if (found) {
+          return prev.map(c => c.phone.replace(/\D/g, '') === clean ? {
+            ...c,
+            name: newOrder.customerName || c.name,
+            address: newOrder.address || c.address,
+            neighborhood: newOrder.neighborhood || c.neighborhood,
+            totalOrders: (c.totalOrders || 0) + 1,
+            lastOrderAt: new Date().toISOString()
+          } : c);
+        } else {
+          return [...prev, {
+            phone: clean,
+            name: newOrder.customerName,
+            address: newOrder.address,
+            neighborhood: newOrder.neighborhood,
+            stampsCount: 0,
+            totalOrders: 1,
+            lastOrderAt: new Date().toISOString()
+          }];
+        }
+      });
+    }
+
+    // Salva no Supabase se configurado
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        supabase.from('orders').insert({
+          id: newOrder.id,
+          customer_name: newOrder.customerName,
+          phone: newOrder.phone,
+          type: newOrder.type,
+          address: newOrder.address,
+          neighborhood: newOrder.neighborhood,
+          payment_method: newOrder.paymentMethod,
+          change_for: newOrder.changeFor,
+          items: newOrder.items,
+          total: newOrder.total,
+          status: 'pending',
+          notes: newOrder.notes || ''
+        }).then(({ error }) => {
+          if (error) console.warn('Supabase order insert error:', error);
+        });
+      } catch (err) {
+        console.warn('Supabase sync catch:', err);
+      }
+    }
+
+    // Dispara alerta sonoro e broadcast
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const ch = new BroadcastChannel('nuu_system_channel');
@@ -434,27 +938,43 @@ export const SystemProvider = ({ children }) => {
     return newOrder;
   };
 
+  // --- Atualização de Status do Pedido ---
   const updateOrderStatus = (orderId, newStatus) => {
     let nextOrders = [];
     setOrders(prev => {
       nextOrders = prev.map(order => {
         if (order.id === orderId) {
-          const updated = { ...order, status: newStatus };
+          const updated = { 
+            ...order, 
+            status: newStatus,
+            shippedAt: newStatus === 'shipping' ? new Date().toISOString() : order.shippedAt,
+            deliveredAt: newStatus === 'delivered' ? new Date().toISOString() : order.deliveredAt
+          };
           
-          // If status turns to delivered, add to finance and auto-generate invoice
+          // Se entregue: gera receita e pontua fidelidade do cliente
           if (newStatus === 'delivered' && order.status !== 'delivered') {
+            // Calcula dedução da taxa de cartão (se aplicável)
+            let netValue = order.total;
+            const payLower = (order.paymentMethod || '').toLowerCase();
+            if (payLower.includes('débito') || payLower.includes('debito')) {
+              netValue = order.total * (1 - (storeSettings.cardDebitFee / 100));
+            } else if (payLower.includes('crédito') || payLower.includes('credito')) {
+              netValue = order.total * (1 - (storeSettings.cardCreditFee / 100));
+            }
+
             const transactionId = 't-' + Date.now();
             const newTransaction = {
               id: transactionId,
               date: new Date().toISOString(),
               type: 'income',
               category: 'Vendas',
-              value: order.total,
-              description: `Pedido #${order.id}`
+              value: parseFloat(netValue.toFixed(2)),
+              grossValue: order.total,
+              description: `Pedido #${order.id} (${order.customerName}) - ${order.paymentMethod}`
             };
             setTransactions(t => [newTransaction, ...t]);
 
-            // Emit NF
+            // Emissão de Nota Fiscal
             const nfId = `NF-${order.id}`;
             const newNf = {
               id: nfId,
@@ -468,6 +988,18 @@ export const SystemProvider = ({ children }) => {
               key: `352606` + Math.floor(100000000000000000 + Math.random() * 900000000000000000)
             };
             setInvoices(i => [newNf, ...i]);
+
+            // Pontuação no Cartão Fidelidade
+            if (order.phone && order.total >= storeSettings.loyaltyMinOrder) {
+              const clean = order.phone.replace(/\D/g, '');
+              setCustomers(custs => custs.map(c => {
+                if (c.phone.replace(/\D/g, '') === clean) {
+                  const newStamps = (c.stampsCount || 0) + 1;
+                  return { ...c, stampsCount: newStamps };
+                }
+                return c;
+              }));
+            }
           }
           return updated;
         }
@@ -476,7 +1008,13 @@ export const SystemProvider = ({ children }) => {
       return nextOrders;
     });
 
-    localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
+    // Supabase update se configurado
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        supabase.from('orders').update({ status: newStatus }).eq('id', orderId).then();
+      } catch (err) {}
+    }
 
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -487,7 +1025,15 @@ export const SystemProvider = ({ children }) => {
     } catch (e) {}
   };
 
-  // Inventory actions
+  const deleteOrder = (orderId) => {
+    setOrders(prev => {
+      const next = prev.filter(o => o.id !== orderId);
+      localStorage.setItem('hd_orders', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // --- Estoque e Entradas ---
   const adjustStock = (ingredientId, amount, type = 'adjust') => {
     setInventory(prev => prev.map(item => {
       if (item.id === ingredientId) {
@@ -498,15 +1044,14 @@ export const SystemProvider = ({ children }) => {
 
         if (type === 'add' && amount > 0) {
           const cost = amount * 2.5;
-          const newTransaction = {
+          setTransactions(t => [{
             id: 't-' + Date.now(),
             date: new Date().toISOString(),
             type: 'expense',
             category: 'Estoque',
             value: parseFloat(cost.toFixed(2)),
             description: `Compra manual de ${amount} ${item.unit} de ${item.name}`
-          };
-          setTransactions(t => [newTransaction, ...t]);
+          }, ...t]);
         }
 
         return { ...item, quantity: newQty };
@@ -517,7 +1062,6 @@ export const SystemProvider = ({ children }) => {
 
   const registerInflowInvoice = (nfData) => {
     const nfId = `NF-${Math.floor(2000 + Math.random() * 5000)}`;
-    const todayStr = new Date().toISOString().split('T')[0];
     const newNf = {
       id: nfId,
       type: 'entrada',
@@ -526,21 +1070,17 @@ export const SystemProvider = ({ children }) => {
       ...nfData
     };
     
-    // Add to invoices list
     setInvoices(prev => [newNf, ...prev]);
 
-    // Record expense
-    const newTransaction = {
+    setTransactions(prev => [{
       id: 't-' + Date.now(),
       date: new Date().toISOString(),
       type: 'expense',
       category: 'Estoque',
       value: nfData.total,
       description: `Nota Fiscal Entrada #${newNf.id} - ${nfData.supplier}`
-    };
-    setTransactions(prev => [newTransaction, ...prev]);
+    }, ...prev]);
 
-    // Update stock for ingredients
     if (nfData.items) {
       setInventory(prev => prev.map(invItem => {
         const itemInNf = nfData.items.find(i => i.name.toLowerCase().includes(invItem.name.toLowerCase()) || invItem.name.toLowerCase().includes(i.name.toLowerCase()));
@@ -549,66 +1089,37 @@ export const SystemProvider = ({ children }) => {
         }
         return invItem;
       }));
-
-      // Auto-update or insert Quotation in real-time from Inflow NF!
-      setQuotations(prev => {
-        let updatedList = [...prev];
-        nfData.items.forEach(nfItem => {
-          const supplierName = nfData.supplier || 'Fornecedor NF-e';
-          const existingIdx = updatedList.findIndex(q => 
-            q.productName.toLowerCase() === nfItem.name.toLowerCase() && 
-            q.supplier.toLowerCase() === supplierName.toLowerCase()
-          );
-
-          const pkgPrice = parseFloat(nfItem.price) || 0;
-          const pkgQty = parseFloat(nfItem.quantity) || 1;
-          const calculatedUnit = parseFloat((pkgPrice / pkgQty).toFixed(2));
-
-          if (existingIdx > -1) {
-            updatedList[existingIdx] = {
-              ...updatedList[existingIdx],
-              packagePrice: pkgPrice,
-              unitPrice: calculatedUnit,
-              lastUpdated: todayStr
-            };
-          } else {
-            updatedList.unshift({
-              id: 'q-' + Date.now() + Math.floor(Math.random() * 1000),
-              productName: nfItem.name,
-              supplier: supplierName,
-              brand: 'NF-e Entrada',
-              package: `${pkgQty} un`,
-              packagePrice: pkgPrice,
-              unitPrice: calculatedUnit,
-              unitType: 'un',
-              lastUpdated: todayStr
-            });
-          }
-        });
-        return updatedList;
-      });
     }
   };
 
-  // Quotation actions
-  const addQuotation = (quotData) => {
-    const newQuot = {
-      id: 'q-' + Date.now(),
-      lastUpdated: new Date().toISOString().split('T')[0],
-      ...quotData
-    };
-    setQuotations(prev => [newQuot, ...prev]);
+  const manualStockInflow = (data) => {
+    if (data.mode === 'new') {
+      const newId = Math.max(...inventory.map(i => i.id), 0) + 1;
+      const newItem = {
+        id: newId,
+        name: data.name,
+        quantity: parseFloat(data.quantity) || 0,
+        minQuantity: parseFloat(data.minQuantity) || 10,
+        unit: data.unit || 'un'
+      };
+      setInventory(prev => [...prev, newItem]);
+    } else {
+      adjustStock(parseInt(data.ingredientId), parseFloat(data.quantity) || 0, 'add');
+    }
+
+    if (data.cost && parseFloat(data.cost) > 0) {
+      setTransactions(t => [{
+        id: 't-' + Date.now(),
+        date: new Date().toISOString(),
+        type: 'expense',
+        category: 'Estoque',
+        value: parseFloat(data.cost),
+        description: `Entrada manual: ${data.name || 'Insumo'} (${data.reason || 'Reposição'})`
+      }, ...t]);
+    }
   };
 
-  const updateQuotation = (id, updatedData) => {
-    setQuotations(prev => prev.map(q => q.id === id ? { ...q, ...updatedData, lastUpdated: new Date().toISOString().split('T')[0] } : q));
-  };
-
-  const deleteQuotation = (id) => {
-    setQuotations(prev => prev.filter(q => q.id !== id));
-  };
-
-  // Product actions
+  // --- Produtos e Complementos ---
   const upsertProduct = (productData) => {
     let next;
     if (productData.id) {
@@ -618,207 +1129,63 @@ export const SystemProvider = ({ children }) => {
       next = [...products, { ...productData, id: newId }];
     }
     setProducts(next);
-    localStorage.setItem('nuu_products_v4', JSON.stringify(next));
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'PRODUCTS_SYNC', products: next });
-        ch.close();
-      }
-    } catch (e) {}
   };
 
   const toggleProductStatus = (productId) => {
-    const next = products.map(p => p.id === productId ? { ...p, active: !p.active } : p);
-    setProducts(next);
-    localStorage.setItem('nuu_products_v4', JSON.stringify(next));
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'PRODUCTS_SYNC', products: next });
-        ch.close();
-      }
-    } catch (e) {}
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, active: !p.active } : p));
   };
 
   const deleteProduct = (id) => {
-    const next = products.filter(p => p.id !== id);
-    setProducts(next);
-    localStorage.setItem('nuu_products_v4', JSON.stringify(next));
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'PRODUCTS_SYNC', products: next });
-        ch.close();
-      }
-    } catch (e) {}
+    setProducts(prev => prev.filter(p => p.id !== id));
   };
 
-  // Complements and Extras actions
-  const toggleComplementStatus = (complementId) => {
-    const next = complements.map(c => c.id === complementId ? { ...c, active: !c.active } : c);
-    setComplements(next);
-    localStorage.setItem('nuu_complements_v2', JSON.stringify(next));
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: next });
-        ch.close();
-      }
-    } catch (e) {}
+  const toggleComplementStatus = (id) => {
+    setComplements(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c));
   };
 
-  const upsertComplement = (complementData) => {
-    let next;
-    if (complementData.id) {
-      next = complements.map(c => c.id === complementData.id ? { ...c, ...complementData } : c);
-    } else {
-      const newId = 'comp-' + Date.now();
-      next = [...complements, { ...complementData, id: newId, active: true }];
-    }
-    setComplements(next);
-    localStorage.setItem('nuu_complements_v2', JSON.stringify(next));
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: next });
-        ch.close();
+  const upsertComplement = (compData) => {
+    setComplements(prev => {
+      if (compData.id) {
+        return prev.map(c => c.id === compData.id ? { ...c, ...compData } : c);
       }
-    } catch (e) {}
-  };
-
-  const deleteComplement = (complementId) => {
-    const next = complements.filter(c => c.id !== complementId);
-    setComplements(next);
-    localStorage.setItem('nuu_complements_v2', JSON.stringify(next));
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: next });
-        ch.close();
-      }
-    } catch (e) {}
-  };
-
-  const deleteOrder = (orderId) => {
-    let nextOrders = [];
-    setOrders(prev => {
-      nextOrders = prev.filter(o => o.id !== orderId);
-      return nextOrders;
+      return [...prev, { ...compData, id: 'comp-' + Date.now() }];
     });
-    localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
-
-    setTransactions(prev => {
-      const next = prev.filter(t => !t.description?.includes(`#${orderId}`));
-      localStorage.setItem('hd_transactions', JSON.stringify(next));
-      return next;
-    });
-
-    setInvoices(prev => {
-      const next = prev.filter(i => i.referenceId !== orderId && i.id !== `NF-${orderId}`);
-      localStorage.setItem('hd_invoices', JSON.stringify(next));
-      return next;
-    });
-
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'ORDERS_SYNC', orders: nextOrders, isNewOrder: false });
-        ch.close();
-      }
-    } catch (e) {}
   };
 
-  const manualStockInflow = ({ ingredientId, name, quantity, minQuantity, unit, cost, reason }) => {
-    const qty = parseFloat(quantity) || 0;
-    const itemCost = parseFloat(cost) || 0;
-    let targetName = name;
-
-    setInventory(prev => {
-      let updated;
-      const existing = prev.find(i => (ingredientId && i.id === ingredientId) || (name && i.name.toLowerCase() === name.trim().toLowerCase()));
-      if (existing) {
-        targetName = existing.name;
-        updated = prev.map(item => item.id === existing.id ? { ...item, quantity: item.quantity + qty } : item);
-      } else {
-        const newId = Math.max(...prev.map(i => i.id), 0) + 1;
-        const newItem = {
-          id: newId,
-          name: name ? name.trim() : 'Novo Insumo',
-          quantity: qty,
-          minQuantity: parseFloat(minQuantity) || 10,
-          unit: unit || 'un'
-        };
-        targetName = newItem.name;
-        updated = [...prev, newItem];
-      }
-      localStorage.setItem('hd_inventory', JSON.stringify(updated));
-      return updated;
-    });
-
-    if (itemCost > 0) {
-      const newTransaction = {
-        id: 't-' + Date.now(),
-        date: new Date().toISOString(),
-        type: 'expense',
-        category: 'Estoque',
-        value: itemCost,
-        description: `Entrada Manual: ${qty} ${unit || 'un'} de ${targetName}${reason ? ` (${reason})` : ''}`
-      };
-      setTransactions(prev => {
-        const next = [newTransaction, ...prev];
-        localStorage.setItem('hd_transactions', JSON.stringify(next));
-        return next;
-      });
-    }
-
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const ch = new BroadcastChannel('nuu_system_channel');
-        ch.postMessage({ type: 'INVENTORY_SYNC' });
-        ch.close();
-      }
-    } catch (e) {}
+  const deleteComplement = (id) => {
+    setComplements(prev => prev.filter(c => c.id !== id));
   };
 
-  // Financial actions
-  const addTransaction = (transData) => {
-    const newTrans = {
+  // --- Transações do Fluxo de Caixa ---
+  const addTransaction = (tData) => {
+    const newT = {
       id: 't-' + Date.now(),
-      date: transData.date || new Date().toISOString(),
-      ...transData,
-      value: parseFloat(transData.value) || 0
+      date: new Date().toISOString(),
+      ...tData,
+      value: parseFloat(tData.value) || 0
     };
-    setTransactions(prev => {
-      const next = [newTrans, ...prev];
-      localStorage.setItem('hd_transactions', JSON.stringify(next));
-      return next;
-    });
+    setTransactions(prev => [newT, ...prev]);
   };
 
   const updateTransaction = (id, updatedData) => {
-    setTransactions(prev => {
-      const next = prev.map(t => {
-        if (t.id === id) {
-          return {
-            ...t,
-            ...updatedData,
-            value: updatedData.value !== undefined ? parseFloat(updatedData.value) || 0 : t.value
-          };
-        }
-        return t;
-      });
-      localStorage.setItem('hd_transactions', JSON.stringify(next));
-      return next;
-    });
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updatedData, value: parseFloat(updatedData.value) || 0 } : t));
   };
 
   const deleteTransaction = (id) => {
-    setTransactions(prev => {
-      const next = prev.filter(t => t.id !== id);
-      localStorage.setItem('hd_transactions', JSON.stringify(next));
-      return next;
-    });
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  // --- Cotações ---
+  const addQuotation = (quotData) => {
+    setQuotations(prev => [{ id: 'q-' + Date.now(), lastUpdated: new Date().toISOString().split('T')[0], ...quotData }, ...prev]);
+  };
+
+  const updateQuotation = (id, updatedData) => {
+    setQuotations(prev => prev.map(q => q.id === id ? { ...q, ...updatedData, lastUpdated: new Date().toISOString().split('T')[0] } : q));
+  };
+
+  const deleteQuotation = (id) => {
+    setQuotations(prev => prev.filter(q => q.id !== id));
   };
 
   return (
@@ -830,6 +1197,37 @@ export const SystemProvider = ({ children }) => {
       invoices,
       quotations,
       complements,
+      storeSettings,
+      deliveryNeighborhoods,
+      deliveryRadiuses,
+      coupons,
+      motoboys,
+      customers,
+      cashShifts,
+      activeShift,
+      supabaseActive,
+      SUPABASE_SCHEMA_SQL,
+      saveSupabaseConfig,
+      isStoreOpenNow,
+      updateStoreSettings,
+      calculateDeliveryFee,
+      validateCoupon,
+      upsertCoupon,
+      deleteCoupon,
+      upsertNeighborhood,
+      deleteNeighborhood,
+      upsertRadius,
+      deleteRadius,
+      upsertMotoboy,
+      deleteMotoboy,
+      assignOrderMotoboy,
+      settleMotoboyPayments,
+      lookupCustomer,
+      saveCustomer,
+      openCashShift,
+      closeCashShift,
+      addShiftBleed,
+      addShiftSupply,
       createOrder,
       updateOrderStatus,
       deleteOrder,

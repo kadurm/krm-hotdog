@@ -573,8 +573,8 @@ input:focus, select:focus, textarea:focus {
 .dot { width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; }
 .dot.active { background-color: #fff; }
 
-.slider-image-area { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
-.product-circle { width: 450px; height: 450px; border-radius: 50%; background-color: rgba(0,0,0,0.2); box-shadow: 0 30px 60px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); font-size: 1.2rem; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.1); }
+.product-circle { width: 450px; height: 450px; border-radius: 50%; background-color: rgba(0,0,0,0.2); box-shadow: 0 30px 60px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); font-size: 1.2rem; backdrop-filter: blur(10px); border: 3px solid rgba(255,255,255,0.25); overflow: hidden; padding: 0; }
+.product-circle img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; border-radius: 50%; }
 
 .float-element { position: absolute; font-size: 4rem; opacity: 0.8; }
 .float-pos-0 { top: 10%; left: 20%; }
@@ -639,9 +639,19 @@ input:focus, select:focus, textarea:focus {
 
   /* Redução da foto */
   .product-circle {
-    width: 160px !important; 
-    height: 160px !important;
+    width: 170px !important; 
+    height: 170px !important;
     margin: 0 auto; 
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+  .product-circle img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    border-radius: 50% !important;
   }
   
   /* Compactação da área de texto */

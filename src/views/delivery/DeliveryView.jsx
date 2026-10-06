@@ -390,15 +390,34 @@ export default function DeliveryView({
             
             {/* IMAGEM PRINCIPAL DO PRODUTO */}
             <div className="product-image-container animate-product-enter" key={activeProduct.id}>
-                <div className="product-circle" style={{ width: '420px', height: '420px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.25)', boxShadow: '0 30px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', textAlign: 'center', padding: '2rem', backdropFilter: 'blur(10px)', border: '2px solid rgba(255,255,255,0.15)', overflow: 'visible' }}>
+                <div 
+                  className="product-circle" 
+                  style={{ 
+                    width: '420px', 
+                    height: '420px', 
+                    borderRadius: '50%', 
+                    backgroundColor: 'rgba(0,0,0,0.25)', 
+                    boxShadow: '0 30px 60px rgba(0,0,0,0.45), inset 0 0 20px rgba(0,0,0,0.3)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    padding: 0, 
+                    backdropFilter: 'blur(10px)', 
+                    border: '3px solid rgba(255,255,255,0.25)', 
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}
+                >
                   <img 
                     src={activeProduct.image} 
                     alt={activeProduct.name} 
                     style={{ 
-                      width: '120%', 
-                      height: 'auto', 
-                      objectFit: 'contain',
-                      filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.5))' 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover',
+                      objectPosition: 'center',
+                      display: 'block',
+                      borderRadius: '50%'
                     }} 
                   />
                 </div>

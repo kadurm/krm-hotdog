@@ -494,7 +494,19 @@ export default function DeliveryView({
 
       {/* TELA DE GRADE (GRID VIEW) */}
       {checkoutStep === 'menu' && viewMode === 'grid' && (
-        <div className="grid-view-container animate-fade-in-up" style={{ padding: '2rem 4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', flex: 1, paddingBottom: '4rem' }}>
+        <div 
+          className="grid-view-container animate-fade-in-up" 
+          style={{ 
+            maxWidth: '1240px',
+            margin: '0 auto',
+            width: '100%',
+            padding: '2rem 2rem 5rem 2rem', 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+            gap: '2rem', 
+            alignItems: 'stretch' 
+          }}
+        >
           {products.map((product) => {
             const themes = {
               1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] },
@@ -522,18 +534,26 @@ export default function DeliveryView({
                   textAlign: 'center', 
                   color: '#fff',
                   opacity: isPaused ? 0.65 : 1,
-                  transition: 'transform 0.3s ease',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                   position: 'relative'
                 }}
-                onMouseOver={(e) => { if (!isPaused) e.currentTarget.style.transform = 'translateY(-10px)'; }}
-                onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                onMouseOver={(e) => { 
+                  if (!isPaused) {
+                    e.currentTarget.style.transform = 'translateY(-6px)'; 
+                    e.currentTarget.style.boxShadow = `0 16px 32px rgba(0,0,0,0.5), 0 0 20px ${theme.color}25`;
+                  }
+                }}
+                onMouseOut={(e) => { 
+                  e.currentTarget.style.transform = 'translateY(0)'; 
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 {/* Foto Real do Produto na Grade */}
                 <div 
                   className="grid-card-image"
                   style={{ 
                     width: '100%', 
-                    height: '190px', 
+                    height: '200px', 
                     borderRadius: '12px', 
                     overflow: 'hidden', 
                     marginBottom: '1.25rem',
@@ -602,54 +622,59 @@ export default function DeliveryView({
                   )}
                 </div>
                 
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: isPaused ? 'var(--text-secondary)' : theme.color }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.4rem', color: isPaused ? 'var(--text-secondary)' : theme.color }}>
                   {product.name}
                 </h3>
                 
-                <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1.5rem', flex: 1, lineHeight: 1.5 }}>
+                <p style={{ opacity: 0.75, fontSize: '0.88rem', marginBottom: '1.25rem', lineHeight: 1.45, minHeight: '44px' }}>
                   {product.description}
                 </p>
                 
-                <div className="grid-price" style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem', color: isPaused ? 'var(--text-muted)' : '#fff' }}>
-                  R$ {product.price.toFixed(2)}
+                <div style={{ width: '100%', marginTop: 'auto' }}>
+                  <div className="grid-price" style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.85rem', color: isPaused ? 'var(--text-muted)' : '#fff' }}>
+                    R$ {product.price.toFixed(2)}
+                  </div>
+                  
+                  {isPaused ? (
+                    <button 
+                      disabled={true}
+                      style={{ 
+                        backgroundColor: 'rgba(255,255,255,0.06)', 
+                        color: '#f87171', 
+                        border: '1px solid rgba(239, 68, 68, 0.3)', 
+                        padding: '12px 0', 
+                        borderRadius: '99px', 
+                        fontWeight: 700, 
+                        fontSize: '0.95rem',
+                        cursor: 'not-allowed', 
+                        width: '100%'
+                      }}
+                    >
+                      Indisponível no Momento
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleOpenProduct(product)} 
+                      style={{ 
+                        backgroundColor: theme.color, 
+                        color: '#fff', 
+                        border: 'none', 
+                        padding: '12px 0', 
+                        borderRadius: '99px', 
+                        fontWeight: 700, 
+                        fontSize: '1rem',
+                        cursor: 'pointer', 
+                        width: '100%',
+                        boxShadow: `0 4px 15px ${theme.color}40`,
+                        transition: 'transform 0.2s, filter 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                      onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1)'}
+                    >
+                      Escolher Montagem
+                    </button>
+                  )}
                 </div>
-                
-                {isPaused ? (
-                  <button 
-                    disabled={true}
-                    style={{ 
-                      backgroundColor: 'rgba(255,255,255,0.06)', 
-                      color: '#f87171', 
-                      border: '1px solid rgba(239, 68, 68, 0.3)', 
-                      padding: '12px 0', 
-                      borderRadius: '99px', 
-                      fontWeight: 700, 
-                      fontSize: '0.95rem',
-                      cursor: 'not-allowed', 
-                      width: '100%'
-                    }}
-                  >
-                    Indisponível no Momento
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => handleOpenProduct(product)} 
-                    style={{ 
-                      backgroundColor: theme.color, 
-                      color: '#fff', 
-                      border: 'none', 
-                      padding: '12px 0', 
-                      borderRadius: '99px', 
-                      fontWeight: 700, 
-                      fontSize: '1rem',
-                      cursor: 'pointer', 
-                      width: '100%',
-                      boxShadow: `0 4px 15px ${theme.color}40`
-                    }}
-                  >
-                    Escolher Montagem
-                  </button>
-                )}
               </div>
             );
           })}

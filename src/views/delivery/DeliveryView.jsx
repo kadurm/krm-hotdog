@@ -17,7 +17,7 @@ export default function DeliveryView({
   checkoutStep: propCheckoutStep,
   setCheckoutStep: propSetCheckoutStep
 }) {
-  const { products, createOrder, orders } = useSystem();
+  const { products, createOrder, orders, complements = [] } = useSystem();
   
   const [activeSlide, setActiveSlide] = useState(0);
   const [internalViewMode, setInternalViewMode] = useState('slider');
@@ -35,14 +35,25 @@ export default function DeliveryView({
   const setCheckoutStep = propSetCheckoutStep || setInternalCheckoutStep;
 
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [extraBacon, setExtraBacon] = useState(false);
-  const [extraCheese, setExtraCheese] = useState(false);
   const [productQty, setProductQty] = useState(1);
   
-  // NOVOS ESTADOS PARA AS OPÇÕES DO CARDÁPIO REAL
-  const [creamyCheese, setCreamyCheese] = useState('catupiry'); // 'catupiry' ou 'requeijao'
-  const [meltedCheese, setMeltedCheese] = useState('mussarela'); // 'mussarela' ou 'cheddar'
-  const [hasVinagrete, setHasVinagrete] = useState(false);
+  // Agrupamento dinâmico de complementos e adicionais
+  const creamyOptions = complements.filter(c => c.group === 'creamy');
+  const meltedOptions = complements.filter(c => c.group === 'melted');
+  const sideOptions = complements.filter(c => c.group === 'side');
+  const extraOptions = complements.filter(c => c.category === 'extra' || c.group === 'extras');
+
+  // Estados dinâmicos de personalização do lanche
+  const [selectedCreamy, setSelectedCreamy] = useState('Catupiry');
+  const [selectedMelted, setSelectedMelted] = useState('Mussarela');
+  const [selectedSide, setSelectedSide] = useState(false);
+  const [selectedExtras, setSelectedExtras] = useState([]); // array de IDs de adicionais extras selecionados
+
+  // Cálculo de adicionais ativos selecionados
+  const activeSelectedExtras = extraOptions.filter(e => selectedExtras.includes(e.id) && e.active);
+  const extrasTotal = activeSelectedExtras.reduce((acc, e) => acc + (e.price || 0), 0);
+  const currentUnitPrice = selectedProduct ? (selectedProduct.price + extrasTotal) : 0;
+  const currentTotalPrice = currentUnitPrice * productQty;
 
   // 1. Cria um histórico falso sempre que o carrinho ou o modal do lanche abrirem
   useEffect(() => {
@@ -172,26 +183,44 @@ export default function DeliveryView({
 
   // Lógica do Carrinho
   const handleOpenProduct = (product) => {
+    if (!product.active) return; // Não abre se o produto estiver pausado
     setSelectedProduct(product);
     setProductQty(1);
-    // Resetar opções padrão quando abrir o modal
-    setCreamyCheese('catupiry');
-    setMeltedCheese('mussarela');
-    setHasVinagrete(false);
+    setSelectedExtras([]);
+    setSelectedSide(false);
+
+    // Seleciona a primeira opção ativa de queijo cremoso
+    const activeCreamy = creamyOptions.find(c => c.active);
+    setSelectedCreamy(activeCreamy ? activeCreamy.name : (creamyOptions[0]?.name || 'Catupiry'));
+
+    // Seleciona a primeira opção ativa de queijo fatiado
+    const activeMelted = meltedOptions.find(c => c.active);
+    setSelectedMelted(activeMelted ? activeMelted.name : (meltedOptions[0]?.name || 'Mussarela'));
   };
 
   const handleAddToCart = () => {
-    let price = selectedProduct.price;
+    if (!selectedProduct || !selectedProduct.active) return;
+
     let nameDetails = [];
     
-    // Se for os itens 3, 4 ou 5, adicionamos as descrições no nome do pedido
+    // Se o produto tiver opções customizáveis (ex: queijos e vinagrete)
     if (selectedProduct.hasCustomOptions) {
-      nameDetails.push(creamyCheese === 'catupiry' ? 'Catupiry' : 'Requeijão');
-      nameDetails.push(meltedCheese === 'mussarela' ? 'Mussarela' : 'Cheddar');
-      if (hasVinagrete) nameDetails.push('+ Vinagrete');
+      if (selectedCreamy) nameDetails.push(selectedCreamy);
+      if (selectedMelted) nameDetails.push(selectedMelted);
+      if (selectedSide) {
+        const sideName = sideOptions[0]?.name || 'Vinagrete';
+        nameDetails.push(`+ ${sideName}`);
+      }
     }
 
+    // Adiciona os adicionais extras ativos selecionados
+    activeSelectedExtras.forEach(extra => {
+      nameDetails.push(`+ ${extra.name}`);
+    });
+
     const itemName = selectedProduct.name + (nameDetails.length > 0 ? ` (${nameDetails.join(' | ')})` : '');
+    const finalUnitPrice = currentUnitPrice; // Preço do produto + adicionais extras selecionados
+
     const existingIndex = cart.findIndex(item => item.name === itemName);
     
     if (existingIndex > -1) {
@@ -199,7 +228,7 @@ export default function DeliveryView({
       updated[existingIndex].quantity += productQty;
       setCart(updated);
     } else {
-      setCart([...cart, { productId: selectedProduct.id, name: itemName, price, quantity: productQty }]);
+      setCart([...cart, { productId: selectedProduct.id, name: itemName, price: finalUnitPrice, quantity: productQty }]);
     }
     
     setSelectedProduct(null);
@@ -466,108 +495,164 @@ export default function DeliveryView({
       {/* TELA DE GRADE (GRID VIEW) */}
       {checkoutStep === 'menu' && viewMode === 'grid' && (
         <div className="grid-view-container animate-fade-in-up" style={{ padding: '2rem 4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', flex: 1, paddingBottom: '4rem' }}>
-          {visualProducts.map((product) => (
-            <div 
-              key={product.id} 
-              className="grid-card"
-              style={{ 
-                background: 'rgba(255,255,255,0.03)', 
-                border: `1px solid rgba(255,255,255,0.1)`, 
-                borderTop: `4px solid ${product.color}`,
-                borderRadius: '16px', 
-                padding: '1.5rem', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                textAlign: 'center', 
-                color: '#fff',
-                transition: 'transform 0.3s ease'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-10px)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              {/* Foto Real do Produto na Grade */}
+          {products.map((product) => {
+            const themes = {
+              1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] },
+              2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] },
+              3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] },
+              4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] },
+              5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] },
+            };
+            const theme = themes[product.id] || { color: '#333333', floaties: ['✨', '🍔', '🥤'] };
+            const isPaused = !product.active;
+
+            return (
               <div 
-                className="grid-card-image"
+                key={product.id} 
+                className="grid-card"
                 style={{ 
-                  width: '100%', 
-                  height: '190px', 
-                  borderRadius: '12px', 
-                  overflow: 'hidden', 
-                  marginBottom: '1.25rem',
-                  position: 'relative',
-                  backgroundColor: '#0a0a0a',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                  border: '1px solid rgba(255,255,255,0.08)'
+                  background: 'rgba(255,255,255,0.03)', 
+                  border: `1px solid rgba(255,255,255,0.1)`, 
+                  borderTop: `4px solid ${isPaused ? '#6b7280' : theme.color}`,
+                  borderRadius: '16px', 
+                  padding: '1.5rem', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  textAlign: 'center', 
+                  color: '#fff',
+                  opacity: isPaused ? 0.65 : 1,
+                  transition: 'transform 0.3s ease',
+                  position: 'relative'
                 }}
+                onMouseOver={(e) => { if (!isPaused) e.currentTarget.style.transform = 'translateY(-10px)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
-                {product.image ? (
-                  <img 
-                    src={product.image} 
-                    alt={product.name} 
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'cover', 
-                      objectPosition: 'center',
-                      display: 'block',
-                      transition: 'transform 0.4s ease'
-                    }} 
-                    className="grid-card-img"
-                  />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>
-                    {product.floaties?.[0] || '🌭'}
-                  </div>
-                )}
-                <span 
+                {/* Foto Real do Produto na Grade */}
+                <div 
+                  className="grid-card-image"
                   style={{ 
-                    position: 'absolute', 
-                    top: '8px', 
-                    right: '8px', 
-                    background: 'rgba(0,0,0,0.65)', 
-                    backdropFilter: 'blur(6px)', 
-                    padding: '4px 8px', 
-                    borderRadius: '20px', 
-                    fontSize: '1rem',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                    width: '100%', 
+                    height: '190px', 
+                    borderRadius: '12px', 
+                    overflow: 'hidden', 
+                    marginBottom: '1.25rem',
+                    position: 'relative',
+                    backgroundColor: '#0a0a0a',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                    border: '1px solid rgba(255,255,255,0.08)'
                   }}
                 >
-                  {product.floaties?.[0] || '🌭'}
-                </span>
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={product.name} 
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover', 
+                        objectPosition: 'center', 
+                        display: 'block',
+                        filter: isPaused ? 'grayscale(80%)' : 'none',
+                        transition: 'transform 0.4s ease'
+                      }} 
+                      className="grid-card-img"
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>
+                      {theme.floaties?.[0] || '🌭'}
+                    </div>
+                  )}
+                  
+                  {/* Badge de status ou emoji */}
+                  {isPaused ? (
+                    <span 
+                      style={{ 
+                        position: 'absolute', 
+                        top: '8px', 
+                        right: '8px', 
+                        background: 'rgba(239, 68, 68, 0.9)', 
+                        backdropFilter: 'blur(6px)', 
+                        padding: '4px 10px', 
+                        borderRadius: '20px', 
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        color: '#fff',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.5)'
+                      }}
+                    >
+                      ESGOTADO
+                    </span>
+                  ) : (
+                    <span 
+                      style={{ 
+                        position: 'absolute', 
+                        top: '8px', 
+                        right: '8px', 
+                        background: 'rgba(0,0,0,0.65)', 
+                        backdropFilter: 'blur(6px)', 
+                        padding: '4px 8px', 
+                        borderRadius: '20px', 
+                        fontSize: '1rem',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      {theme.floaties?.[0] || '🌭'}
+                    </span>
+                  )}
+                </div>
+                
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: isPaused ? 'var(--text-secondary)' : theme.color }}>
+                  {product.name}
+                </h3>
+                
+                <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1.5rem', flex: 1, lineHeight: 1.5 }}>
+                  {product.description}
+                </p>
+                
+                <div className="grid-price" style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem', color: isPaused ? 'var(--text-muted)' : '#fff' }}>
+                  R$ {product.price.toFixed(2)}
+                </div>
+                
+                {isPaused ? (
+                  <button 
+                    disabled={true}
+                    style={{ 
+                      backgroundColor: 'rgba(255,255,255,0.06)', 
+                      color: '#f87171', 
+                      border: '1px solid rgba(239, 68, 68, 0.3)', 
+                      padding: '12px 0', 
+                      borderRadius: '99px', 
+                      fontWeight: 700, 
+                      fontSize: '0.95rem',
+                      cursor: 'not-allowed', 
+                      width: '100%'
+                    }}
+                  >
+                    Indisponível no Momento
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleOpenProduct(product)} 
+                    style={{ 
+                      backgroundColor: theme.color, 
+                      color: '#fff', 
+                      border: 'none', 
+                      padding: '12px 0', 
+                      borderRadius: '99px', 
+                      fontWeight: 700, 
+                      fontSize: '1rem',
+                      cursor: 'pointer', 
+                      width: '100%',
+                      boxShadow: `0 4px 15px ${theme.color}40`
+                    }}
+                  >
+                    Escolher Montagem
+                  </button>
+                )}
               </div>
-              
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: product.color }}>
-                {product.name}
-              </h3>
-              
-              <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1.5rem', flex: 1, lineHeight: 1.5 }}>
-                {product.description}
-              </p>
-              
-              <div className="grid-price" style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>
-                R$ {product.price.toFixed(2)}
-              </div>
-              
-              <button 
-                onClick={() => handleOpenProduct(product)} 
-                style={{ 
-                  backgroundColor: product.color, 
-                  color: '#fff', 
-                  border: 'none', 
-                  padding: '12px 0', 
-                  borderRadius: '99px', 
-                  fontWeight: 700, 
-                  fontSize: '1rem',
-                  cursor: 'pointer', 
-                  width: '100%',
-                  boxShadow: `0 4px 15px ${product.color}40`
-                }}
-              >
-                Escolher Montagem
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -960,79 +1045,204 @@ export default function DeliveryView({
                 </p>
               </div>
 
-              {/* Exibe opções de queijo e vinagrete apenas se o lanche for 3, 4 ou 5 */}
+              {/* Exibe opções de queijo e vinagrete se o lanche tiver opções de montagem */}
               {selectedProduct && selectedProduct.hasCustomOptions && (
                 <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: '1px solid var(--border-glass)' }}>
-                  <h4 style={{ marginBottom: '10px', color: '#fff', fontSize: '1rem' }}>Personalize seu Prensado:</h4>
+                  <h4 style={{ marginBottom: '12px', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={16} color="var(--color-brand-yellow)" />
+                    Personalize seu Prensado:
+                  </h4>
                   
                   {/* Escolha do Queijo Cremoso */}
-                  <div style={{ marginBottom: '12px' }}>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Cremoso:</strong><br/>
-                    <div style={{ marginTop: '4px' }}>
-                      <label style={{ marginRight: '15px', cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
-                        <input type="radio" name="creamy" checked={creamyCheese === 'catupiry'} onChange={() => setCreamyCheese('catupiry')} style={{ accentColor: 'var(--color-brand)' }} /> Catupiry
-                      </label>
-                      <label style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
-                        <input type="radio" name="creamy" checked={creamyCheese === 'requeijao'} onChange={() => setCreamyCheese('requeijao')} style={{ accentColor: 'var(--color-brand)' }} /> Requeijão
-                      </label>
+                  <div style={{ marginBottom: '14px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Cremoso:</strong>
+                    <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {creamyOptions.map(opt => {
+                        const isPaused = !opt.active;
+                        return (
+                          <label 
+                            key={opt.id} 
+                            style={{ 
+                              cursor: isPaused ? 'not-allowed' : 'pointer', 
+                              fontSize: '0.9rem', 
+                              color: isPaused ? 'var(--text-muted)' : '#fff',
+                              opacity: isPaused ? 0.5 : 1,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              backgroundColor: selectedCreamy === opt.name && !isPaused ? 'rgba(255,255,255,0.06)' : 'transparent',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: selectedCreamy === opt.name && !isPaused ? '1px solid var(--border-glass)' : '1px solid transparent'
+                            }}
+                          >
+                            <input 
+                              type="radio" 
+                              name="creamy" 
+                              disabled={isPaused}
+                              checked={selectedCreamy === opt.name && !isPaused} 
+                              onChange={() => !isPaused && setSelectedCreamy(opt.name)} 
+                              style={{ accentColor: 'var(--color-brand)' }} 
+                            />
+                            <span>{opt.name}</span>
+                            {isPaused && (
+                              <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: 700 }}>
+                                Esgotado
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Escolha do Queijo Derretido */}
-                  <div style={{ marginBottom: '12px' }}>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Fatiado:</strong><br/>
-                    <div style={{ marginTop: '4px' }}>
-                      <label style={{ marginRight: '15px', cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
-                        <input type="radio" name="melted" checked={meltedCheese === 'mussarela'} onChange={() => setMeltedCheese('mussarela')} style={{ accentColor: 'var(--color-brand)' }} /> Mussarela
-                      </label>
-                      <label style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
-                        <input type="radio" name="melted" checked={meltedCheese === 'cheddar'} onChange={() => setMeltedCheese('cheddar')} style={{ accentColor: 'var(--color-brand)' }} /> Cheddar
-                      </label>
+                  {/* Escolha do Queijo Derretido / Fatiado */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Fatiado:</strong>
+                    <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {meltedOptions.map(opt => {
+                        const isPaused = !opt.active;
+                        return (
+                          <label 
+                            key={opt.id} 
+                            style={{ 
+                              cursor: isPaused ? 'not-allowed' : 'pointer', 
+                              fontSize: '0.9rem', 
+                              color: isPaused ? 'var(--text-muted)' : '#fff',
+                              opacity: isPaused ? 0.5 : 1,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              backgroundColor: selectedMelted === opt.name && !isPaused ? 'rgba(255,255,255,0.06)' : 'transparent',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: selectedMelted === opt.name && !isPaused ? '1px solid var(--border-glass)' : '1px solid transparent'
+                            }}
+                          >
+                            <input 
+                              type="radio" 
+                              name="melted" 
+                              disabled={isPaused}
+                              checked={selectedMelted === opt.name && !isPaused} 
+                              onChange={() => !isPaused && setSelectedMelted(opt.name)} 
+                              style={{ accentColor: 'var(--color-brand)' }} 
+                            />
+                            <span>{opt.name}</span>
+                            {isPaused && (
+                              <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: 700 }}>
+                                Esgotado
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Vinagrete Opcional */}
+                  {/* Acompanhamentos Opcionais (Vinagrete) */}
                   <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Acompanhamento:</strong><br/>
-                    <div style={{ marginTop: '4px' }}>
-                      <label style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
-                        <input type="checkbox" checked={hasVinagrete} onChange={(e) => setHasVinagrete(e.target.checked)} style={{ accentColor: 'var(--color-brand)' }} /> Adicionar Vinagrete (Opcional)
-                      </label>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Acompanhamento:</strong>
+                    <div style={{ marginTop: '6px' }}>
+                      {sideOptions.length > 0 ? (
+                        sideOptions.map(opt => {
+                          const isPaused = !opt.active;
+                          return (
+                            <label 
+                              key={opt.id} 
+                              style={{ 
+                                cursor: isPaused ? 'not-allowed' : 'pointer', 
+                                fontSize: '0.9rem', 
+                                color: isPaused ? 'var(--text-muted)' : '#fff',
+                                opacity: isPaused ? 0.5 : 1,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              <input 
+                                type="checkbox" 
+                                disabled={isPaused}
+                                checked={selectedSide && !isPaused} 
+                                onChange={(e) => !isPaused && setSelectedSide(e.target.checked)} 
+                                style={{ accentColor: 'var(--color-brand)' }} 
+                              />
+                              <span>Adicionar {opt.name} (Opcional)</span>
+                              {isPaused && (
+                                <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: 700 }}>
+                                  Esgotado
+                                </span>
+                              )}
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <label style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#fff' }}>
+                          <input type="checkbox" checked={selectedSide} onChange={(e) => setSelectedSide(e.target.checked)} style={{ accentColor: 'var(--color-brand)' }} /> Adicionar Vinagrete Fresco (Opcional)
+                        </label>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Extras de Adicionais Padrão */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
-                <h5 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>Adicionais Extras (Opcional):</h5>
-                
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={extraBacon}
-                      onChange={(e) => setExtraBacon(e.target.checked)}
-                      style={{ accentColor: 'var(--color-brand)' }}
-                    />
-                    <span style={{ fontSize: '0.9rem' }}>Extra Bacon Crocante</span>
-                  </div>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--color-brand)', fontWeight: 600 }}>+ R$ 4,00</span>
-                </label>
+              {/* Extras de Adicionais Dinâmicos */}
+              {extraOptions.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
+                  <h5 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>
+                    Adicionais Extras (Opcional):
+                  </h5>
+                  
+                  {extraOptions.map(extra => {
+                    const isPaused = !extra.active;
+                    const isChecked = selectedExtras.includes(extra.id) && !isPaused;
 
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={extraCheese}
-                      onChange={(e) => setExtraCheese(e.target.checked)}
-                      style={{ accentColor: 'var(--color-brand)' }}
-                    />
-                    <span style={{ fontSize: '0.9rem' }}>Extra Queijo Derretido</span>
-                  </div>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--color-brand)', fontWeight: 600 }}>+ R$ 3,00</span>
-                </label>
-              </div>
+                    return (
+                      <label 
+                        key={extra.id} 
+                        style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          padding: '8px 12px', 
+                          border: '1px solid',
+                          borderColor: isChecked ? 'var(--color-brand)' : 'var(--border-glass)', 
+                          borderRadius: 'var(--radius-sm)', 
+                          cursor: isPaused ? 'not-allowed' : 'pointer',
+                          opacity: isPaused ? 0.5 : 1,
+                          backgroundColor: isChecked ? 'rgba(234, 179, 8, 0.08)' : 'transparent',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            type="checkbox" 
+                            disabled={isPaused}
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (isPaused) return;
+                              if (e.target.checked) {
+                                setSelectedExtras(prev => [...prev, extra.id]);
+                              } else {
+                                setSelectedExtras(prev => prev.filter(id => id !== extra.id));
+                              }
+                            }}
+                            style={{ accentColor: 'var(--color-brand)' }}
+                          />
+                          <span style={{ fontSize: '0.9rem', fontWeight: isChecked ? 600 : 400 }}>{extra.name}</span>
+                          {isPaused && (
+                            <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: 700 }}>
+                              Esgotado
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.85rem', color: isPaused ? 'var(--text-muted)' : 'var(--color-brand)', fontWeight: 600 }}>
+                          {isPaused ? 'Indisponível' : `+ R$ ${extra.price.toFixed(2)}`}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Quantidade */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
@@ -1053,7 +1263,7 @@ export default function DeliveryView({
                 Cancelar
               </button>
               <button onClick={handleAddToCart} className="btn-primary">
-                Adicionar • R$ {((selectedProduct.price + (extraBacon ? 4.0 : 0) + (extraCheese ? 3.0 : 0)) * productQty).toFixed(2)}
+                Adicionar • R$ {currentTotalPrice.toFixed(2)}
               </button>
             </div>
           </div>

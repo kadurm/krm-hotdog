@@ -7,14 +7,17 @@ import {
   Utensils, X, Plus, Edit, PlusSquare, LogOut,
   ChevronLeft, ChevronRight, Menu, ShoppingBag, Sparkles,
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
-  Volume2, VolumeX, Upload, Image
+  Volume2, VolumeX, Upload, Image, Pause, Play
 } from 'lucide-react';
 
 export default function AdminView({ onLogout }) {
   const { 
     products, inventory, orders, transactions, invoices, quotations,
+    complements = [],
     updateOrderStatus, deleteOrder, adjustStock, manualStockInflow, registerInflowInvoice, 
-    upsertProduct, deleteProduct, addTransaction, updateTransaction, deleteTransaction,
+    upsertProduct, deleteProduct, toggleProductStatus,
+    toggleComplementStatus, upsertComplement, deleteComplement,
+    addTransaction, updateTransaction, deleteTransaction,
     addQuotation, updateQuotation, deleteQuotation 
   } = useSystem();
 
@@ -61,6 +64,16 @@ export default function AdminView({ onLogout }) {
   const [prodActive, setProdActive] = useState(true);
   const [prodImage, setProdImage] = useState('/images/prensadinho.png');
   const [prodRecipe, setProdRecipe] = useState([]);
+
+  // Menu Sub-tab & Complement states
+  const [menuSubTab, setMenuSubTab] = useState('products'); // 'products' | 'complements'
+  const [isComplementModalOpen, setIsComplementModalOpen] = useState(false);
+  const [editingComplement, setEditingComplement] = useState(null);
+  const [compName, setCompName] = useState('');
+  const [compCategory, setCompCategory] = useState('extra'); // 'extra' | 'complement'
+  const [compGroup, setCompGroup] = useState('extras'); // 'extras' | 'creamy' | 'melted' | 'side' | 'other'
+  const [compPrice, setCompPrice] = useState('0');
+  const [compActive, setCompActive] = useState(true);
 
   // Manual Stock Entry Modal states
   const [isManualStockModalOpen, setIsManualStockModalOpen] = useState(false);
@@ -260,6 +273,54 @@ export default function AdminView({ onLogout }) {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Complement Handlers
+  const handleOpenComplementModal = (comp = null, defaultCategory = 'extra') => {
+    if (comp) {
+      setEditingComplement(comp);
+      setCompName(comp.name);
+      setCompCategory(comp.category || 'extra');
+      setCompGroup(comp.group || 'extras');
+      setCompPrice(comp.price !== undefined ? comp.price.toString() : '0');
+      setCompActive(comp.active !== false);
+    } else {
+      setEditingComplement(null);
+      setCompName('');
+      setCompCategory(defaultCategory);
+      setCompGroup(defaultCategory === 'extra' ? 'extras' : 'creamy');
+      setCompPrice(defaultCategory === 'extra' ? '4.00' : '0');
+      setCompActive(true);
+    }
+    setIsComplementModalOpen(true);
+  };
+
+  const handleSaveComplement = (e) => {
+    e.preventDefault();
+    if (!compName.trim()) return;
+
+    let groupName = 'Adicionais Extras';
+    if (compGroup === 'creamy') groupName = 'Queijo Cremoso';
+    else if (compGroup === 'melted') groupName = 'Queijo Fatiado';
+    else if (compGroup === 'side') groupName = 'Acompanhamento';
+    else if (compGroup === 'other') groupName = 'Outros Complementos';
+
+    const payload = {
+      name: compName.trim(),
+      category: compCategory,
+      group: compGroup,
+      groupName,
+      price: parseFloat(compPrice) || 0,
+      active: compActive
+    };
+
+    if (editingComplement) {
+      upsertComplement({ ...payload, id: editingComplement.id });
+    } else {
+      upsertComplement(payload);
+    }
+    setIsComplementModalOpen(false);
+    setEditingComplement(null);
   };
 
   // Manual Stock Entry Handler
@@ -1336,86 +1397,361 @@ export default function AdminView({ onLogout }) {
             </div>
           )}
 
-          {/* TAB: PRODUCTS */}
+          {/* TAB: PRODUCTS & COMPLEMENTS */}
           {activeTab === 'products' && (
             <div className="animate-fade-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Cadastro de Produtos (Cardápio)</h2>
-                <button onClick={() => handleOpenProductModal(null)} className="btn-primary" style={{ fontSize: '0.85rem' }}>
-                  <Plus size={16} /> Cadastrar Produto
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Gestão de Cardápio & Itens</h2>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Pause ou ative produtos, queijos e adicionais com 1 clique para controlar a disponibilidade no cardápio do cliente.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {menuSubTab === 'products' ? (
+                    <button onClick={() => handleOpenProductModal(null)} className="btn-primary" style={{ fontSize: '0.85rem' }}>
+                      <Plus size={16} /> Cadastrar Produto
+                    </button>
+                  ) : (
+                    <button onClick={() => handleOpenComplementModal(null)} className="btn-primary" style={{ fontSize: '0.85rem' }}>
+                      <Plus size={16} /> Novo Adicional / Complemento
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Sub-abas de Navegação */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setMenuSubTab('products')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s',
+                    backgroundColor: menuSubTab === 'products' ? 'var(--color-brand)' : 'var(--bg-secondary)',
+                    color: '#fff',
+                    border: '1px solid var(--border-glass)'
+                  }}
+                >
+                  <Utensils size={16} />
+                  <span>Lanches & Bebidas</span>
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    padding: '2px 7px', 
+                    borderRadius: '99px', 
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    fontWeight: 800
+                  }}>
+                    {products.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMenuSubTab('complements')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s',
+                    backgroundColor: menuSubTab === 'complements' ? 'var(--color-brand)' : 'var(--bg-secondary)',
+                    color: '#fff',
+                    border: '1px solid var(--border-glass)'
+                  }}
+                >
+                  <Sparkles size={16} />
+                  <span>Adicionais & Complementos</span>
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    padding: '2px 7px', 
+                    borderRadius: '99px', 
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    fontWeight: 800
+                  }}>
+                    {complements.length}
+                  </span>
                 </button>
               </div>
 
-              <div className="admin-table-container">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '60px' }}>Foto</th>
-                      <th>Produto</th>
-                      <th>Categoria</th>
-                      <th>Preço</th>
-                      <th>Status</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map(prod => (
-                      <tr key={prod.id}>
-                        <td>
-                          <img 
-                            src={prod.image || '/logoNuuPrensado-semfundo.png'} 
-                            alt={prod.name} 
-                            style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'contain', backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-glass)', padding: '2px' }}
-                            onError={(e) => { 
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = '/logoNuuPrensado-semfundo.png'; 
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{prod.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{prod.description}</div>
-                        </td>
-                        <td>
-                          <span style={{ textTransform: 'capitalize', fontSize: '0.85rem' }}>{prod.category}</span>
-                        </td>
-                        <td style={{ fontWeight: 700, color: 'var(--color-brand)' }}>
-                          R$ {prod.price.toFixed(2)}
-                        </td>
-                        <td>
-                          {prod.active ? (
-                            <span className="badge badge-delivered" style={{ fontSize: '0.7rem' }}>Ativo</span>
-                          ) : (
-                            <span className="badge badge-pending" style={{ fontSize: '0.7rem' }}>Inativo</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button 
-                              onClick={() => handleOpenProductModal(prod)}
-                              style={{ padding: '6px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-info)', border: '1px solid var(--border-glass)' }}
-                              title="Editar Produto e Foto"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                if (confirm(`Excluir produto ${prod.name}?`)) {
-                                  deleteProduct(prod.id);
-                                }
-                              }}
-                              style={{ padding: '6px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-danger)', border: '1px solid var(--border-glass)' }}
-                              title="Excluir Produto"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* SUBTAB 1: PRODUTOS PRINCIPAIS */}
+              {menuSubTab === 'products' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      Total: <strong>{products.length}</strong> produtos • <span style={{ color: '#4ade80' }}>{products.filter(p => p.active).length} ativos</span> • <span style={{ color: '#f87171' }}>{products.filter(p => !p.active).length} pausados</span>
+                    </div>
+                  </div>
+
+                  <div className="admin-table-container">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '60px' }}>Foto</th>
+                          <th>Produto</th>
+                          <th>Categoria</th>
+                          <th>Preço</th>
+                          <th style={{ textAlign: 'center' }}>Disponibilidade (1-Clique)</th>
+                          <th style={{ textAlign: 'center' }}>Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map(prod => (
+                          <tr key={prod.id} style={{ opacity: prod.active ? 1 : 0.75, transition: 'opacity 0.2s' }}>
+                            <td>
+                              <img 
+                                src={prod.image || '/logoNuuPrensado-semfundo.png'} 
+                                alt={prod.name} 
+                                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'contain', backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-glass)', padding: '2px' }}
+                                onError={(e) => { 
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = '/logoNuuPrensado-semfundo.png'; 
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {prod.name}
+                                {!prod.active && (
+                                  <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: 700 }}>
+                                    PAUSADO
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{prod.description}</div>
+                            </td>
+                            <td>
+                              <span style={{ textTransform: 'capitalize', fontSize: '0.85rem' }}>{prod.category}</span>
+                            </td>
+                            <td style={{ fontWeight: 700, color: 'var(--color-brand)' }}>
+                              R$ {prod.price.toFixed(2)}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => toggleProductStatus(prod.id)}
+                                title={prod.active ? "Clique para pausar no cardápio" : "Clique para reativar no cardápio"}
+                                style={{
+                                  padding: '5px 12px',
+                                  borderRadius: '99px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  border: '1px solid',
+                                  transition: 'all 0.2s',
+                                  backgroundColor: prod.active ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: prod.active ? '#4ade80' : '#f87171',
+                                  borderColor: prod.active ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'
+                                }}
+                              >
+                                {prod.active ? (
+                                  <>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
+                                    <span>Ativo (Liberado)</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pause size={12} />
+                                    <span>Pausado (Esgotado)</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                <button 
+                                  onClick={() => toggleProductStatus(prod.id)}
+                                  style={{ 
+                                    padding: '6px 8px', 
+                                    borderRadius: '4px', 
+                                    backgroundColor: 'var(--bg-tertiary)', 
+                                    color: prod.active ? '#f59e0b' : '#22c55e', 
+                                    border: '1px solid var(--border-glass)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer'
+                                  }}
+                                  title={prod.active ? "Pausar Produto" : "Ativar Produto"}
+                                >
+                                  {prod.active ? <Pause size={14} /> : <Play size={14} />}
+                                </button>
+                                <button 
+                                  onClick={() => handleOpenProductModal(prod)}
+                                  style={{ padding: '6px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-info)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
+                                  title="Editar Produto e Foto"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if (confirm(`Excluir produto ${prod.name}?`)) {
+                                      deleteProduct(prod.id);
+                                    }
+                                  }}
+                                  style={{ padding: '6px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-danger)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
+                                  title="Excluir Produto"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* SUBTAB 2: ADICIONAIS & COMPLEMENTOS */}
+              {menuSubTab === 'complements' && (
+                <div>
+                  <div className="glass-panel" style={{ padding: '12px 16px', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderLeft: '4px solid var(--color-brand)' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      💡 <strong>Dica da Cozinha:</strong> Se faltar bacon, catupiry ou cheddar na chapa, basta pausar o item aqui. O cliente verá como <strong>"Esgotado / Indisponível"</strong> no cardápio na hora!
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#fff' }}>
+                      <strong>{complements.filter(c => c.active).length}</strong> ativos • <strong style={{ color: '#f87171' }}>{complements.filter(c => !c.active).length}</strong> pausados
+                    </div>
+                  </div>
+
+                  <div className="admin-table-container">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Item / Adicional</th>
+                          <th>Grupo / Categoria</th>
+                          <th>Valor Adicional</th>
+                          <th style={{ textAlign: 'center' }}>Disponibilidade (1-Clique)</th>
+                          <th style={{ textAlign: 'center' }}>Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {complements.map(comp => (
+                          <tr key={comp.id} style={{ opacity: comp.active ? 1 : 0.75, transition: 'opacity 0.2s' }}>
+                            <td>
+                              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>{comp.name}</span>
+                                {!comp.active && (
+                                  <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: 700 }}>
+                                    ESGOTADO
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ 
+                                fontSize: '0.78rem', 
+                                padding: '3px 8px', 
+                                borderRadius: '4px', 
+                                backgroundColor: 'var(--bg-secondary)', 
+                                border: '1px solid var(--border-glass)',
+                                color: comp.group === 'extras' ? '#f59e0b' : comp.group === 'creamy' ? '#60a5fa' : comp.group === 'melted' ? '#fbbf24' : '#a3e635'
+                              }}>
+                                {comp.groupName || comp.group || comp.category}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 700, color: comp.price > 0 ? 'var(--color-brand)' : 'var(--text-secondary)' }}>
+                              {comp.price > 0 ? `+ R$ ${comp.price.toFixed(2)}` : 'Incluso (R$ 0,00)'}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => toggleComplementStatus(comp.id)}
+                                title={comp.active ? "Clique para pausar no cardápio" : "Clique para reativar no cardápio"}
+                                style={{
+                                  padding: '5px 12px',
+                                  borderRadius: '99px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  border: '1px solid',
+                                  transition: 'all 0.2s',
+                                  backgroundColor: comp.active ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: comp.active ? '#4ade80' : '#f87171',
+                                  borderColor: comp.active ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'
+                                }}
+                              >
+                                {comp.active ? (
+                                  <>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
+                                    <span>Ativo (Disponível)</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pause size={12} />
+                                    <span>Pausado (Esgotado)</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                <button 
+                                  onClick={() => toggleComplementStatus(comp.id)}
+                                  style={{ 
+                                    padding: '6px 8px', 
+                                    borderRadius: '4px', 
+                                    backgroundColor: 'var(--bg-tertiary)', 
+                                    color: comp.active ? '#f59e0b' : '#22c55e', 
+                                    border: '1px solid var(--border-glass)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer'
+                                  }}
+                                  title={comp.active ? "Pausar Complemento" : "Ativar Complemento"}
+                                >
+                                  {comp.active ? <Pause size={14} /> : <Play size={14} />}
+                                </button>
+                                <button 
+                                  onClick={() => handleOpenComplementModal(comp)}
+                                  style={{ padding: '6px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-info)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
+                                  title="Editar Complemento"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if (confirm(`Excluir complemento "${comp.name}"?`)) {
+                                      deleteComplement(comp.id);
+                                    }
+                                  }}
+                                  style={{ padding: '6px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-danger)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
+                                  title="Excluir Complemento"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2111,14 +2447,210 @@ export default function AdminView({ onLogout }) {
                   </div>
                 </div>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={prodActive} onChange={e => setProdActive(e.target.checked)} style={{ accentColor: 'var(--color-brand)' }} />
-                  <span style={{ fontSize: '0.85rem' }}>Produto Ativo (Visível no Delivery)</span>
-                </label>
+                {/* Status de Disponibilidade do Produto */}
+                <div style={{ 
+                  borderTop: '1px solid var(--border-glass)', 
+                  paddingTop: '14px',
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '8px' 
+                }}>
+                  <div style={{ 
+                    padding: '12px 14px', 
+                    borderRadius: '8px', 
+                    border: '1px solid',
+                    borderColor: prodActive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+                    backgroundColor: prodActive ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: prodActive ? '#4ade80' : '#f87171', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {prodActive ? (
+                          <>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
+                            <span>Produto Ativo (Liberado p/ Venda)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pause size={14} />
+                            <span>Produto Pausado (Esgotado / Indisponível)</span>
+                          </>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {prodActive 
+                          ? 'Visível e liberado para pedidos no cardápio dos clientes.' 
+                          : 'Ocultado temporariamente das vendas até ser reativado.'}
+                      </div>
+                    </div>
+
+                    <button 
+                      type="button"
+                      onClick={() => setProdActive(!prodActive)}
+                      style={{ 
+                        fontSize: '0.8rem', 
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: '1px solid var(--border-glass)',
+                        backgroundColor: prodActive ? 'var(--bg-tertiary)' : 'var(--color-brand)',
+                        color: prodActive ? 'var(--text-secondary)' : '#fff'
+                      }}
+                    >
+                      {prodActive ? 'Pausar Venda' : 'Ativar Venda'}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn-secondary">Cancelar</button>
                 <button type="submit" className="btn-primary">Salvar Produto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CADASTRO/EDIÇÃO DE ADICIONAL OU COMPLEMENTO */}
+      {isComplementModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsComplementModalOpen(false)}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={20} color="var(--color-brand-yellow)" />
+                {editingComplement ? 'Editar Adicional / Complemento' : 'Novo Adicional / Complemento'}
+              </h3>
+              <button type="button" onClick={() => setIsComplementModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveComplement}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                    Nome do Item / Adicional *
+                  </label>
+                  <input 
+                    type="text" 
+                    value={compName} 
+                    onChange={e => setCompName(e.target.value)} 
+                    placeholder="Ex: Bacon Crocante, Catupiry Original, Cheddar Fatiado..." 
+                    required 
+                    style={{ width: '100%', padding: '10px 12px', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                      Grupo / Categoria *
+                    </label>
+                    <select 
+                      value={compGroup} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCompGroup(val);
+                        if (val === 'extras') {
+                          setCompCategory('extra');
+                          if (compPrice === '0' || compPrice === '0.00') setCompPrice('4.00');
+                        } else {
+                          setCompCategory('choice');
+                        }
+                      }}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: '0.85rem' }}
+                    >
+                      <option value="extras">🥓 Adicional Extra (+ R$)</option>
+                      <option value="creamy">🧀 Queijo Cremoso (Escolha)</option>
+                      <option value="melted">🥪 Queijo Fatiado (Escolha)</option>
+                      <option value="side">🥗 Acompanhamento (Escolha)</option>
+                      <option value="other">✨ Outro Complemento</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                      Preço Adicional (R$)
+                    </label>
+                    <input 
+                      type="number" 
+                      step="0.50" 
+                      min="0"
+                      value={compPrice} 
+                      onChange={e => setCompPrice(e.target.value)} 
+                      placeholder="0.00" 
+                      style={{ width: '100%', padding: '10px 12px', fontSize: '0.9rem' }}
+                    />
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      {compGroup === 'extras' ? 'Cobrado a mais no lanche' : 'Deixe 0 se já for incluso'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Disponibilidade do Adicional */}
+                <div style={{ 
+                  padding: '12px 14px', 
+                  borderRadius: '8px', 
+                  border: '1px solid',
+                  borderColor: compActive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+                  backgroundColor: compActive ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: compActive ? '#4ade80' : '#f87171', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {compActive ? (
+                        <>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
+                          <span>Item Ativo (Disponível p/ Escolha)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Pause size={14} />
+                          <span>Item Pausado (Esgotado na Cozinha)</span>
+                        </>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      {compActive 
+                        ? 'Clientes podem selecionar este item ao montar o lanche.' 
+                        : 'Aparecerá desabilitado como "Esgotado" no cardápio.'}
+                    </div>
+                  </div>
+
+                  <button 
+                    type="button"
+                    onClick={() => setCompActive(!compActive)}
+                    style={{ 
+                      fontSize: '0.8rem', 
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: '1px solid var(--border-glass)',
+                      backgroundColor: compActive ? 'var(--bg-tertiary)' : 'var(--color-brand)',
+                      color: compActive ? 'var(--text-secondary)' : '#fff'
+                    }}
+                  >
+                    {compActive ? 'Pausar' : 'Ativar'}
+                  </button>
+                </div>
+
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setIsComplementModalOpen(false)} className="btn-secondary">
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary">
+                  {editingComplement ? 'Salvar Alterações' : 'Cadastrar Complemento'}
+                </button>
               </div>
             </form>
           </div>

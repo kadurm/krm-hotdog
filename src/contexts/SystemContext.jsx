@@ -82,6 +82,21 @@ const INITIAL_PRODUCTS = [
   }
 ];
 
+const INITIAL_COMPLEMENTS = [
+  // Adicionais Pagos (Extras)
+  { id: 'extra-bacon', name: 'Extra Bacon Crocante', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
+  { id: 'extra-cheese', name: 'Extra Queijo Derretido', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 3.00, active: true },
+  
+  // Complementos do Lanche (Queijos e Acompanhamentos)
+  { id: 'creamy-catupiry', name: 'Catupiry Original', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
+  { id: 'creamy-requeijao', name: 'Requeijão Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
+  
+  { id: 'melted-mussarela', name: 'Queijo Mussarela', category: 'complement', group: 'melted', groupName: 'Queijo Fatiado', price: 0, active: true },
+  { id: 'melted-cheddar', name: 'Queijo Cheddar', category: 'complement', group: 'melted', groupName: 'Queijo Fatiado', price: 0, active: true },
+  
+  { id: 'side-vinagrete', name: 'Vinagrete Artesanal', category: 'complement', group: 'side', groupName: 'Acompanhamento', price: 0, active: true }
+];
+
 const INITIAL_INVENTORY = [
   { id: 1, name: 'Pão de Hot Dog', quantity: 42, minQuantity: 15, unit: 'un' },
   { id: 2, name: 'Salsicha Premium', quantity: 38, minQuantity: 15, unit: 'un' },
@@ -259,6 +274,21 @@ export const SystemProvider = ({ children }) => {
     }
   });
 
+  const [complements, setComplements] = useState(() => {
+    const saved = localStorage.getItem('nuu_complements_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const existingIds = new Set(parsed.map(c => c.id));
+        const missingDefaults = INITIAL_COMPLEMENTS.filter(c => !existingIds.has(c.id));
+        return missingDefaults.length > 0 ? [...parsed, ...missingDefaults] : parsed;
+      } catch (e) {
+        return INITIAL_COMPLEMENTS;
+      }
+    }
+    return INITIAL_COMPLEMENTS;
+  });
+
   // Sincronização em tempo real entre abas (Cliente <-> Cozinha/Admin)
   useEffect(() => {
     let channel = null;
@@ -281,6 +311,18 @@ export const SystemProvider = ({ children }) => {
           setInventory(parsed);
         } catch (err) {}
       }
+      if (e.key === 'nuu_products_v4' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setProducts(parsed);
+        } catch (err) {}
+      }
+      if (e.key === 'nuu_complements_v2' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setComplements(parsed);
+        } catch (err) {}
+      }
     };
 
     const handleBroadcast = (e) => {
@@ -292,6 +334,12 @@ export const SystemProvider = ({ children }) => {
       }
       if (e.data?.type === 'INVENTORY_SYNC' && Array.isArray(e.data.inventory)) {
         setInventory(e.data.inventory);
+      }
+      if (e.data?.type === 'PRODUCTS_SYNC' && Array.isArray(e.data.products)) {
+        setProducts(e.data.products);
+      }
+      if (e.data?.type === 'COMPLEMENTS_SYNC' && Array.isArray(e.data.complements)) {
+        setComplements(e.data.complements);
       }
     };
 
@@ -313,6 +361,10 @@ export const SystemProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('nuu_products_v4', JSON.stringify(products));
   }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_complements_v2', JSON.stringify(complements));
+  }, [complements]);
 
   useEffect(() => {
     localStorage.setItem('hd_inventory', JSON.stringify(inventory));
@@ -558,16 +610,94 @@ export const SystemProvider = ({ children }) => {
 
   // Product actions
   const upsertProduct = (productData) => {
+    let next;
     if (productData.id) {
-      setProducts(prev => prev.map(p => p.id === productData.id ? { ...p, ...productData } : p));
+      next = products.map(p => p.id === productData.id ? { ...p, ...productData } : p);
     } else {
       const newId = Math.max(...products.map(p => p.id), 0) + 1;
-      setProducts(prev => [...prev, { ...productData, id: newId }]);
+      next = [...products, { ...productData, id: newId }];
     }
+    setProducts(next);
+    localStorage.setItem('nuu_products_v4', JSON.stringify(next));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'PRODUCTS_SYNC', products: next });
+        ch.close();
+      }
+    } catch (e) {}
+  };
+
+  const toggleProductStatus = (productId) => {
+    const next = products.map(p => p.id === productId ? { ...p, active: !p.active } : p);
+    setProducts(next);
+    localStorage.setItem('nuu_products_v4', JSON.stringify(next));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'PRODUCTS_SYNC', products: next });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   const deleteProduct = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+    const next = products.filter(p => p.id !== id);
+    setProducts(next);
+    localStorage.setItem('nuu_products_v4', JSON.stringify(next));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'PRODUCTS_SYNC', products: next });
+        ch.close();
+      }
+    } catch (e) {}
+  };
+
+  // Complements and Extras actions
+  const toggleComplementStatus = (complementId) => {
+    const next = complements.map(c => c.id === complementId ? { ...c, active: !c.active } : c);
+    setComplements(next);
+    localStorage.setItem('nuu_complements_v2', JSON.stringify(next));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: next });
+        ch.close();
+      }
+    } catch (e) {}
+  };
+
+  const upsertComplement = (complementData) => {
+    let next;
+    if (complementData.id) {
+      next = complements.map(c => c.id === complementData.id ? { ...c, ...complementData } : c);
+    } else {
+      const newId = 'comp-' + Date.now();
+      next = [...complements, { ...complementData, id: newId, active: true }];
+    }
+    setComplements(next);
+    localStorage.setItem('nuu_complements_v2', JSON.stringify(next));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: next });
+        ch.close();
+      }
+    } catch (e) {}
+  };
+
+  const deleteComplement = (complementId) => {
+    const next = complements.filter(c => c.id !== complementId);
+    setComplements(next);
+    localStorage.setItem('nuu_complements_v2', JSON.stringify(next));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: next });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   const deleteOrder = (orderId) => {
@@ -699,6 +829,7 @@ export const SystemProvider = ({ children }) => {
       transactions,
       invoices,
       quotations,
+      complements,
       createOrder,
       updateOrderStatus,
       deleteOrder,
@@ -707,6 +838,10 @@ export const SystemProvider = ({ children }) => {
       registerInflowInvoice,
       upsertProduct,
       deleteProduct,
+      toggleProductStatus,
+      toggleComplementStatus,
+      upsertComplement,
+      deleteComplement,
       addTransaction,
       updateTransaction,
       deleteTransaction,

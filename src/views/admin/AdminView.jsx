@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useSystem } from '../../contexts/SystemContext';
+import { useSystem, playNotificationChime } from '../../contexts/SystemContext';
 import { 
   LayoutDashboard, ChefHat, Package, BadgeDollarSign, 
   FileText, PlusCircle, Trash2, AlertTriangle, 
   TrendingUp, Check, RotateCcw, Printer, Download,
   Utensils, X, Plus, Edit, PlusSquare, LogOut,
   ChevronLeft, ChevronRight, Menu, ShoppingBag, Sparkles,
-  Search, CheckCircle2, Building2
+  Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
+  Volume2, VolumeX
 } from 'lucide-react';
 
 export default function AdminView({ onLogout }) {
@@ -164,6 +165,18 @@ export default function AdminView({ onLogout }) {
   const shippingOrders = orders.filter(o => o.status === 'shipping');
   const finishedOrders = orders.filter(o => o.status === 'delivered');
 
+  // Notificação sonora quando um novo pedido cai em Pendentes
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [prevPendingCount, setPrevPendingCount] = useState(pendingOrders.length);
+  useEffect(() => {
+    if (pendingOrders.length > prevPendingCount) {
+      if (isSoundEnabled) {
+        playNotificationChime();
+      }
+    }
+    setPrevPendingCount(pendingOrders.length);
+  }, [pendingOrders.length, isSoundEnabled, prevPendingCount]);
+
   // Product CRUD Handlers
   const handleOpenProductModal = (product = null) => {
     if (product) {
@@ -264,7 +277,7 @@ export default function AdminView({ onLogout }) {
     orders: { 
       label: 'Cozinha & Pedidos', 
       icon: <ChefHat size={20} />, 
-      badge: (pendingOrders.length + preparingOrders.length) > 0 ? (pendingOrders.length + preparingOrders.length) : null,
+      badge: (pendingOrders.length + preparingOrders.length + shippingOrders.length) > 0 ? (pendingOrders.length + preparingOrders.length + shippingOrders.length) : null,
       badgeColor: 'var(--color-brand)' 
     },
     inventory: { 
@@ -676,114 +689,376 @@ export default function AdminView({ onLogout }) {
           {/* TAB: ORDERS & KITCHEN */}
           {activeTab === 'orders' && (
             <div className="animate-fade-in">
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginBottom: '1.5rem' }}>Monitor de Pedidos & Cozinha (KDS)</h2>
+              {/* Header do KDS com status em tempo real e controle de som */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0 }}>Monitor de Pedidos & Cozinha (KDS)</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }}></span>
+                    <span style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 500 }}>Sincronização em tempo real ativa</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => {
+                      const next = !isSoundEnabled;
+                      setIsSoundEnabled(next);
+                      if (next) playNotificationChime();
+                    }}
+                    style={{
+                      background: isSoundEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                      border: `1px solid ${isSoundEnabled ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+                      color: isSoundEnabled ? '#34d399' : '#ef4444',
+                      padding: '6px 14px',
+                      borderRadius: '99px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: '0.2s'
+                    }}
+                    title="Ativar ou silenciar alerta sonoro de novos pedidos"
+                  >
+                    {isSoundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                    <span>{isSoundEnabled ? 'Campainha Ativa' : 'Campainha Muta'}</span>
+                  </button>
+                </div>
+              </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', alignItems: 'start' }}>
+              {/* Grid das 3 Colunas: Pendentes > Em Preparo > Entrega/Retirada */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
                 
-                {/* COLUMN: PENDENTE */}
-                <div className="glass-panel" style={{ padding: '1rem', backgroundColor: 'rgba(0,0,0,0.2)', borderTop: '4px solid var(--color-danger)' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Pendentes</span>
-                    <span className="badge badge-pending">{pendingOrders.length}</span>
+                {/* 1. COLUNA: PENDENTES */}
+                <div className="glass-panel" style={{ padding: '1.25rem', backgroundColor: 'rgba(0,0,0,0.3)', borderTop: '4px solid var(--color-danger)' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-danger)' }}></span>
+                      Pendentes
+                    </span>
+                    <span className="badge badge-pending" style={{ fontSize: '0.8rem', padding: '3px 10px' }}>{pendingOrders.length}</span>
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {pendingOrders.map(order => (
-                      <div key={order.id} className="glass-panel" style={{ padding: '10px', backgroundColor: 'var(--bg-tertiary)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, color: '#fff' }}>#{order.id}</span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {pendingOrders.map(order => {
+                      const cleanPhone = order.phone ? order.phone.replace(/\D/g, '') : '';
+                      return (
+                        <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          {/* Cabeçalho do Card */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={13} />
+                              {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                          </div>
+
+                          {/* Cliente e WhatsApp */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.95rem', color: '#fff', fontWeight: 700 }}>{order.customerName}</span>
+                            {cleanPhone && (
+                              <a 
+                                href={`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(`Olá ${order.customerName}! Aqui é do Nuu Prensado sobre seu pedido #${order.id}.`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: '#25D366', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', background: 'rgba(37,211,102,0.1)', padding: '2px 8px', borderRadius: '4px' }}
+                                title="Falar no WhatsApp"
+                              >
+                                <Phone size={12} /> WhatsApp
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Badges de Tipo e Pagamento */}
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                            <span style={{ 
+                              fontSize: '0.72rem', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontWeight: 600,
+                              backgroundColor: order.type === 'delivery' ? 'rgba(59,130,246,0.2)' : 'rgba(16,185,129,0.2)',
+                              color: order.type === 'delivery' ? '#60a5fa' : '#34d399',
+                              border: order.type === 'delivery' ? '1px solid rgba(59,130,246,0.4)' : '1px solid rgba(16,185,129,0.4)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              {order.type === 'delivery' ? <Bike size={13} /> : <Store size={13} />}
+                              {order.type === 'delivery' ? 'Delivery' : 'Balcão'}
+                            </span>
+
+                            <span style={{ 
+                              fontSize: '0.72rem', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontWeight: 600,
+                              backgroundColor: 'rgba(251,191,36,0.15)',
+                              color: '#fbbf24',
+                              border: '1px solid rgba(251,191,36,0.3)'
+                            }}>
+                              {order.paymentMethod} {order.changeFor ? `(Troco p/ ${order.changeFor})` : ''}
+                            </span>
+                          </div>
+
+                          {/* Endereço de entrega se for delivery */}
+                          {order.type === 'delivery' && order.address && (
+                            <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '10px', backgroundColor: 'rgba(0,0,0,0.25)', padding: '6px 8px', borderRadius: '4px', lineHeight: '1.3' }}>
+                              📍 {order.address}
+                            </div>
+                          )}
+
+                          {/* Itens do Pedido */}
+                          <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: '8px 10px', borderRadius: '6px', margin: '8px 0' }}>
+                            <ul style={{ paddingLeft: '15px', fontSize: '0.82rem', color: '#e2e8f0', margin: 0 }}>
+                              {order.items.map((item, idx) => (
+                                <li key={idx} style={{ marginBottom: '4px' }}>
+                                  <strong>{item.quantity}x</strong> {item.name}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Rodapé: Total e Ação */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-glass)' }}>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-brand)' }}>R$ {order.total.toFixed(2)}</span>
+                            <button 
+                              onClick={() => updateOrderStatus(order.id, 'preparing')}
+                              className="btn-primary" 
+                              style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              <ChefHat size={14} /> Mover p/ Chapa
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>{order.customerName}</div>
-                        <ul style={{ paddingLeft: '15px', fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '6px 0' }}>
-                          {order.items.map((item, idx) => (
-                            <li key={idx}>{item.quantity}x {item.name}</li>
-                          ))}
-                        </ul>
-                        <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', marginTop: '10px', pt: '8px', borderTop: '1px solid var(--border-glass)' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-brand)' }}>R$ {order.total.toFixed(2)}</span>
-                          <button 
-                            onClick={() => updateOrderStatus(order.id, 'preparing')}
-                            className="btn-primary" 
-                            style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '4px' }}
-                          >
-                            Preparar
-                          </button>
-                        </div>
+                      );
+                    })}
+                    {pendingOrders.length === 0 && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                        Nenhum pedido pendente no momento.
                       </div>
-                    ))}
-                    {pendingOrders.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>Fila limpa.</div>}
+                    )}
                   </div>
                 </div>
 
-                {/* COLUMN: PREPARANDO */}
-                <div className="glass-panel" style={{ padding: '1rem', backgroundColor: 'rgba(0,0,0,0.2)', borderTop: '4px solid var(--color-warning)' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Em Preparo</span>
-                    <span className="badge badge-preparing">{preparingOrders.length}</span>
+                {/* 2. COLUNA: EM PREPARO */}
+                <div className="glass-panel" style={{ padding: '1.25rem', backgroundColor: 'rgba(0,0,0,0.3)', borderTop: '4px solid var(--color-warning)' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-warning)' }}></span>
+                      Em Preparo (Na Chapa)
+                    </span>
+                    <span className="badge badge-preparing" style={{ fontSize: '0.8rem', padding: '3px 10px' }}>{preparingOrders.length}</span>
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {preparingOrders.map(order => (
-                      <div key={order.id} className="glass-panel" style={{ padding: '10px', backgroundColor: 'var(--bg-tertiary)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, color: '#fff' }}>#{order.id}</span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {preparingOrders.map(order => {
+                      const cleanPhone = order.phone ? order.phone.replace(/\D/g, '') : '';
+                      return (
+                        <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          {/* Cabeçalho do Card */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={13} />
+                              {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                          </div>
+
+                          {/* Cliente e WhatsApp */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.95rem', color: '#fff', fontWeight: 700 }}>{order.customerName}</span>
+                            {cleanPhone && (
+                              <a 
+                                href={`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(`Olá ${order.customerName}! Seu pedido #${order.id} já está sendo preparado pelo chapeiro.`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: '#25D366', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', background: 'rgba(37,211,102,0.1)', padding: '2px 8px', borderRadius: '4px' }}
+                                title="Falar no WhatsApp"
+                              >
+                                <Phone size={12} /> WhatsApp
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Badges */}
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                            <span style={{ 
+                              fontSize: '0.72rem', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontWeight: 600,
+                              backgroundColor: order.type === 'delivery' ? 'rgba(59,130,246,0.2)' : 'rgba(16,185,129,0.2)',
+                              color: order.type === 'delivery' ? '#60a5fa' : '#34d399',
+                              border: order.type === 'delivery' ? '1px solid rgba(59,130,246,0.4)' : '1px solid rgba(16,185,129,0.4)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              {order.type === 'delivery' ? <Bike size={13} /> : <Store size={13} />}
+                              {order.type === 'delivery' ? 'Delivery' : 'Balcão'}
+                            </span>
+
+                            <span style={{ 
+                              fontSize: '0.72rem', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontWeight: 600,
+                              backgroundColor: 'rgba(251,191,36,0.15)',
+                              color: '#fbbf24',
+                              border: '1px solid rgba(251,191,36,0.3)'
+                            }}>
+                              {order.paymentMethod}
+                            </span>
+                          </div>
+
+                          {/* Itens do Pedido */}
+                          <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: '8px 10px', borderRadius: '6px', margin: '8px 0' }}>
+                            <ul style={{ paddingLeft: '15px', fontSize: '0.82rem', color: '#e2e8f0', margin: 0 }}>
+                              {order.items.map((item, idx) => (
+                                <li key={idx} style={{ marginBottom: '4px' }}>
+                                  <strong>{item.quantity}x</strong> {item.name}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Rodapé: Total e Ação (SEMPRE move para Entrega/Retirada) */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-glass)' }}>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-brand)' }}>R$ {order.total.toFixed(2)}</span>
+                            <button 
+                              onClick={() => updateOrderStatus(order.id, 'shipping')}
+                              className="btn-primary" 
+                              style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: '6px', backgroundColor: 'var(--color-info)', display: 'flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              {order.type === 'delivery' ? <Bike size={14} /> : <Store size={14} />}
+                              {order.type === 'delivery' ? 'Pronto p/ Entrega' : 'Pronto no Balcão'}
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>{order.customerName}</div>
-                        <ul style={{ paddingLeft: '15px', fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '6px 0' }}>
-                          {order.items.map((item, idx) => (
-                            <li key={idx}>{item.quantity}x {item.name}</li>
-                          ))}
-                        </ul>
-                        <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', marginTop: '10px', pt: '8px', borderTop: '1px solid var(--border-glass)' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-brand)' }}>R$ {order.total.toFixed(2)}</span>
-                          <button 
-                            onClick={() => updateOrderStatus(order.id, order.type === 'delivery' ? 'shipping' : 'delivered')}
-                            className="btn-primary" 
-                            style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '4px', backgroundColor: 'var(--color-info)' }}
-                          >
-                            {order.type === 'delivery' ? 'Despachar' : 'Entregar'}
-                          </button>
-                        </div>
+                      );
+                    })}
+                    {preparingOrders.length === 0 && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                        Nenhum lanche na chapa agora.
                       </div>
-                    ))}
-                    {preparingOrders.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>Nenhum na chapa.</div>}
+                    )}
                   </div>
                 </div>
 
-                {/* COLUMN: A CAMINHO / PRONTO */}
-                <div className="glass-panel" style={{ padding: '1rem', backgroundColor: 'rgba(0,0,0,0.2)', borderTop: '4px solid var(--color-info)' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Entrega/Retirada</span>
-                    <span className="badge badge-shipping">{shippingOrders.length}</span>
+                {/* 3. COLUNA: ENTREGA / RETIRADA */}
+                <div className="glass-panel" style={{ padding: '1.25rem', backgroundColor: 'rgba(0,0,0,0.3)', borderTop: '4px solid var(--color-info)' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-info)' }}></span>
+                      Entrega / Retirada
+                    </span>
+                    <span className="badge badge-shipping" style={{ fontSize: '0.8rem', padding: '3px 10px' }}>{shippingOrders.length}</span>
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {shippingOrders.map(order => (
-                      <div key={order.id} className="glass-panel" style={{ padding: '10px', backgroundColor: 'var(--bg-tertiary)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, color: '#fff' }}>#{order.id}</span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {shippingOrders.map(order => {
+                      const cleanPhone = order.phone ? order.phone.replace(/\D/g, '') : '';
+                      return (
+                        <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          {/* Cabeçalho do Card */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.05rem' }}>#{order.id}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={13} />
+                              {new Date(order.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                          </div>
+
+                          {/* Cliente e WhatsApp */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.95rem', color: '#fff', fontWeight: 700 }}>{order.customerName}</span>
+                            {cleanPhone && (
+                              <a 
+                                href={`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(`Olá ${order.customerName}! Seu pedido #${order.id} ${order.type === 'delivery' ? 'já saiu para entrega!' : 'está pronto para retirada no balcão!'}`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: '#25D366', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', background: 'rgba(37,211,102,0.1)', padding: '2px 8px', borderRadius: '4px' }}
+                                title="Avisar no WhatsApp"
+                              >
+                                <Phone size={12} /> Avisar Cliente
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Status de Destino */}
+                          {order.type === 'delivery' ? (
+                            <div style={{ fontSize: '0.78rem', color: '#93c5fd', backgroundColor: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', padding: '8px', borderRadius: '6px', marginBottom: '10px', lineHeight: '1.4' }}>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+                                <Bike size={14} /> Saiu para Entrega
+                              </div>
+                              <div>📍 {order.address}</div>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.78rem', color: '#6ee7b7', backgroundColor: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '8px', borderRadius: '6px', marginBottom: '10px' }}>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+                                <Store size={14} /> Pronto no Balcão
+                              </div>
+                              <div>Aguardando cliente retirar presencialmente</div>
+                            </div>
+                          )}
+
+                          {/* Resumo breve dos itens */}
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                            {order.items.map((i, idx) => `${i.quantity}x ${i.name}`).join(' | ')}
+                          </div>
+
+                          {/* Rodapé: Total e Ação de Finalizar */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-glass)' }}>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-brand)' }}>R$ {order.total.toFixed(2)}</span>
+                            <button 
+                              onClick={() => updateOrderStatus(order.id, 'delivered')}
+                              className="btn-primary" 
+                              style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: '6px', backgroundColor: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '5px' }}
+                            >
+                              <Check size={14} />
+                              {order.type === 'delivery' ? 'Concluir Entrega' : 'Confirmar Retirada'}
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>{order.customerName}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {order.address}
-                        </div>
-                        <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', marginTop: '10px', pt: '8px', borderTop: '1px solid var(--border-glass)' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-brand)' }}>R$ {order.total.toFixed(2)}</span>
-                          <button 
-                            onClick={() => updateOrderStatus(order.id, 'delivered')}
-                            className="btn-primary" 
-                            style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '4px', backgroundColor: 'var(--color-success)' }}
-                          >
-                            Finalizar
-                          </button>
-                        </div>
+                      );
+                    })}
+                    {shippingOrders.length === 0 && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                        Nenhum pedido em rota ou aguardando retirada.
                       </div>
-                    ))}
-                    {shippingOrders.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>Fila vazia.</div>}
+                    )}
                   </div>
                 </div>
 
               </div>
+
+              {/* Seção inferior: Pedidos Finalizados Hoje */}
+              {finishedOrders.length > 0 && (
+                <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={18} color="var(--color-success)" />
+                    Pedidos Concluídos Hoje ({finishedOrders.length})
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                    {finishedOrders.slice(0, 6).map(order => (
+                      <div key={order.id} className="glass-panel" style={{ padding: '10px 14px', backgroundColor: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>#{order.id} - {order.customerName}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            {order.type === 'delivery' ? '🛵 Delivery' : '🏪 Balcão'} • {order.paymentMethod}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--color-success)', fontSize: '0.9rem' }}>R$ {order.total.toFixed(2)}</div>
+                          <span className="badge badge-delivered" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>Finalizado</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

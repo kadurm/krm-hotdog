@@ -1,5 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+// Campainha sonora para novos pedidos na cozinha
+export const playNotificationChime = () => {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1046.5, ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.45);
+  } catch (err) {}
+};
+
 const SystemContext = createContext(null);
 
 const INITIAL_PRODUCTS = [
@@ -268,6 +295,56 @@ export const SystemProvider = ({ children }) => {
     }
   });
 
+  // Sincronização em tempo real entre abas (Cliente <-> Cozinha/Admin)
+  useEffect(() => {
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('nuu_system_channel');
+      }
+    } catch (e) {}
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'hd_orders' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setOrders(parsed);
+        } catch (err) {}
+      }
+      if (e.key === 'hd_inventory' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setInventory(parsed);
+        } catch (err) {}
+      }
+    };
+
+    const handleBroadcast = (e) => {
+      if (e.data?.type === 'ORDERS_SYNC' && Array.isArray(e.data.orders)) {
+        setOrders(e.data.orders);
+        if (e.data.isNewOrder) {
+          playNotificationChime();
+        }
+      }
+      if (e.data?.type === 'INVENTORY_SYNC' && Array.isArray(e.data.inventory)) {
+        setInventory(e.data.inventory);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    if (channel) {
+      channel.addEventListener('message', handleBroadcast);
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (channel) {
+        channel.removeEventListener('message', handleBroadcast);
+        channel.close();
+      }
+    };
+  }, []);
+
   // Sync to localStorage
   useEffect(() => {
     localStorage.setItem('nuu_products_v4', JSON.stringify(products));
@@ -295,7 +372,7 @@ export const SystemProvider = ({ children }) => {
 
   // Actions
   const createOrder = (orderData) => {
-    const newId = (Math.max(...orders.map(o => parseInt(o.id)), 1000) + 1).toString();
+    const newId = (Math.max(...orders.map(o => parseInt(o.id) || 0), 1000) + 1).toString();
     const newOrder = {
       id: newId,
       status: 'pending',
@@ -323,48 +400,75 @@ export const SystemProvider = ({ children }) => {
       }
     });
 
+    const nextOrders = [newOrder, ...orders];
     setInventory(updatedInventory);
-    setOrders(prev => [newOrder, ...prev]);
+    setOrders(nextOrders);
+
+    localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
+    localStorage.setItem('hd_inventory', JSON.stringify(updatedInventory));
+
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'ORDERS_SYNC', orders: nextOrders, isNewOrder: true });
+        ch.close();
+      }
+    } catch (e) {}
+
     return newOrder;
   };
 
   const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(prev => prev.map(order => {
-      if (order.id === orderId) {
-        const updated = { ...order, status: newStatus };
-        
-        // If status turns to delivered, add to finance and auto-generate invoice
-        if (newStatus === 'delivered' && order.status !== 'delivered') {
-          const transactionId = 't-' + Date.now();
-          const newTransaction = {
-            id: transactionId,
-            date: new Date().toISOString(),
-            type: 'income',
-            category: 'Vendas',
-            value: order.total,
-            description: `Pedido #${order.id}`
-          };
-          setTransactions(t => [newTransaction, ...t]);
+    let nextOrders = [];
+    setOrders(prev => {
+      nextOrders = prev.map(order => {
+        if (order.id === orderId) {
+          const updated = { ...order, status: newStatus };
+          
+          // If status turns to delivered, add to finance and auto-generate invoice
+          if (newStatus === 'delivered' && order.status !== 'delivered') {
+            const transactionId = 't-' + Date.now();
+            const newTransaction = {
+              id: transactionId,
+              date: new Date().toISOString(),
+              type: 'income',
+              category: 'Vendas',
+              value: order.total,
+              description: `Pedido #${order.id}`
+            };
+            setTransactions(t => [newTransaction, ...t]);
 
-          // Emit NF
-          const nfId = `NF-${order.id}`;
-          const newNf = {
-            id: nfId,
-            type: 'saida',
-            referenceId: order.id,
-            customerName: order.customerName,
-            customerCpf: '***.***.***-**',
-            date: new Date().toISOString(),
-            total: order.total,
-            items: order.items,
-            key: `352606` + Math.floor(100000000000000000 + Math.random() * 900000000000000000)
-          };
-          setInvoices(i => [newNf, ...i]);
+            // Emit NF
+            const nfId = `NF-${order.id}`;
+            const newNf = {
+              id: nfId,
+              type: 'saida',
+              referenceId: order.id,
+              customerName: order.customerName,
+              customerCpf: '***.***.***-**',
+              date: new Date().toISOString(),
+              total: order.total,
+              items: order.items,
+              key: `352606` + Math.floor(100000000000000000 + Math.random() * 900000000000000000)
+            };
+            setInvoices(i => [newNf, ...i]);
+          }
+          return updated;
         }
-        return updated;
+        return order;
+      });
+      return nextOrders;
+    });
+
+    localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
+
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'ORDERS_SYNC', orders: nextOrders, isNewOrder: false });
+        ch.close();
       }
-      return order;
-    }));
+    } catch (e) {}
   };
 
   // Inventory actions
@@ -529,7 +633,8 @@ export const SystemProvider = ({ children }) => {
       addTransaction,
       addQuotation,
       updateQuotation,
-      deleteQuotation
+      deleteQuotation,
+      playNotificationChime
     }}>
       {children}
     </SystemContext.Provider>

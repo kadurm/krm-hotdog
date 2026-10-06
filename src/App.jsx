@@ -3,7 +3,8 @@ import { SystemProvider, useSystem } from './contexts/SystemContext';
 import DeliveryView from './views/delivery/DeliveryView';
 import AdminView from './views/admin/AdminView';
 import AdminLoginView from './views/admin/AdminLoginView';
-import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock } from 'lucide-react';
+import OperationView from './views/operation/OperationView';
+import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield } from 'lucide-react';
 import './App.css';
 
 function AppContent() {
@@ -11,6 +12,7 @@ function AppContent() {
   const getModeFromHash = () => {
     const hash = window.location.hash;
     if (hash.startsWith('#admin')) return 'admin';
+    if (hash.startsWith('#operacao') || hash.startsWith('#pdv') || hash.startsWith('#caixa') || hash.startsWith('#kds')) return 'operacao';
     return 'delivery';
   };
 
@@ -89,32 +91,32 @@ function AppContent() {
 
   return (
     <>
-      {/* Header Limpo para o Cliente */}
-      <header className="app-header">
-        <div className="container flex justify-between items-center" style={{ padding: '0.75rem 1.5rem' }}>
-          
-          {/* Logo Oficial */}
-          <span 
-            className="nav-logo" 
-            style={{ cursor: 'pointer' }}
-            onClick={() => { 
-              setCurrentMode('delivery'); 
-              setCheckoutStep('menu');
-            }}
-          >
-            <img 
-              src="/logoNuuPrensado-semfundo.png" 
-              alt="Nuu Prensado!!" 
-              style={{ 
-                height: '48px', 
-                objectFit: 'contain', 
-                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))'
-              }} 
-            />
-          </span>
+      {/* Header Limpo para o Cliente (apenas no modo delivery) */}
+      {currentMode === 'delivery' && (
+        <header className="app-header">
+          <div className="container flex justify-between items-center" style={{ padding: '0.75rem 1.5rem' }}>
+            
+            {/* Logo Oficial */}
+            <span 
+              className="nav-logo" 
+              style={{ cursor: 'pointer' }}
+              onClick={() => { 
+                setCurrentMode('delivery'); 
+                setCheckoutStep('menu');
+              }}
+            >
+              <img 
+                src="/logoNuuPrensado-semfundo.png" 
+                alt="Nuu Prensado!!" 
+                style={{ 
+                  height: '48px', 
+                  objectFit: 'contain', 
+                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))'
+                }} 
+              />
+            </span>
 
-          {/* Botões de Ação na Barra Superior Superior */}
-          {currentMode === 'delivery' && (
+            {/* Botões de Ação na Barra Superior */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
               {checkoutStep !== 'menu' && (
                 <span 
@@ -202,15 +204,29 @@ function AppContent() {
                 )}
               </div>
             </div>
-          )}
 
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {/* Main Content Render */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {currentMode === 'admin' && isAdminAuthenticated ? (
-          <AdminView onLogout={handleLogout} />
+        {currentMode === 'operacao' ? (
+          <OperationView 
+            onOpenAdmin={handleOpenAdmin}
+            onGoDelivery={() => {
+              setCurrentMode('delivery');
+              window.location.hash = 'delivery';
+            }}
+          />
+        ) : currentMode === 'admin' && isAdminAuthenticated ? (
+          <AdminView 
+            onLogout={handleLogout}
+            onGoOperation={() => {
+              setCurrentMode('operacao');
+              window.location.hash = 'operacao';
+            }}
+          />
         ) : (
           <DeliveryView 
             viewMode={viewMode}
@@ -226,19 +242,64 @@ function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer className="app-footer" style={{ 
-        borderTop: '1px solid var(--border-glass)', 
-        padding: '1.5rem 0', 
-        backgroundColor: 'rgba(9, 13, 22, 0.85)', 
-        backdropFilter: 'blur(12px)',
-        color: 'var(--text-muted)',
-        fontSize: '0.85rem',
-        textAlign: 'center'
-      }}>
-        <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-          <p>© 2026 Nuu Prensado!! - Todos os direitos reservados.</p>
-        </div>
-      </footer>
+      {currentMode !== 'operacao' && (
+        <footer className="app-footer" style={{ 
+          borderTop: '1px solid var(--border-glass)', 
+          padding: '1.5rem 0', 
+          backgroundColor: 'rgba(9, 13, 22, 0.85)', 
+          backdropFilter: 'blur(12px)',
+          color: 'var(--text-muted)',
+          fontSize: '0.85rem',
+          textAlign: 'center'
+        }}>
+          <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <p style={{ margin: 0 }}>© 2026 Nuu Prensado!! - Todos os direitos reservados.</p>
+            
+            {/* Links de Acesso Interno da Loja */}
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginTop: '4px', fontSize: '0.78rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentMode('operacao');
+                  window.location.hash = 'operacao';
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-brand-yellow)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 700
+                }}
+              >
+                <ChefHat size={14} />
+                <span>Frente de Operação (Caixa & KDS)</span>
+              </button>
+              
+              <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+
+              <button
+                type="button"
+                onClick={handleOpenAdmin}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Lock size={13} />
+                <span>Gestão ERP (Admin)</span>
+              </button>
+            </div>
+          </div>
+        </footer>
+      )}
     </>
   );
 }

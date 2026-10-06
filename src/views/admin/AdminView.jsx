@@ -17,7 +17,7 @@ import {
   MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag
 } from 'lucide-react';
 
-export default function AdminView({ onLogout }) {
+export default function AdminView({ onLogout, onGoOperation }) {
   const { 
     products, inventory, orders, transactions, invoices, quotations,
     complements = [],
@@ -25,6 +25,9 @@ export default function AdminView({ onLogout }) {
     upsertMotoboy,
     assignOrderMotoboy,
     settleMotoboyPayments,
+    operators = [],
+    upsertOperator,
+    deleteOperator,
     storeSettings = {},
     updateStoreSettings,
     coupons = [],
@@ -45,6 +48,40 @@ export default function AdminView({ onLogout }) {
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+
+  // Estados para Gestão de Operadores / Equipe
+  const [isOperatorModalOpen, setIsOperatorModalOpen] = useState(false);
+  const [editingOperator, setEditingOperator] = useState(null);
+  const [operatorName, setOperatorName] = useState('');
+  const [operatorRole, setOperatorRole] = useState('Atendente');
+  const [operatorActive, setOperatorActive] = useState(true);
+
+  const handleOpenOperatorModal = (op = null) => {
+    if (op) {
+      setEditingOperator(op);
+      setOperatorName(op.name);
+      setOperatorRole(op.role || 'Atendente');
+      setOperatorActive(op.active !== false);
+    } else {
+      setEditingOperator(null);
+      setOperatorName('');
+      setOperatorRole('Atendente');
+      setOperatorActive(true);
+    }
+    setIsOperatorModalOpen(true);
+  };
+
+  const handleSaveOperator = (e) => {
+    e.preventDefault();
+    if (!operatorName.trim()) return;
+    upsertOperator({
+      id: editingOperator?.id,
+      name: operatorName.trim(),
+      role: operatorRole,
+      active: operatorActive
+    });
+    setIsOperatorModalOpen(false);
+  };
 
   // Estados para Gestão de Motoboy
   const [isMotoboyModalOpen, setIsMotoboyModalOpen] = useState(false);
@@ -71,7 +108,7 @@ export default function AdminView({ onLogout }) {
     const hash = window.location.hash;
     if (hash.startsWith('#admin/')) {
       const tab = hash.replace('#admin/', '');
-      if (['dashboard', 'orders', 'inventory', 'products', 'logistics', 'store', 'cotacao', 'finance', 'nfe'].includes(tab)) {
+      if (['dashboard', 'orders', 'inventory', 'products', 'logistics', 'store', 'cotacao', 'finance', 'nfe', 'team'].includes(tab)) {
         return tab;
       }
     }
@@ -544,6 +581,7 @@ export default function AdminView({ onLogout }) {
       badge: !storeSettings?.isOpen ? 'Fechada' : null,
       badgeColor: 'var(--color-danger)'
     },
+    team: { label: 'Equipe & Operadores', icon: <User size={20} /> },
     cotacao: { label: 'Cotações', icon: <ShoppingBag size={20} /> },
     finance: { label: 'Financeiro', icon: <BadgeDollarSign size={20} /> },
     nfe: { label: 'Notas Fiscais (NF-e)', icon: <FileText size={20} /> }
@@ -575,6 +613,20 @@ export default function AdminView({ onLogout }) {
           {/* Menu Dropdown de Opções Selecionáveis em Mobile */}
           {isMobileMenuOpen && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '10px', borderTop: '1px solid var(--border-glass)' }}>
+              {/* Botão de Destaque Frente de Operação */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onGoOperation) onGoOperation();
+                  else window.location.hash = 'operacao';
+                }}
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '10px 14px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}
+              >
+                <ChefHat size={18} />
+                <span>🚀 Abrir Frente de Operação (Caixa & KDS)</span>
+              </button>
+
               {Object.entries(tabDetails).map(([key, tab]) => (
                 <button
                   key={key}
@@ -641,13 +693,43 @@ export default function AdminView({ onLogout }) {
                 color: 'var(--text-secondary)',
                 backgroundColor: 'var(--bg-secondary)',
                 borderRadius: 'var(--radius-sm)',
-                marginBottom: '6px',
+                marginBottom: '4px',
                 border: '1px solid var(--border-glass)'
               }}
               title={isSidebarCollapsed ? "Expandir Menu Lateral" : "Minimizar Menu Lateral"}
             >
               {!isSidebarCollapsed && <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Navegação Gestão</span>}
               {isSidebarCollapsed ? <ChevronRight size={18} color="var(--color-brand-yellow)" /> : <ChevronLeft size={18} />}
+            </button>
+
+            {/* BOTÃO EM DESTAQUE: IR PARA A FRENTE DE OPERAÇÃO */}
+            <button 
+              type="button"
+              onClick={() => {
+                if (onGoOperation) onGoOperation();
+                else window.location.hash = 'operacao';
+              }} 
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', 
+                padding: isSidebarCollapsed ? '10px 6px' : '9px 12px',
+                color: 'var(--color-brand-yellow)',
+                backgroundColor: 'rgba(234, 179, 8, 0.16)',
+                border: '1px solid var(--color-brand)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '6px',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 8px rgba(234, 179, 8, 0.2)'
+              }}
+              title="Abrir Frente de Operação (Caixa & KDS)"
+            >
+              <ChefHat size={18} />
+              {!isSidebarCollapsed && <span>Frente de Operação</span>}
             </button>
 
             {/* Dashboard */}
@@ -811,6 +893,21 @@ export default function AdminView({ onLogout }) {
                   OFF
                 </span>
               )}
+            </button>
+
+            {/* Equipe & Operadores */}
+            <button 
+              onClick={() => changeTab('team')} 
+              className={`nav-link ${activeTab === 'team' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Equipe & Operadores"
+            >
+              <User size={20} />
+              {!isSidebarCollapsed && <span>Equipe & Operadores</span>}
             </button>
 
             {/* Cotações */}
@@ -3024,6 +3121,97 @@ export default function AdminView({ onLogout }) {
             </div>
           )}
 
+          {/* TAB: EQUIPE & OPERADORES DO TURNO */}
+          {activeTab === 'team' && (
+            <div className="animate-fade-in">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: '0 0 4px 0' }}>
+                    Equipe & Operadores de Turno
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Cadastre os atendentes, caixas e chapeiros que podem ser selecionados na Frente de Operação diária.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenOperatorModal()}
+                  className="btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontWeight: 700 }}
+                >
+                  <PlusCircle size={18} />
+                  <span>+ Cadastrar Operador</span>
+                </button>
+              </div>
+
+              <div className="admin-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Nome do Atendente</th>
+                      <th>Função / Cargo</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'center' }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {operators.map(op => (
+                      <tr key={op.id}>
+                        <td style={{ fontWeight: 700, color: '#fff' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                              color: 'var(--color-brand-yellow)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 800,
+                              fontSize: '0.9rem'
+                            }}>
+                              {op.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span>{op.name}</span>
+                          </div>
+                        </td>
+                        <td>{op.role}</td>
+                        <td>
+                          <span className={`badge ${op.active ? 'badge-delivered' : 'badge-pending'}`} style={{ fontSize: '0.72rem' }}>
+                            {op.active ? 'Ativo no Turno' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                            <button
+                              onClick={() => handleOpenOperatorModal(op)}
+                              className="btn-secondary"
+                              style={{ padding: '5px 10px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              title="Editar"
+                            >
+                              <Edit size={13} /> Editar
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Deseja remover o operador ${op.name}?`)) deleteOperator(op.id);
+                              }}
+                              className="btn-secondary"
+                              style={{ padding: '5px 8px', fontSize: '0.75rem', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                              title="Excluir"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -4145,6 +4333,65 @@ export default function AdminView({ onLogout }) {
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsCouponModalOpen(false)} className="btn-secondary">Cancelar</button>
                 <button type="submit" className="btn-primary">Salvar Cupom</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CADASTRO / EDIÇÃO DE OPERADOR DE TURNO */}
+      {isOperatorModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsOperatorModalOpen(false)}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={20} color="var(--color-brand-yellow)" />
+                {editingOperator ? 'Editar Operador' : 'Novo Operador de Turno'}
+              </h3>
+              <button onClick={() => setIsOperatorModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveOperator}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Nome Completo *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Carlos Santos"
+                    value={operatorName}
+                    onChange={e => setOperatorName(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Função / Cargo</label>
+                  <select value={operatorRole} onChange={e => setOperatorRole(e.target.value)}>
+                    <option value="Atendente">Atendente</option>
+                    <option value="Caixa">Caixa</option>
+                    <option value="Chapa / Cozinha">Chapa / Cozinha</option>
+                    <option value="Gerente">Gerente</option>
+                    <option value="Proprietário">Proprietário</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                  <input
+                    type="checkbox"
+                    id="opActiveCheck"
+                    checked={operatorActive}
+                    onChange={e => setOperatorActive(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="opActiveCheck" style={{ fontSize: '0.85rem', color: '#fff', cursor: 'pointer' }}>
+                    Operador Ativo (visível na tela de turno)
+                  </label>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setIsOperatorModalOpen(false)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="btn-primary">Salvar Operador</button>
               </div>
             </form>
           </div>

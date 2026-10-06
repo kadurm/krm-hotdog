@@ -299,6 +299,13 @@ const INITIAL_CUSTOMERS = [
   { phone: '31999998888', name: 'Cliente Demonstração', address: 'Rua das Flores, 123 - Centro', neighborhood: 'Centro', stampsCount: 4, totalOrders: 4, lastOrderAt: '2026-09-20' }
 ];
 
+// 10. EQUIPE E OPERADORES DO TURNO (Atendentes, Chapa, Caixa, Dono)
+const INITIAL_OPERATORS = [
+  { id: 'op-1', name: 'Kadu', role: 'Proprietário / Gerente', active: true, pin: '1234' },
+  { id: 'op-2', name: 'Carlos', role: 'Atendente / Caixa', active: true, pin: '0000' },
+  { id: 'op-3', name: 'Juliana', role: 'Atendente / Chapa', active: true, pin: '0000' }
+];
+
 // Cotações de Fornecedores
 const INITIAL_QUOTATIONS = [
   { id: 'q-1', productName: 'Molho Barbecue', supplier: 'Supermercado BH', brand: 'Saboroso', package: 'Balde 3,5 kg', packagePrice: 32.90, unitPrice: 9.40, unitType: 'kg', lastUpdated: '2026-08-25' },
@@ -416,6 +423,23 @@ export const SystemProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
   });
 
+  const [operators, setOperators] = useState(() => {
+    const saved = localStorage.getItem('nuu_operators');
+    return saved ? JSON.parse(saved) : INITIAL_OPERATORS;
+  });
+
+  const [currentOperator, setCurrentOperator] = useState(() => {
+    const saved = sessionStorage.getItem('nuu_current_operator');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+
   const [cashShifts, setCashShifts] = useState(() => {
     const saved = localStorage.getItem('nuu_cash_shifts');
     return saved ? JSON.parse(saved) : [];
@@ -478,6 +502,10 @@ export const SystemProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('nuu_customers', JSON.stringify(customers));
   }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('nuu_operators', JSON.stringify(operators));
+  }, [operators]);
 
   useEffect(() => {
     localStorage.setItem('nuu_cash_shifts', JSON.stringify(cashShifts));
@@ -755,8 +783,42 @@ export const SystemProvider = ({ children }) => {
     });
   };
 
+  // --- Gestão de Equipe & Operadores de Turno ---
+  const loginOperator = (op) => {
+    sessionStorage.setItem('nuu_current_operator', JSON.stringify(op));
+    setCurrentOperator(op);
+  };
+
+  const logoutOperator = () => {
+    sessionStorage.removeItem('nuu_current_operator');
+    setCurrentOperator(null);
+  };
+
+  const upsertOperator = (opData) => {
+    setOperators(prev => {
+      if (opData.id) {
+        return prev.map(o => o.id === opData.id ? { ...o, ...opData } : o);
+      }
+      return [...prev, { ...opData, id: 'op-' + Date.now(), active: true }];
+    });
+  };
+
+  const deleteOperator = (id) => {
+    setOperators(prev => prev.filter(o => o.id !== id));
+  };
+
   // --- Turnos de Caixa (Abertura, Sangria, Fechamento) ---
-  const openCashShift = ({ operatorName = 'Operador', initialFloat = 100.00 }) => {
+  const openCashShift = (param = {}) => {
+    let operatorName = currentOperator ? `${currentOperator.name} (${currentOperator.role})` : 'Operador';
+    let initialFloat = 100.00;
+
+    if (typeof param === 'number') {
+      initialFloat = param;
+    } else if (typeof param === 'object' && param !== null) {
+      if (param.operatorName) operatorName = param.operatorName;
+      if (param.initialFloat !== undefined) initialFloat = parseFloat(param.initialFloat) || 0;
+    }
+
     const newShift = {
       id: 'shift-' + Date.now(),
       openedAt: new Date().toISOString(),
@@ -773,9 +835,19 @@ export const SystemProvider = ({ children }) => {
     return newShift;
   };
 
-  const addShiftBleed = ({ amount, reason }) => {
+  const addShiftBleed = (arg1, arg2) => {
     if (!activeShift) return;
-    const val = parseFloat(amount) || 0;
+    let val = 0;
+    let reason = 'Sangria de caixa';
+    if (typeof arg1 === 'object' && arg1 !== null) {
+      val = parseFloat(arg1.amount) || 0;
+      reason = arg1.reason || reason;
+    } else {
+      val = parseFloat(arg1) || 0;
+      if (arg2) reason = arg2;
+    }
+    if (val <= 0) return;
+
     const bleedEntry = { id: 'bleed-' + Date.now(), amount: val, reason, date: new Date().toISOString() };
     
     setCashShifts(prev => prev.map(s => {
@@ -793,16 +865,26 @@ export const SystemProvider = ({ children }) => {
     setTransactions(t => [{
       id: 't-' + Date.now(),
       date: new Date().toISOString(),
-      type: 'bleed',
+      type: 'expense',
       category: 'Sangria de Caixa',
       value: val,
-      description: `Sangria: ${reason}`
+      description: `Sangria: ${reason} (Turno #${activeShift.id})`
     }, ...t]);
   };
 
-  const addShiftSupply = ({ amount, reason }) => {
+  const addShiftSupply = (arg1, arg2) => {
     if (!activeShift) return;
-    const val = parseFloat(amount) || 0;
+    let val = 0;
+    let reason = 'Reforço de troco';
+    if (typeof arg1 === 'object' && arg1 !== null) {
+      val = parseFloat(arg1.amount) || 0;
+      reason = arg1.reason || reason;
+    } else {
+      val = parseFloat(arg1) || 0;
+      if (arg2) reason = arg2;
+    }
+    if (val <= 0) return;
+
     const supplyEntry = { id: 'supply-' + Date.now(), amount: val, reason, date: new Date().toISOString() };
 
     setCashShifts(prev => prev.map(s => {
@@ -819,15 +901,20 @@ export const SystemProvider = ({ children }) => {
     setTransactions(t => [{
       id: 't-' + Date.now(),
       date: new Date().toISOString(),
-      type: 'supply',
+      type: 'income',
       category: 'Suprimento de Caixa',
       value: val,
-      description: `Suprimento (Troco): ${reason}`
+      description: `Suprimento (Troco): ${reason} (Turno #${activeShift.id})`
     }, ...t]);
   };
 
-  const closeCashShift = ({ countedCash, countedCard, notes = '' }) => {
+  const closeCashShift = (counts = {}, notes = '') => {
     if (!activeShift) return;
+    
+    const countedCash = parseFloat(counts.cash ?? counts.countedCash ?? 0) || 0;
+    const countedCard = parseFloat(counts.card ?? counts.countedCard ?? 0) || 0;
+    const countedPix = parseFloat(counts.pix ?? counts.countedPix ?? 0) || 0;
+    const finalNotes = notes || counts.notes || '';
     
     // Calcula vendas no turno
     const shiftOrders = orders.filter(o => 
@@ -840,26 +927,32 @@ export const SystemProvider = ({ children }) => {
     const cardSales = shiftOrders.filter(o => o.paymentMethod?.toLowerCase().includes('cartão') || o.paymentMethod?.toLowerCase().includes('cartao')).reduce((acc, o) => acc + o.total, 0);
 
     const expectedCash = activeShift.initialFloat + cashSales + (activeShift.supplyTotal || 0) - (activeShift.bleedTotal || 0);
-    const diff = (parseFloat(countedCash) || 0) - expectedCash;
+    const diff = countedCash - expectedCash;
+
+    let closedShiftSummary = null;
 
     setCashShifts(prev => prev.map(s => {
       if (s.id === activeShift.id) {
-        return {
+        closedShiftSummary = {
           ...s,
           status: 'closed',
           closedAt: new Date().toISOString(),
           cashSales,
           pixSales,
           cardSales,
-          countedCash: parseFloat(countedCash) || 0,
-          countedCard: parseFloat(countedCard) || 0,
+          countedCash,
+          countedCard,
+          countedPix,
           expectedCash,
           difference: diff,
-          notes
+          notes: finalNotes
         };
+        return closedShiftSummary;
       }
       return s;
     }));
+
+    return closedShiftSummary;
   };
 
   // --- Criação de Pedidos e Baixa Automática de Insumos/Embalagens ---
@@ -1233,8 +1326,16 @@ export const SystemProvider = ({ children }) => {
       coupons,
       motoboys,
       customers,
+      operators,
+      currentOperator,
+      loginOperator,
+      logoutOperator,
+      upsertOperator,
+      deleteOperator,
       cashShifts,
       activeShift,
+      currentShift: activeShift,
+      shiftHistory: cashShifts,
       supabaseActive,
       SUPABASE_SCHEMA_SQL,
       saveSupabaseConfig,

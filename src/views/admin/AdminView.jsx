@@ -14,7 +14,7 @@ export default function AdminView({ onLogout }) {
   const { 
     products, inventory, orders, transactions, invoices, quotations,
     updateOrderStatus, deleteOrder, adjustStock, manualStockInflow, registerInflowInvoice, 
-    upsertProduct, deleteProduct, addTransaction,
+    upsertProduct, deleteProduct, addTransaction, updateTransaction, deleteTransaction,
     addQuotation, updateQuotation, deleteQuotation 
   } = useSystem();
 
@@ -80,11 +80,16 @@ export default function AdminView({ onLogout }) {
   const [inflowTotal, setInflowTotal] = useState('');
   const [inflowItems, setInflowItems] = useState([]);
   
-  // Custom transaction state
-  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [expenseDesc, setExpenseDesc] = useState('');
-  const [expenseVal, setExpenseVal] = useState('');
-  const [expenseCat, setExpenseCat] = useState('Geral');
+  // Finance & Transaction state
+  const [isTransModalOpen, setIsTransModalOpen] = useState(false);
+  const [editingTrans, setEditingTrans] = useState(null);
+  const [transType, setTransType] = useState('expense');
+  const [transDesc, setTransDesc] = useState('');
+  const [transVal, setTransVal] = useState('');
+  const [transCat, setTransCat] = useState('Geral');
+  const [transDate, setTransDate] = useState('');
+  const [financeSearch, setFinanceSearch] = useState('');
+  const [financeFilterType, setFinanceFilterType] = useState('all');
 
   // Quotation form & filter states
   const [isQuotModalOpen, setIsQuotModalOpen] = useState(false);
@@ -156,6 +161,18 @@ export default function AdminView({ onLogout }) {
     .reduce((acc, t) => acc + t.value, 0);
 
   const saldoLiquido = totalFaturamento - totalDespesas;
+  
+  const filteredTransactions = transactions.filter(t => {
+    if (financeFilterType !== 'all' && t.type !== financeFilterType) return false;
+    if (financeSearch) {
+      const q = financeSearch.toLowerCase();
+      const matchDesc = t.description?.toLowerCase().includes(q);
+      const matchCat = t.category?.toLowerCase().includes(q);
+      const matchVal = t.value?.toString().includes(q);
+      if (!matchDesc && !matchCat && !matchVal) return false;
+    }
+    return true;
+  });
 
   const totalPedidos = orders.length;
   const pedidosHoje = orders.filter(o => {
@@ -305,17 +322,68 @@ export default function AdminView({ onLogout }) {
   };
 
   // Finance Handlers
-  const handleSaveExpense = (e) => {
+  const formatDateTimeForInput = (isoDate) => {
+    if (!isoDate) return '';
+    try {
+      const d = new Date(isoDate);
+      if (isNaN(d.getTime())) return '';
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch {
+      return '';
+    }
+  };
+
+  const handleOpenTransactionModal = (trans = null, defaultType = 'expense') => {
+    if (trans) {
+      setEditingTrans(trans);
+      setTransType(trans.type || 'expense');
+      setTransDesc(trans.description || '');
+      setTransVal(trans.value !== undefined ? String(trans.value) : '');
+      setTransCat(trans.category || 'Geral');
+      setTransDate(formatDateTimeForInput(trans.date));
+    } else {
+      setEditingTrans(null);
+      setTransType(defaultType);
+      setTransDesc('');
+      setTransVal('');
+      setTransCat(defaultType === 'income' ? 'Vendas' : 'Geral');
+      setTransDate(formatDateTimeForInput(new Date().toISOString()));
+    }
+    setIsTransModalOpen(true);
+  };
+
+  const handleSaveTransaction = (e) => {
     e.preventDefault();
-    addTransaction({
-      type: 'expense',
-      category: expenseCat,
-      value: parseFloat(expenseVal),
-      description: expenseDesc
-    });
-    setIsExpenseModalOpen(false);
-    setExpenseDesc('');
-    setExpenseVal('');
+    if (!transDesc || !transVal) return;
+    const numVal = parseFloat(transVal);
+    if (isNaN(numVal) || numVal < 0) {
+      alert('Por favor, informe um valor válido.');
+      return;
+    }
+
+    const payload = {
+      type: transType,
+      category: transCat || 'Geral',
+      value: numVal,
+      description: transDesc,
+      date: transDate ? new Date(transDate).toISOString() : new Date().toISOString()
+    };
+
+    if (editingTrans) {
+      updateTransaction(editingTrans.id, payload);
+    } else {
+      addTransaction(payload);
+    }
+
+    setIsTransModalOpen(false);
+    setEditingTrans(null);
+  };
+
+  const handleDeleteTransaction = (id) => {
+    if (window.confirm('Tem certeza que deseja excluir este lançamento financeiro? Essa ação recalculará o faturamento e as despesas imediatamente.')) {
+      deleteTransaction(id);
+    }
   };
 
   // Inflow NF Handlers
@@ -1560,48 +1628,177 @@ export default function AdminView({ onLogout }) {
           {/* TAB: FINANCE */}
           {activeTab === 'finance' && (
             <div className="animate-fade-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                   <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Fluxo de Caixa / Financeiro</h2>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     Faturamento: <strong style={{ color: 'var(--color-success)' }}>R$ {totalFaturamento.toFixed(2)}</strong> | 
-                    Despesas: <strong style={{ color: 'var(--color-danger)' }}>R$ {totalDespesas.toFixed(2)}</strong>
+                    Despesas: <strong style={{ color: 'var(--color-danger)' }}>R$ {totalDespesas.toFixed(2)}</strong> | 
+                    Saldo Líquido: <strong style={{ color: saldoLiquido >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>R$ {saldoLiquido.toFixed(2)}</strong>
                   </p>
                 </div>
-                <button onClick={() => setIsExpenseModalOpen(true)} className="btn-primary" style={{ fontSize: '0.85rem', backgroundColor: 'var(--color-danger)' }}>
-                  <Plus size={16} /> Lançar Despesa
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={() => handleOpenTransactionModal(null, 'income')} 
+                    className="btn-primary" 
+                    style={{ fontSize: '0.85rem', backgroundColor: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Plus size={16} /> Lançar Receita
+                  </button>
+                  <button 
+                    onClick={() => handleOpenTransactionModal(null, 'expense')} 
+                    className="btn-primary" 
+                    style={{ fontSize: '0.85rem', backgroundColor: 'var(--color-danger)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Plus size={16} /> Lançar Despesa
+                  </button>
+                </div>
+              </div>
+
+              {/* Barra de Filtros e Busca */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                marginBottom: '1rem', 
+                flexWrap: 'wrap', 
+                alignItems: 'center',
+                backgroundColor: 'var(--bg-secondary)',
+                padding: '12px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-glass)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
+                  <Search size={16} color="var(--text-secondary)" />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar por descrição, categoria ou valor..."
+                    value={financeSearch}
+                    onChange={e => setFinanceSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: '#fff',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                  {financeSearch && (
+                    <button 
+                      onClick={() => setFinanceSearch('')}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                      title="Limpar busca"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={() => setFinanceFilterType('all')}
+                    className={financeFilterType === 'all' ? 'btn-primary' : 'btn-secondary'}
+                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                  >
+                    Todos ({transactions.length})
+                  </button>
+                  <button
+                    onClick={() => setFinanceFilterType('income')}
+                    className={financeFilterType === 'income' ? 'btn-primary' : 'btn-secondary'}
+                    style={{ 
+                      fontSize: '0.8rem', 
+                      padding: '6px 12px',
+                      backgroundColor: financeFilterType === 'income' ? 'var(--color-success)' : undefined
+                    }}
+                  >
+                    Receitas ({transactions.filter(t => t.type === 'income').length})
+                  </button>
+                  <button
+                    onClick={() => setFinanceFilterType('expense')}
+                    className={financeFilterType === 'expense' ? 'btn-primary' : 'btn-secondary'}
+                    style={{ 
+                      fontSize: '0.8rem', 
+                      padding: '6px 12px',
+                      backgroundColor: financeFilterType === 'expense' ? 'var(--color-danger)' : undefined
+                    }}
+                  >
+                    Despesas ({transactions.filter(t => t.type === 'expense').length})
+                  </button>
+                </div>
               </div>
 
               <div className="admin-table-container">
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>Data</th>
+                      <th>Data / Hora</th>
                       <th>Tipo</th>
                       <th>Categoria</th>
                       <th>Descrição</th>
                       <th>Valor</th>
+                      <th style={{ textAlign: 'center', width: '130px' }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map(t => (
-                      <tr key={t.id}>
-                        <td>{new Date(t.date).toLocaleDateString()} {new Date(t.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                        <td>
-                          {t.type === 'income' ? (
-                            <span className="badge badge-delivered" style={{ fontSize: '0.7rem' }}>Receita</span>
-                          ) : (
-                            <span className="badge badge-pending" style={{ fontSize: '0.7rem' }}>Despesa</span>
-                          )}
-                        </td>
-                        <td>{t.category}</td>
-                        <td>{t.description}</td>
-                        <td style={{ fontWeight: 700, color: t.type === 'income' ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                          {t.type === 'income' ? '+' : '-'} R$ {t.value.toFixed(2)}
+                    {filteredTransactions.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                          Nenhum lançamento financeiro encontrado.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredTransactions.map(t => (
+                        <tr key={t.id}>
+                          <td style={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
+                            {new Date(t.date).toLocaleDateString()} <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{new Date(t.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                          </td>
+                          <td>
+                            {t.type === 'income' ? (
+                              <span className="badge badge-delivered" style={{ fontSize: '0.7rem' }}>Receita</span>
+                            ) : (
+                              <span className="badge badge-pending" style={{ fontSize: '0.7rem' }}>Despesa</span>
+                            )}
+                          </td>
+                          <td>
+                            <span style={{ 
+                              display: 'inline-block',
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              backgroundColor: 'var(--bg-tertiary)', 
+                              fontSize: '0.75rem',
+                              border: '1px solid var(--border-glass)'
+                            }}>
+                              {t.category}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 500 }}>{t.description}</td>
+                          <td style={{ fontWeight: 700, color: t.type === 'income' ? 'var(--color-success)' : 'var(--color-danger)', whiteSpace: 'nowrap' }}>
+                            {t.type === 'income' ? '+' : '-'} R$ {Number(t.value || 0).toFixed(2)}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', gap: '6px' }}>
+                              <button
+                                onClick={() => handleOpenTransactionModal(t)}
+                                className="btn-secondary"
+                                style={{ padding: '5px 10px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Editar Lançamento"
+                              >
+                                <Edit size={13} /> Editar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTransaction(t.id)}
+                                className="btn-secondary"
+                                style={{ padding: '5px 8px', fontSize: '0.75rem', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                title="Excluir Lançamento"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -2171,42 +2368,155 @@ export default function AdminView({ onLogout }) {
         </div>
       )}
 
-      {/* MODAL: LANÇAMENTO DE DESPESA */}
-      {isExpenseModalOpen && (
+      {/* MODAL: LANÇAMENTO / EDIÇÃO FINANCEIRA */}
+      {isTransModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: '400px' }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '480px' }}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Lançar Nova Despesa</h3>
-              <button onClick={() => setIsExpenseModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BadgeDollarSign size={20} color={transType === 'income' ? 'var(--color-success)' : 'var(--color-danger)'} />
+                {editingTrans ? 'Editar Lançamento' : (transType === 'income' ? 'Lançar Receita' : 'Lançar Despesa')}
+              </h3>
+              <button onClick={() => setIsTransModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSaveExpense}>
+            <form onSubmit={handleSaveTransaction}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Descrição / Fornecedor</label>
-                  <input type="text" required value={expenseDesc} onChange={e => setExpenseDesc(e.target.value)} placeholder="Ex: Consumo de Energia Elétrica Coelba" />
+                
+                {/* Tipo de Lançamento (Toggle Receita / Despesa) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Tipo de Movimentação</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTransType('income');
+                        if (!editingTrans && transCat === 'Geral') setTransCat('Vendas');
+                      }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        border: transType === 'income' ? '2px solid var(--color-success)' : '1px solid var(--border-glass)',
+                        backgroundColor: transType === 'income' ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)',
+                        color: transType === 'income' ? 'var(--color-success)' : 'var(--text-secondary)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      + Receita (Entrada)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTransType('expense');
+                        if (!editingTrans && transCat === 'Vendas') setTransCat('Geral');
+                      }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        border: transType === 'expense' ? '2px solid var(--color-danger)' : '1px solid var(--border-glass)',
+                        backgroundColor: transType === 'expense' ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-tertiary)',
+                        color: transType === 'expense' ? 'var(--color-danger)' : 'var(--text-secondary)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      - Despesa (Saída)
+                    </button>
+                  </div>
                 </div>
 
+                {/* Descrição */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Descrição / Fornecedor / Origem</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={transDesc} 
+                    onChange={e => setTransDesc(e.target.value)} 
+                    placeholder={transType === 'income' ? "Ex: Venda de Balcão, Evento, Pedido #..." : "Ex: Compra de embalagens, Energia Elétrica, Gás..."} 
+                  />
+                </div>
+
+                {/* Valor e Categoria */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Valor Pago (R$)</label>
-                    <input type="number" step="0.01" required value={expenseVal} onChange={e => setExpenseVal(e.target.value)} placeholder="0.00" />
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Valor (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0.01"
+                      required 
+                      value={transVal} 
+                      onChange={e => setTransVal(e.target.value)} 
+                      placeholder="0.00" 
+                    />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Categoria</label>
-                    <select value={expenseCat} onChange={e => setExpenseCat(e.target.value)}>
-                      <option value="Geral">Outros / Geral</option>
-                      <option value="Infraestrutura">Infraestrutura / Contas</option>
-                      <option value="Marketing">Marketing / Tráfego</option>
-                      <option value="Estoque">Compras e Insumos</option>
+                    <select value={transCat} onChange={e => setTransCat(e.target.value)}>
+                      {transType === 'income' ? (
+                        <>
+                          <option value="Vendas">Vendas / Pedidos</option>
+                          <option value="Balcão">Venda Balcão / Presencial</option>
+                          <option value="Delivery">Delivery / Encomendas</option>
+                          <option value="Eventos">Eventos / Feiras</option>
+                          <option value="Aporte">Aporte / Capital</option>
+                          <option value="Outros">Outras Receitas</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Geral">Geral / Diversos</option>
+                          <option value="Estoque">Estoque / Insumos</option>
+                          <option value="Embalagens">Embalagens / Descartáveis</option>
+                          <option value="Serviços">Água / Luz / Internet / Gás</option>
+                          <option value="Manutenção">Manutenção de Equipamentos</option>
+                          <option value="Pessoal">Pessoal / Pró-labore</option>
+                          <option value="Marketing">Marketing / Divulgação</option>
+                          <option value="Taxas">Taxas / Impostos</option>
+                          <option value="Outros">Outras Despesas</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>
+
+                {/* Data e Hora */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Data e Hora do Lançamento</label>
+                  <input 
+                    type="datetime-local" 
+                    value={transDate} 
+                    onChange={e => setTransDate(e.target.value)} 
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: '#fff',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Permite retroagir ou antecipar a data do fluxo financeiro.
+                  </span>
+                </div>
+
               </div>
               <div className="modal-footer">
-                <button type="button" onClick={() => setIsExpenseModalOpen(false)} className="btn-secondary">Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ backgroundColor: 'var(--color-danger)' }}>Confirmar Despesa</button>
+                <button type="button" onClick={() => setIsTransModalOpen(false)} className="btn-secondary">Cancelar</button>
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  style={{ backgroundColor: transType === 'income' ? 'var(--color-success)' : 'var(--color-danger)' }}
+                >
+                  {editingTrans ? 'Salvar Alterações' : (transType === 'income' ? 'Confirmar Receita' : 'Confirmar Despesa')}
+                </button>
               </div>
             </form>
           </div>

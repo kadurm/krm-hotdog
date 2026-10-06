@@ -655,10 +655,40 @@ export const SystemProvider = ({ children }) => {
   const addTransaction = (transData) => {
     const newTrans = {
       id: 't-' + Date.now(),
-      date: new Date().toISOString(),
-      ...transData
+      date: transData.date || new Date().toISOString(),
+      ...transData,
+      value: parseFloat(transData.value) || 0
     };
-    setTransactions(prev => [newTrans, ...prev]);
+    setTransactions(prev => {
+      const next = [newTrans, ...prev];
+      localStorage.setItem('hd_transactions', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const updateTransaction = (id, updatedData) => {
+    setTransactions(prev => {
+      const next = prev.map(t => {
+        if (t.id === id) {
+          return {
+            ...t,
+            ...updatedData,
+            value: updatedData.value !== undefined ? parseFloat(updatedData.value) || 0 : t.value
+          };
+        }
+        return t;
+      });
+      localStorage.setItem('hd_transactions', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const deleteTransaction = (id) => {
+    setTransactions(prev => {
+      const next = prev.filter(t => t.id !== id);
+      localStorage.setItem('hd_transactions', JSON.stringify(next));
+      return next;
+    });
   };
 
   return (
@@ -678,6 +708,8 @@ export const SystemProvider = ({ children }) => {
       upsertProduct,
       deleteProduct,
       addTransaction,
+      updateTransaction,
+      deleteTransaction,
       addQuotation,
       updateQuotation,
       deleteQuotation,

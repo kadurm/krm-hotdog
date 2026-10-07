@@ -54,6 +54,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
   const [editingOperator, setEditingOperator] = useState(null);
   const [operatorName, setOperatorName] = useState('');
   const [operatorRole, setOperatorRole] = useState('Atendente');
+  const [operatorPin, setOperatorPin] = useState('');
   const [operatorActive, setOperatorActive] = useState(true);
 
   const handleOpenOperatorModal = (op = null) => {
@@ -61,11 +62,13 @@ export default function AdminView({ onLogout, onGoOperation }) {
       setEditingOperator(op);
       setOperatorName(op.name);
       setOperatorRole(op.role || 'Atendente');
+      setOperatorPin(op.pin || '');
       setOperatorActive(op.active !== false);
     } else {
       setEditingOperator(null);
       setOperatorName('');
       setOperatorRole('Atendente');
+      setOperatorPin('');
       setOperatorActive(true);
     }
     setIsOperatorModalOpen(true);
@@ -78,6 +81,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
       id: editingOperator?.id,
       name: operatorName.trim(),
       role: operatorRole,
+      pin: operatorPin.trim() || '1234',
       active: operatorActive
     });
     setIsOperatorModalOpen(false);
@@ -4374,6 +4378,23 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <option value="Gerente">Gerente</option>
                     <option value="Proprietário">Proprietário</option>
                   </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Senha de Acesso (PIN) *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Ex: 1234"
+                    value={operatorPin}
+                    onChange={e => setOperatorPin(e.target.value)}
+                    style={{ letterSpacing: '2px' }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Senha que o atendente digitará para entrar no turno na Frente de Operação.
+                  </span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>

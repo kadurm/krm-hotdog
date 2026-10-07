@@ -40,9 +40,13 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState(null);
 
-  // Estados de identificação / login do operador
+  // Estados de identificação / login do operador com senha
+  const [selectedOperatorForLogin, setSelectedOperatorForLogin] = useState(null);
+  const [loginPin, setLoginPin] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [newOpName, setNewOpName] = useState('');
   const [newOpRole, setNewOpRole] = useState('Atendente');
+  const [newOpPin, setNewOpPin] = useState('');
   const [isAddingNewOp, setIsAddingNewOp] = useState(false);
 
   // Controle de campainha de novos pedidos
@@ -61,6 +65,26 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     }
     setPrevPendingCount(pendingOrders.length);
   }, [pendingOrders.length, isSoundEnabled, prevPendingCount]);
+
+  const handleSelectOperator = (op) => {
+    setSelectedOperatorForLogin(op);
+    setLoginPin('');
+    setLoginError('');
+  };
+
+  const handleConfirmLogin = (e) => {
+    e.preventDefault();
+    if (!selectedOperatorForLogin) return;
+    const expectedPin = selectedOperatorForLogin.pin || '1234';
+    if (loginPin.trim() === expectedPin.trim()) {
+      loginOperator(selectedOperatorForLogin);
+      setSelectedOperatorForLogin(null);
+      setLoginPin('');
+      setLoginError('');
+    } else {
+      setLoginError('Senha incorreta! Verifique ou solicite ao administrador.');
+    }
+  };
 
   // Se o operador ainda não estiver identificado, exibe a tela de login do turno
   if (!currentOperator) {
@@ -114,17 +138,110 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
             Quem está no atendimento hoje?
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-            Identifique o atendente ou dono responsável pelo turno para registrar pedidos e caixa.
+            Selecione seu usuário e digite sua senha de acesso individual.
           </p>
 
-          {/* Lista de Operadores Cadastrados */}
-          {!isAddingNewOp ? (
+          {/* Modal / Formulário de Confirmação de Senha do Operador Selecionado */}
+          {selectedOperatorForLogin ? (
+            <form 
+              onSubmit={handleConfirmLogin}
+              className="animate-fade-in"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                padding: '1.5rem',
+                borderRadius: '16px',
+                border: '1px solid rgba(234, 179, 8, 0.3)',
+                marginBottom: '1.5rem',
+                textAlign: 'center'
+              }}
+            >
+              <div style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                border: '2px solid var(--color-brand)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--color-brand-yellow)',
+                fontWeight: 800,
+                fontSize: '1.4rem',
+                margin: '0 auto 10px auto'
+              }}>
+                {selectedOperatorForLogin.name.charAt(0).toUpperCase()}
+              </div>
+
+              <h3 style={{ margin: '0 0 2px 0', fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+                {selectedOperatorForLogin.name}
+              </h3>
+              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                {selectedOperatorForLogin.role}
+              </p>
+
+              <div style={{ maxWidth: '280px', margin: '0 auto 1rem auto', textAlign: 'left' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+                  Digite sua Senha de Acesso:
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="password"
+                    value={loginPin}
+                    onChange={(e) => {
+                      setLoginPin(e.target.value);
+                      if (loginError) setLoginError('');
+                    }}
+                    placeholder="••••"
+                    required
+                    autoFocus
+                    className="form-input"
+                    style={{
+                      padding: '10px 14px',
+                      fontSize: '1.2rem',
+                      letterSpacing: '4px',
+                      textAlign: 'center',
+                      borderColor: loginError ? '#ef4444' : 'rgba(255,255,255,0.2)'
+                    }}
+                  />
+                </div>
+                {loginError && (
+                  <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '6px', textAlign: 'center', fontWeight: 600 }}>
+                    {loginError}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedOperatorForLogin(null);
+                    setLoginPin('');
+                    setLoginError('');
+                  }}
+                  className="btn-secondary"
+                  style={{ padding: '10px 18px', fontSize: '0.85rem' }}
+                >
+                  Voltar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ padding: '10px 24px', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Lock size={15} />
+                  <span>Entrar no Turno</span>
+                </button>
+              </div>
+            </form>
+          ) : !isAddingNewOp ? (
+            /* Lista de Operadores Cadastrados */
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '1.5rem' }}>
                 {operators.map(op => (
                   <button
                     key={op.id}
-                    onClick={() => loginOperator(op)}
+                    onClick={() => handleSelectOperator(op)}
                     style={{
                       background: 'rgba(255,255,255,0.04)',
                       border: '1px solid rgba(255,255,255,0.1)',
@@ -136,7 +253,8 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                       gap: '8px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      color: '#fff'
+                      color: '#fff',
+                      position: 'relative'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = 'var(--color-brand)';
@@ -166,6 +284,16 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                     </div>
                     <div style={{ fontWeight: 700, fontSize: '1rem' }}>{op.name}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{op.role}</div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      fontSize: '0.7rem',
+                      color: 'var(--text-muted)',
+                      marginTop: '2px'
+                    }}>
+                      <Lock size={10} /> Requer Senha
+                    </div>
                   </button>
                 ))}
               </div>
@@ -193,7 +321,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
               </div>
             </>
           ) : (
-            /* Formulário para Inserir Outro Operador */
+            /* Formulário para Inserir Outro Operador com Senha */
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
@@ -202,6 +330,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                   id: 'op-' + Date.now(),
                   name: newOpName.trim(),
                   role: newOpRole,
+                  pin: newOpPin.trim() || '1234',
                   active: true
                 };
                 upsertOperator(newOp);
@@ -218,7 +347,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
               <h4 style={{ margin: '0 0 10px 0', fontSize: '0.95rem', fontWeight: 700 }}>
                 Cadastrar Atendente para o Turno:
               </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', marginBottom: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Nome:</label>
                   <input
@@ -248,13 +377,29 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                   </select>
                 </div>
               </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>
+                  Senha de Acesso (PIN):
+                </label>
+                <input
+                  type="password"
+                  value={newOpPin}
+                  onChange={(e) => setNewOpPin(e.target.value)}
+                  placeholder="Ex: 1234"
+                  required
+                  className="form-input"
+                  style={{ padding: '8px 12px', fontSize: '0.9rem', letterSpacing: '2px' }}
+                />
+              </div>
+
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="submit"
                   className="btn-primary"
                   style={{ flex: 1, padding: '10px', fontSize: '0.9rem', fontWeight: 700 }}
                 >
-                  Entrar no Turno
+                  Cadastrar e Entrar
                 </button>
                 <button
                   type="button"

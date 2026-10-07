@@ -241,8 +241,8 @@ function AppContent() {
         )}
       </main>
 
-      {/* Footer */}
-      {currentMode !== 'operacao' && (
+      {/* Footer Limpo e Exclusivo para o Cliente */}
+      {currentMode === 'delivery' && (
         <footer className="app-footer" style={{ 
           borderTop: '1px solid var(--border-glass)', 
           padding: '1.5rem 0', 
@@ -252,51 +252,8 @@ function AppContent() {
           fontSize: '0.85rem',
           textAlign: 'center'
         }}>
-          <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
             <p style={{ margin: 0 }}>© 2026 Nuu Prensado!! - Todos os direitos reservados.</p>
-            
-            {/* Links de Acesso Interno da Loja */}
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginTop: '4px', fontSize: '0.78rem' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentMode('operacao');
-                  window.location.hash = 'operacao';
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--color-brand-yellow)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontWeight: 700
-                }}
-              >
-                <ChefHat size={14} />
-                <span>Frente de Operação (Caixa & KDS)</span>
-              </button>
-              
-              <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-
-              <button
-                type="button"
-                onClick={handleOpenAdmin}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Lock size={13} />
-                <span>Gestão ERP (Admin)</span>
-              </button>
-            </div>
           </div>
         </footer>
       )}

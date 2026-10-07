@@ -100,14 +100,93 @@ export default function DeliveryView({
     return null;
   });
 
+  // Metadados enriquecidos para as categorias do cardápio
+  const CATEGORY_META = {
+    prensados: {
+      id: 'prensados',
+      label: 'Lanches Prensados',
+      shortLabel: 'Prensados',
+      icon: '🌭',
+      description: 'Nossos prensados artesanais com queijo derretido, bacon crocante e receitas exclusivas da casa.',
+      accentColor: '#eab308',
+      order: 1
+    },
+    bebidas: {
+      id: 'bebidas',
+      label: 'Bebidas Geladas',
+      shortLabel: 'Bebidas',
+      icon: '🥤',
+      description: 'Refrigerantes em lata, garrafas para toda a família, sucos naturais e águas estupidamente geladas.',
+      accentColor: '#3b82f6',
+      order: 2
+    },
+    acompanhamentos: {
+      id: 'acompanhamentos',
+      label: 'Acompanhamentos & Porções',
+      shortLabel: 'Acompanhamentos',
+      icon: '🍟',
+      description: 'Batatas crocantes e complementos especiais feitos na hora com o tempero Nuu Prensado.',
+      accentColor: '#f97316',
+      order: 3
+    }
+  };
+
+  const getCategoryMeta = (catId) => {
+    return CATEGORY_META[catId] || {
+      id: catId || 'outros',
+      label: catId ? (catId.charAt(0).toUpperCase() + catId.slice(1)) : 'Outros',
+      shortLabel: catId || 'Outros',
+      icon: '🍽️',
+      description: 'Opções especiais disponíveis no nosso cardápio.',
+      accentColor: 'var(--color-brand)',
+      order: 99
+    };
+  };
+
+  const categoriesList = [
+    { id: 'todos', label: 'Todos os Itens', shortLabel: 'Todos', icon: '🍽️' },
+    { id: 'prensados', label: 'Lanches Prensados', shortLabel: 'Prensados', icon: '🌭' },
+    { id: 'bebidas', label: 'Bebidas Geladas', shortLabel: 'Bebidas', icon: '🥤' },
+    { id: 'acompanhamentos', label: 'Acompanhamentos', shortLabel: 'Acompanhamentos', icon: '🍟' },
+  ];
+
+  // Ordenação lógica dos produtos por categoria (prensados -> bebidas -> acompanhamentos)
+  const orderedProducts = [...products].sort((a, b) => {
+    const orderA = CATEGORY_META[a.category]?.order || 99;
+    const orderB = CATEGORY_META[b.category]?.order || 99;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.id - b.id;
+  });
+
   // Filtro de produtos por categoria
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = orderedProducts.filter(p => {
     if (selectedCategory === 'todos') return true;
     return p.category === selectedCategory;
   });
 
-  // Produtos visuais para o Slider (mantendo animações e cores)
-  const visualProducts = filteredProducts.filter(p => p.active).map((p, index) => {
+  // Contagem de produtos ativos por categoria
+  const activeProductsTotal = orderedProducts.filter(p => p.active);
+  const categoryActiveCounts = activeProductsTotal.reduce((acc, p) => {
+    acc[p.category] = (acc[p.category] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Contagem cumulativa por categoria para obter o rank (1 de 5, 2 de 5...)
+  const catRanks = {};
+
+  // Produtos visuais para o Slider (mantendo animações, cores e metadados de categoria)
+  const visualProducts = filteredProducts.filter(p => p.active).map((p, index, arr) => {
+    const meta = getCategoryMeta(p.category);
+    catRanks[p.category] = (catRanks[p.category] || 0) + 1;
+    const rank = catRanks[p.category];
+    const totalInCat = categoryActiveCounts[p.category] || 1;
+    const isFirstInCat = rank === 1;
+    const isLastInCat = rank === totalInCat;
+
+    const nextProd = arr[index + 1] || arr[0];
+    const isNextDifferentCategory = nextProd && nextProd.category !== p.category;
+    const nextCatMeta = isNextDifferentCategory ? getCategoryMeta(nextProd.category) : null;
+
     const themes = {
       1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] },
       2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] },
@@ -115,16 +194,89 @@ export default function DeliveryView({
       4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] },
       5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] },
       6: { color: '#dc2626', floaties: ['🥤', '🧊', '✨'] },
-      7: { color: '#dc2626', floaties: ['🥤', '🧊', '✨'] },
-      8: { color: '#16a34a', floaties: ['🥤', '🌿', '✨'] },
+      7: { color: '#16a34a', floaties: ['🥤', '🌿', '✨'] },
+      8: { color: '#b91c1c', floaties: ['🥤', '🧊', '✨'] },
       9: { color: '#eab308', floaties: ['🍊', '🥤', '🧊'] },
       10: { color: '#2563eb', floaties: ['💧', '🧊', '✨'] },
       11: { color: '#ca8a04', floaties: ['🍟', '🔥', '🧂'] },
     };
     
-    const theme = themes[p.id] || { color: '#333333', floaties: ['✨', '🍔', '🥤'] };
-    return { ...p, ...theme, slideIndex: index };
+    const theme = themes[p.id] || { color: meta.accentColor || '#333333', floaties: ['✨', meta.icon, '🍔'] };
+    return { 
+      ...p, 
+      ...theme, 
+      slideIndex: index,
+      categoryMeta: meta,
+      categoryRank: rank,
+      categoryTotal: totalInCat,
+      isFirstOfCategory: isFirstInCat,
+      isLastOfCategory: isLastInCat,
+      nextCategoryMeta: nextCatMeta
+    };
   });
+
+  // Agrupamento para a visualização em grade
+  const availableCategoryKeys = ['prensados', 'bebidas', 'acompanhamentos'];
+  products.forEach(p => {
+    if (p.category && !availableCategoryKeys.includes(p.category)) {
+      availableCategoryKeys.push(p.category);
+    }
+  });
+
+  const gridCategorySections = availableCategoryKeys.map(catId => {
+    const meta = getCategoryMeta(catId);
+    const catProds = orderedProducts.filter(p => p.category === catId);
+    return {
+      ...meta,
+      products: catProds
+    };
+  }).filter(sec => sec.products.length > 0);
+
+  // Referência do container principal para scroll suave na grade
+  const mainContainerRef = React.useRef(null);
+
+  // Toast animado ao cruzar fronteiras de categoria no slider
+  const [categoryToast, setCategoryToast] = useState(null);
+  const [lastSlideCat, setLastSlideCat] = useState(null);
+
+  useEffect(() => {
+    if (visualProducts.length === 0) return;
+    const current = visualProducts[activeSlide] || visualProducts[0];
+    if (current && lastSlideCat && current.category !== lastSlideCat) {
+      setCategoryToast(current.categoryMeta);
+      const timer = setTimeout(() => setCategoryToast(null), 2800);
+      return () => clearTimeout(timer);
+    }
+    if (current) {
+      setLastSlideCat(current.category);
+    }
+  }, [activeSlide]);
+
+  // Handler unificado de clique nas pills de categoria
+  const handleSelectCategory = (catId) => {
+    setSelectedCategory(catId);
+
+    if (viewMode === 'grid') {
+      if (catId === 'todos') {
+        mainContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        const targetEl = document.getElementById(`secao-categoria-${catId}`);
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    } else {
+      // Modo slider
+      if (catId === 'todos') {
+        setActiveSlide(0);
+      } else {
+        const targetIdx = visualProducts.findIndex(p => p.category === catId);
+        if (targetIdx !== -1) {
+          setActiveSlide(targetIdx);
+        }
+      }
+    }
+  };
 
   // Histórico falso para o botão voltar do celular fechar modais
   useEffect(() => {
@@ -396,14 +548,6 @@ export default function DeliveryView({
     return currentLevel >= targetLevel ? 'step-active' : 'step-inactive';
   };
 
-  // Categorias sem doces
-  const categoriesList = [
-    { id: 'todos', label: 'Todos', icon: '🍽️' },
-    { id: 'prensados', label: 'Lanches Prensados', icon: '🌭' },
-    { id: 'bebidas', label: 'Bebidas Geladas', icon: '🥤' },
-    { id: 'acompanhamentos', label: 'Acompanhamentos', icon: '🍟' },
-  ];
-
   if (!products || products.length === 0) {
     return <div style={{ color: 'white', padding: '2rem', textAlign: 'center' }}>Carregando cardápio...</div>;
   }
@@ -416,12 +560,19 @@ export default function DeliveryView({
 
   const isStoreOpen = storeSettings?.isOpen ?? true;
 
+  // Categoria ativa a ser destacada nas pills
+  const activePillId = viewMode === 'slider'
+    ? (selectedCategory === 'todos' ? (activeProduct?.category || 'todos') : selectedCategory)
+    : selectedCategory;
+
   return (
     <div 
       className="app-container"
+      ref={mainContainerRef}
       style={{ 
         backgroundColor: backgroundColor,
         transition: 'background-color 0.8s ease-in-out',
+        scrollBehavior: 'smooth',
         height: '100dvh',
         width: '100vw',
         display: 'flex',
@@ -552,32 +703,65 @@ export default function DeliveryView({
             width: '100%',
             scrollbarWidth: 'none'
           }}>
-            {categoriesList.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '99px',
-                  border: selectedCategory === cat.id ? '1px solid #eab308' : '1px solid rgba(255,255,255,0.15)',
-                  backgroundColor: selectedCategory === cat.id ? '#eab308' : 'rgba(0,0,0,0.45)',
-                  color: selectedCategory === cat.id ? '#000' : '#fff',
-                  fontWeight: 700,
-                  fontSize: '0.78rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(5px)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
+            {categoriesList.map(cat => {
+              const isSelected = activePillId === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleSelectCategory(cat.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '99px',
+                    border: isSelected ? '1px solid #eab308' : '1px solid rgba(255,255,255,0.15)',
+                    backgroundColor: isSelected ? '#eab308' : 'rgba(0,0,0,0.45)',
+                    color: isSelected ? '#000' : '#fff',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(5px)',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSelected ? '0 0 14px rgba(234, 179, 8, 0.45)' : 'none'
+                  }}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
           </div>
+        </div>
+      )}
+
+      {/* TOAST DE ENTRADA EM NOVA CATEGORIA */}
+      {checkoutStep === 'menu' && categoryToast && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '72px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 250,
+            backgroundColor: 'rgba(15, 15, 15, 0.94)',
+            backdropFilter: 'blur(12px)',
+            border: `1px solid ${categoryToast.accentColor}`,
+            boxShadow: `0 8px 30px rgba(0,0,0,0.7), 0 0 20px ${categoryToast.accentColor}40`,
+            padding: '8px 20px',
+            borderRadius: '99px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            color: '#fff',
+            animation: 'fadeInDown 0.35s ease'
+          }}
+        >
+          <Sparkles size={16} color={categoryToast.accentColor} />
+          <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+            Você entrou em: <strong style={{ color: categoryToast.accentColor }}>{categoryToast.icon} {categoryToast.label}</strong>
+          </span>
         </div>
       )}
 
@@ -587,7 +771,7 @@ export default function DeliveryView({
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', gap: '12px' }}>
             <span style={{ fontSize: '3rem' }}>🔍</span>
             <h3>Nenhum item nesta categoria</h3>
-            <button onClick={() => setSelectedCategory('todos')} className="btn-primary" style={{ fontSize: '0.85rem' }}>
+            <button onClick={() => handleSelectCategory('todos')} className="btn-primary" style={{ fontSize: '0.85rem' }}>
               Ver Todos os Produtos
             </button>
           </div>
@@ -600,8 +784,14 @@ export default function DeliveryView({
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 3rem 2rem 3rem', position: 'relative', height: 'calc(100vh - 110px)' }}
           >
             {/* Indicadores Laterais */}
-            <div className="slider-indicator" style={{ position: 'absolute', bottom: '2rem', left: '3rem', color: 'rgba(255,255,255,0.7)', fontSize: '1.5rem', fontWeight: 300, letterSpacing: '2px' }}>
-              00{activeSlide + 1} / 00{visualProducts.length}
+            <div className="slider-indicator" style={{ position: 'absolute', bottom: '2rem', left: '3rem', color: 'rgba(255,255,255,0.85)', zIndex: 20 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: activeProduct.categoryMeta.accentColor, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>{activeProduct.categoryMeta.icon}</span>
+                <span>{activeProduct.categoryMeta.shortLabel}</span>
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 300, letterSpacing: '2px' }}>
+                00{activeProduct.categoryRank} / 00{activeProduct.categoryTotal}
+              </div>
             </div>
 
             <div className="slider-nav-dots" style={{ position: 'absolute', left: '3rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '1rem', zIndex: 20 }}>
@@ -610,8 +800,8 @@ export default function DeliveryView({
               ))}
             </div>
 
-            {/* Área Central: Imagem do Produto */}
-            <div className="slider-image-area" style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            {/* Área Central: Imagem do Produto e Badge Superior */}
+            <div className="slider-image-area" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {activeProduct.floaties.map((icon, i) => (
                 <div 
                   key={i} 
@@ -630,7 +820,44 @@ export default function DeliveryView({
               ))}
               
               {/* IMAGEM PRINCIPAL DO PRODUTO (Proporção 4:3 mantida) */}
-              <div className="product-image-container animate-product-enter" key={activeProduct.id}>
+              <div className="product-image-container animate-product-enter" key={activeProduct.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {/* BADGE DE CATEGORIA NO TOPO DO SLIDE */}
+                <div 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '5px 14px',
+                    borderRadius: '99px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${activeProduct.categoryMeta.accentColor}80`,
+                    boxShadow: `0 4px 15px rgba(0,0,0,0.5), 0 0 12px ${activeProduct.categoryMeta.accentColor}30`,
+                    marginBottom: '10px',
+                    zIndex: 25
+                  }}
+                >
+                  <span style={{ fontSize: '1rem' }}>{activeProduct.categoryMeta.icon}</span>
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: 800, 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '1px',
+                    color: activeProduct.categoryMeta.accentColor
+                  }}>
+                    {activeProduct.categoryMeta.label}
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.7rem', 
+                    color: 'rgba(255,255,255,0.75)', 
+                    fontWeight: 700,
+                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                    paddingLeft: '8px'
+                  }}>
+                    {activeProduct.categoryRank} de {activeProduct.categoryTotal}
+                  </span>
+                </div>
+
                 <div 
                   className="product-circle product-mockup" 
                   style={{ 
@@ -668,8 +895,9 @@ export default function DeliveryView({
 
             {/* Painel Direito: Informações e Pedido */}
             <div className="slider-info-panel animate-fade-in" key={`info-${activeProduct.id}`} style={{ width: '380px', color: '#fff', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ textTransform: 'uppercase', letterSpacing: '3px', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-                {activeProduct.category === 'bebidas' ? 'Bebida Gelada' : activeProduct.category === 'acompanhamentos' ? 'Acompanhamento' : 'Lanche Prensado'}
+              <div style={{ textTransform: 'uppercase', letterSpacing: '2px', fontSize: '0.8rem', color: activeProduct.categoryMeta.accentColor, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>{activeProduct.categoryMeta.icon}</span>
+                <span>{activeProduct.categoryMeta.label}</span>
               </div>
               
               <h1 style={{ fontSize: '3rem', fontWeight: 900, lineHeight: 1.05, textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
@@ -703,6 +931,48 @@ export default function DeliveryView({
                   {isStoreOpen ? 'Pedir Agora' : 'Loja Fechada'}
                 </button>
               </div>
+
+              {/* AVISO DE PRÓXIMA CATEGORIA AO FIM DA LISTA */}
+              {activeProduct.isLastOfCategory && activeProduct.nextCategoryMeta && (
+                <button
+                  onClick={nextSlide}
+                  style={{
+                    marginTop: '8px',
+                    padding: '10px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                    border: `1px solid ${activeProduct.nextCategoryMeta.accentColor}60`,
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    width: '100%',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(8px)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${activeProduct.nextCategoryMeta.accentColor}25`;
+                    e.currentTarget.style.borderColor = activeProduct.nextCategoryMeta.accentColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.45)';
+                    e.currentTarget.style.borderColor = `${activeProduct.nextCategoryMeta.accentColor}60`;
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>{activeProduct.nextCategoryMeta.icon}</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+                      A seguir: <strong style={{ color: activeProduct.nextCategoryMeta.accentColor }}>{activeProduct.nextCategoryMeta.label}</strong>
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: activeProduct.nextCategoryMeta.accentColor, fontWeight: 700 }}>
+                    <span>Avançar</span>
+                    <ChevronDown size={14} />
+                  </div>
+                </button>
+              )}
             </div>
 
             {/* Setas para passar slide */}
@@ -714,7 +984,7 @@ export default function DeliveryView({
         )
       )}
 
-      {/* TELA DE GRADE (GRID VIEW) */}
+      {/* TELA DE GRADE (GRID VIEW ORGANIZADA POR SEÇÕES) */}
       {checkoutStep === 'menu' && viewMode === 'grid' && (
         <div 
           className="grid-view-container animate-fade-in-up" 
@@ -722,131 +992,236 @@ export default function DeliveryView({
             maxWidth: '1240px',
             margin: '0 auto',
             width: '100%',
-            padding: '2rem 2rem 5rem 2rem', 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-            gap: '2rem', 
-            alignItems: 'stretch' 
+            padding: '2rem 1.5rem 6rem 1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3rem'
           }}
         >
-          {filteredProducts.map((product) => {
-            const themes = {
-              1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] },
-              2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] },
-              3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] },
-              4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] },
-              5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] },
-            };
-            const theme = themes[product.id] || { color: '#333333', floaties: ['✨', '🍔', '🥤'] };
-            const isPaused = !product.active;
-
-            return (
-              <div 
-                key={product.id} 
-                className="grid-card"
+          {gridCategorySections.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#fff', padding: '3rem' }}>
+              <span style={{ fontSize: '3rem' }}>🔍</span>
+              <h3>Nenhum produto cadastrado nesta categoria</h3>
+              <button 
+                onClick={() => handleSelectCategory('todos')} 
+                className="btn-primary" 
+                style={{ marginTop: '1rem', fontSize: '0.85rem' }}
+              >
+                Ver Todas as Categorias
+              </button>
+            </div>
+          ) : (
+            (selectedCategory === 'todos' 
+              ? gridCategorySections 
+              : gridCategorySections.filter(s => s.id === selectedCategory)
+            ).map((section) => (
+              <section 
+                key={section.id} 
+                id={`secao-categoria-${section.id}`}
                 style={{ 
-                  background: 'rgba(255,255,255,0.03)', 
-                  border: `1px solid rgba(255,255,255,0.1)`, 
-                  borderTop: `4px solid ${isPaused ? '#6b7280' : theme.color}`,
-                  borderRadius: '16px', 
-                  padding: '1.5rem', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  textAlign: 'center', 
-                  color: '#fff',
-                  opacity: isPaused ? 0.65 : 1,
-                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                  position: 'relative'
+                  scrollMarginTop: '120px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem'
                 }}
               >
-                {/* Foto Real do Produto na Grade */}
-                <div 
-                  className="grid-card-image"
-                  style={{ 
-                    width: '100%', 
-                    height: '200px', 
-                    borderRadius: '12px', 
-                    overflow: 'hidden', 
-                    marginBottom: '1.25rem',
-                    position: 'relative',
-                    backgroundColor: '#0a0a0a',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                    border: '1px solid rgba(255,255,255,0.08)'
-                  }}
-                >
-                  {product.image ? (
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        objectFit: 'cover', 
-                        objectPosition: 'center', 
-                        display: 'block',
-                        filter: isPaused ? 'grayscale(80%)' : 'none',
-                        transition: 'transform 0.4s ease'
-                      }} 
-                    />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>
-                      {theme.floaties?.[0] || '🌭'}
+                {/* Cabeçalho da Categoria na Grade */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  padding: '1rem 1.5rem',
+                  borderRadius: '16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderLeft: `5px solid ${section.accentColor}`,
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{
+                      fontSize: '1.8rem',
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      backgroundColor: `${section.accentColor}20`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `1px solid ${section.accentColor}40`
+                    }}>
+                      {section.icon}
                     </div>
-                  )}
-                  
-                  {isPaused && (
-                    <span 
-                      style={{ 
-                        position: 'absolute', 
-                        top: '8px', 
-                        right: '8px', 
-                        background: 'rgba(239, 68, 68, 0.9)', 
-                        backdropFilter: 'blur(6px)', 
-                        padding: '4px 10px', 
-                        borderRadius: '20px', 
-                        fontSize: '0.75rem',
-                        fontWeight: 800,
-                        color: '#fff',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                      }}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                          {section.label}
+                        </h2>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          color: section.accentColor,
+                          backgroundColor: `${section.accentColor}20`,
+                          padding: '3px 10px',
+                          borderRadius: '99px',
+                          border: `1px solid ${section.accentColor}40`
+                        }}>
+                          {section.products.length} {section.products.length === 1 ? 'opção' : 'opções'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.65)' }}>
+                        {section.description}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedCategory !== 'todos' && (
+                    <button
+                      onClick={() => handleSelectCategory('todos')}
+                      className="btn-secondary"
+                      style={{ fontSize: '0.75rem', padding: '6px 14px', borderRadius: '99px' }}
                     >
-                      Pausado
-                    </span>
+                      Ver todas as categorias
+                    </button>
                   )}
                 </div>
 
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}>
-                  {product.name}
-                </h3>
-                
-                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5', marginBottom: '1.25rem', flex: 1 }}>
-                  {product.description}
-                </p>
+                {/* Grade de Cards da Categoria */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '1.5rem',
+                  alignItems: 'stretch'
+                }}>
+                  {section.products.map(product => {
+                    const themes = {
+                      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] },
+                      2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] },
+                      3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] },
+                      4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] },
+                      5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] },
+                      6: { color: '#dc2626', floaties: ['🥤', '🧊', '✨'] },
+                      7: { color: '#16a34a', floaties: ['🥤', '🌿', '✨'] },
+                      8: { color: '#b91c1c', floaties: ['🥤', '🧊', '✨'] },
+                      9: { color: '#eab308', floaties: ['🍊', '🥤', '🧊'] },
+                      10: { color: '#2563eb', floaties: ['💧', '🧊', '✨'] },
+                      11: { color: '#ca8a04', floaties: ['🍟', '🔥', '🧂'] },
+                    };
+                    const theme = themes[product.id] || { color: section.accentColor, floaties: ['✨', section.icon, '🍔'] };
+                    const isPaused = !product.active;
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-brand)' }}>
-                    R$ {product.price.toFixed(2)}
-                  </span>
-                  
-                  <button 
-                    onClick={() => handleOpenProduct(product)}
-                    disabled={isPaused || !isStoreOpen}
-                    className="btn-primary"
-                    style={{ 
-                      padding: '8px 18px', 
-                      fontSize: '0.85rem',
-                      borderRadius: '8px',
-                      cursor: (isPaused || !isStoreOpen) ? 'not-allowed' : 'pointer',
-                      opacity: (isPaused || !isStoreOpen) ? 0.5 : 1
-                    }}
-                  >
-                    {!isStoreOpen ? 'Fechado' : isPaused ? 'Esgotado' : 'Pedir'}
-                  </button>
+                    return (
+                      <div 
+                        key={product.id} 
+                        className="grid-card"
+                        style={{ 
+                          background: 'rgba(255,255,255,0.03)', 
+                          border: `1px solid rgba(255,255,255,0.1)`, 
+                          borderTop: `4px solid ${isPaused ? '#6b7280' : theme.color}`,
+                          borderRadius: '16px', 
+                          padding: '1.5rem', 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center', 
+                          textAlign: 'center', 
+                          color: '#fff',
+                          opacity: isPaused ? 0.65 : 1,
+                          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                          position: 'relative'
+                        }}
+                      >
+                        {/* Foto Real do Produto na Grade */}
+                        <div 
+                          className="grid-card-image"
+                          style={{ 
+                            width: '100%', 
+                            height: '200px', 
+                            borderRadius: '12px', 
+                            overflow: 'hidden', 
+                            marginBottom: '1.25rem',
+                            position: 'relative',
+                            backgroundColor: '#0a0a0a',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                            border: '1px solid rgba(255,255,255,0.08)'
+                          }}
+                        >
+                          {product.image ? (
+                            <img 
+                              src={product.image} 
+                              alt={product.name} 
+                              style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover', 
+                                objectPosition: 'center', 
+                                display: 'block',
+                                filter: isPaused ? 'grayscale(80%)' : 'none',
+                                transition: 'transform 0.4s ease'
+                              }} 
+                            />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>
+                              {theme.floaties?.[0] || section.icon}
+                            </div>
+                          )}
+                          
+                          {isPaused && (
+                            <span 
+                              style={{ 
+                                position: 'absolute', 
+                                top: '8px', 
+                                right: '8px', 
+                                background: 'rgba(239, 68, 68, 0.9)', 
+                                backdropFilter: 'blur(6px)', 
+                                padding: '4px 10px', 
+                                borderRadius: '20px', 
+                                fontSize: '0.75rem',
+                                fontWeight: 800,
+                                color: '#fff',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                              }}
+                            >
+                              Pausado
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}>
+                          {product.name}
+                        </h3>
+                        
+                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5', marginBottom: '1.25rem', flex: 1 }}>
+                          {product.description}
+                        </p>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                          <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-brand)' }}>
+                            R$ {product.price.toFixed(2)}
+                          </span>
+                          
+                          <button 
+                            onClick={() => handleOpenProduct(product)}
+                            disabled={isPaused || !isStoreOpen}
+                            className="btn-primary"
+                            style={{ 
+                              padding: '8px 18px', 
+                              fontSize: '0.85rem',
+                              borderRadius: '8px',
+                              cursor: (isPaused || !isStoreOpen) ? 'not-allowed' : 'pointer',
+                              opacity: (isPaused || !isStoreOpen) ? 0.5 : 1
+                            }}
+                          >
+                            {!isStoreOpen ? 'Fechado' : isPaused ? 'Esgotado' : 'Pedir'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            );
-          })}
+              </section>
+            ))
+          )}
         </div>
       )}
 

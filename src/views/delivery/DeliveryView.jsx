@@ -38,8 +38,9 @@ export default function DeliveryView({
   const [internalIsCartOpen, setInternalIsCartOpen] = useState(false);
   const [internalCheckoutStep, setInternalCheckoutStep] = useState('menu');
 
+  const isImmersiveEnabled = storeSettings?.enableImmersiveView ?? VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW;
   const rawViewMode = propViewMode !== undefined ? propViewMode : internalViewMode;
-  const viewMode = VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW ? rawViewMode : 'grid';
+  const viewMode = isImmersiveEnabled ? rawViewMode : 'grid';
   const setViewMode = propSetViewMode || setInternalViewMode;
   const cart = propCart !== undefined ? propCart : internalCart;
   const setCart = propSetCart || setInternalCart;
@@ -672,8 +673,8 @@ export default function DeliveryView({
                 </button>
               )}
 
-              {/* Botão de Alternar Slider / Grade (disponível quando VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW = true) */}
-              {VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW && (
+              {/* Botão de Alternar Slider / Grade (disponível quando isImmersiveEnabled = true) */}
+              {isImmersiveEnabled && (
                 <button 
                   onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
                   style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)', cursor: 'pointer' }}

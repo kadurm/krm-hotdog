@@ -262,7 +262,10 @@ const INITIAL_STORE_SETTINGS = {
   loyalty: {
     requiredOrders: 10,
     rewardValue: 20
-  }
+  },
+  // Experiência do Cardápio (Delivery)
+  enableImmersiveView: false,
+  defaultViewMode: 'grid'
 };
 
 // 5. BAIRROS DE ENTREGA

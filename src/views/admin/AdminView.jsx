@@ -15,7 +15,7 @@ import {
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
   Volume2, VolumeX, Upload, Image, Pause, Play,
   MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag,
-  User
+  User, LayoutGrid, MonitorPlay
 } from 'lucide-react';
 
 export default function AdminView({ onLogout, onGoOperation }) {
@@ -2416,6 +2416,105 @@ export default function AdminView({ onLogout, onGoOperation }) {
                       style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Bloco: Experiência do Cardápio (Visualização Imersiva vs Grade) */}
+              <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MonitorPlay size={20} color="var(--color-brand)" /> Modo de Visualização do Cardápio (Clientes)
+                    </h3>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '650px' }}>
+                      Controle a experiência visual do catálogo no delivery. Ative a visualização imersiva quando quiser surpreender os clientes com animações e slider interativo.
+                    </p>
+                  </div>
+
+                  {/* Botão de Ação: Ativar / Desativar */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button
+                      onClick={() => {
+                        const current = storeSettings?.enableImmersiveView ?? false;
+                        updateStoreSettings({ enableImmersiveView: !current });
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        backgroundColor: storeSettings?.enableImmersiveView ? '#22c55e' : 'rgba(255,255,255,0.12)',
+                        color: '#fff',
+                        boxShadow: storeSettings?.enableImmersiveView ? '0 0 20px rgba(34, 197, 94, 0.35)' : 'none',
+                        transition: 'all 0.25s ease'
+                      }}
+                    >
+                      {storeSettings?.enableImmersiveView ? (
+                        <>
+                          <CheckCircle2 size={18} />
+                          <span>✨ Modo Imersivo Ativado</span>
+                        </>
+                      ) : (
+                        <>
+                          <LayoutGrid size={18} />
+                          <span>Ativar Modo Imersivo</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status e Configurações de Abertura */}
+                <div style={{
+                  marginTop: '1.25rem',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  backgroundColor: storeSettings?.enableImmersiveView ? 'rgba(34, 197, 94, 0.08)' : 'rgba(234, 179, 8, 0.08)',
+                  border: `1px solid ${storeSettings?.enableImmersiveView ? 'rgba(34, 197, 94, 0.25)' : 'rgba(234, 179, 8, 0.25)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.3rem' }}>{storeSettings?.enableImmersiveView ? '🚀' : '🛡️'}</span>
+                    <div style={{ fontSize: '0.82rem', color: '#fff' }}>
+                      <strong>Status Operacional: </strong>
+                      {storeSettings?.enableImmersiveView ? (
+                        <span style={{ color: '#4ade80', fontWeight: 700 }}>Modo Imersivo liberado! Clientes podem alternar entre Slider e Grade.</span>
+                      ) : (
+                        <span style={{ color: '#facc15', fontWeight: 700 }}>Desativado. Cardápio operando 100% em formato de grade tradicional para fácil adaptação dos clientes.</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {storeSettings?.enableImmersiveView && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Abertura padrão do cliente:</span>
+                      <select
+                        value={storeSettings?.defaultViewMode || 'grid'}
+                        onChange={(e) => updateStoreSettings({ defaultViewMode: e.target.value })}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          backgroundColor: 'var(--bg-tertiary)',
+                          color: '#fff',
+                          border: '1px solid var(--border-glass)',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="grid">Grade (Tradicional)</option>
+                        <option value="slider">Slider (Imersivo)</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 

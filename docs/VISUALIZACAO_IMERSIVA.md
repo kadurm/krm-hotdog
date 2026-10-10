@@ -15,25 +15,22 @@ Para a inauguração e início de operação, optou-se por iniciar o cardápio *
 
 ## 2. Como Reativar a Visualização Imersiva
 
-Toda a alternância agora é centralizada no arquivo:
-📂 `src/config/viewConfig.js`
+Você pode reativar a qualquer momento diretamente pelo **Painel de Administração** ou via arquivo de configuração:
 
-### Cenário A: Permitir que o cliente escolha entre Grade e Imersivo (botão visível)
-No arquivo `src/config/viewConfig.js`:
+### 🌟 Método 1: Pelo Painel do Admin (Recomendado - 1 Clique)
+1. Acesse o painel Admin em `/#admin` (ou menu administrativo).
+2. Vá na aba **Controle de Loja** (ícone de Loja).
+3. No bloco **"Modo de Visualização do Cardápio (Clientes)"**:
+   - Clique em **"Ativar Modo Imersivo"** para liberar o modo imersivo e os botões de alternância para os clientes.
+   - Escolha o modo de abertura padrão (`Grade` ou `Slider`).
+   - Para desativar novamente, basta clicar no mesmo botão. A alteração entra em vigor instantaneamente sem precisar reiniciar a aplicação.
+
+### 🛠️ Método 2: Via Código (`src/config/viewConfig.js`)
+Caso queira fixar no código-fonte padrão:
 ```javascript
 export const VIEW_CONFIG = {
-  ENABLE_IMMERSIVE_VIEW: true,  // <-- Altere para true
-  DEFAULT_VIEW_MODE: 'grid',     // Inicia em grade, mas cliente pode alternar para imersivo
-  // ...
-};
-```
-
-### Cenário B: Tornar a Visualização Imersiva o padrão da loja
-No arquivo `src/config/viewConfig.js`:
-```javascript
-export const VIEW_CONFIG = {
-  ENABLE_IMMERSIVE_VIEW: true,  // <-- Habilita
-  DEFAULT_VIEW_MODE: 'slider',  // <-- Inicia direto no modo imersivo
+  ENABLE_IMMERSIVE_VIEW: true,  // <-- Habilita para todos
+  DEFAULT_VIEW_MODE: 'grid',     // 'grid' (grade) ou 'slider' (imersivo)
   // ...
 };
 ```

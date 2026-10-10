@@ -52,7 +52,10 @@ class AdminErrorBoundary extends React.Component {
 }
 
 function AppContent() {
-  const { orders } = useSystem();
+  const { orders, storeSettings } = useSystem();
+  const isImmersiveEnabled = storeSettings?.enableImmersiveView ?? VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW;
+  const preferredDefaultMode = storeSettings?.defaultViewMode || VIEW_CONFIG.DEFAULT_VIEW_MODE;
+
   const getModeFromHash = () => {
     const hash = window.location.hash;
     if (hash.startsWith('#admin')) return 'admin';
@@ -67,10 +70,16 @@ function AppContent() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Estados compartilhados com a DeliveryView para a barra superior
-  const [viewMode, setViewMode] = useState(VIEW_CONFIG.DEFAULT_VIEW_MODE);
+  const [viewMode, setViewMode] = useState(isImmersiveEnabled ? preferredDefaultMode : 'grid');
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState('menu');
+
+  useEffect(() => {
+    if (!isImmersiveEnabled && viewMode !== 'grid') {
+      setViewMode('grid');
+    }
+  }, [isImmersiveEnabled, viewMode]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -200,7 +209,7 @@ function AppContent() {
                   </button>
                 );
               })()}
-              {checkoutStep === 'menu' && VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW && (
+              {checkoutStep === 'menu' && isImmersiveEnabled && (
                 <button 
                   onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
                   style={{ 

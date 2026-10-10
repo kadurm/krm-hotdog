@@ -13,7 +13,10 @@ export default function AdminLoginView({ onLoginSuccess, onCancel }) {
     const userClean = username.trim().toLowerCase();
     const passClean = password.trim();
 
-    if (userClean === 'nuuadmin' && (passClean === 'NuuAdmin' || passClean === 'nuuadmin')) {
+    const isUserValid = userClean === 'nuuadmin' || userClean === 'nuuadm';
+    const isPassValid = passClean === 'NuuAdmin' || passClean.toLowerCase() === 'nuuadmin' || passClean.toLowerCase() === 'nuuadm';
+
+    if (isUserValid && isPassValid) {
       onLoginSuccess();
     } else {
       setError('Usuário ou senha incorretos. Tente novamente.');

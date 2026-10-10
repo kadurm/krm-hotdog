@@ -14,7 +14,8 @@ import {
   ChevronLeft, ChevronRight, Menu, ShoppingBag, Sparkles,
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
   Volume2, VolumeX, Upload, Image, Pause, Play,
-  MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag
+  MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag,
+  User
 } from 'lucide-react';
 
 export default function AdminView({ onLogout, onGoOperation }) {

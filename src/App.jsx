@@ -8,6 +8,49 @@ import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield } fr
 import { VIEW_CONFIG } from './config/viewConfig';
 import './App.css';
 
+class AdminErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Erro capturado no AdminView:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ 
+          padding: '3rem 1.5rem', 
+          maxWidth: '600px', 
+          margin: '2rem auto', 
+          textAlign: 'center', 
+          backgroundColor: '#161d2f', 
+          borderRadius: '12px', 
+          border: '1px solid #ef4444' 
+        }}>
+          <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Ops! Ocorreu um problema ao carregar a página</h2>
+          <p style={{ color: '#ccc', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            {this.state.error?.message || 'Erro inesperado durante a renderização.'}
+          </p>
+          <button 
+            className="btn-primary" 
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function AppContent() {
   const { orders } = useSystem();
   const getModeFromHash = () => {
@@ -33,13 +76,17 @@ function AppContent() {
     const handleHashChange = () => {
       const mode = getModeFromHash();
       setCurrentMode(mode);
-      if (mode === 'admin' && !isAdminAuthenticated) {
+      const isAuth = sessionStorage.getItem('nuu_admin_authenticated') === 'true';
+      setIsAdminAuthenticated(isAuth);
+      if (mode === 'admin' && !isAuth) {
         setShowLoginModal(true);
+      } else if (mode === 'admin' && isAuth) {
+        setShowLoginModal(false);
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [isAdminAuthenticated]);
+  }, []);
 
   const handleOpenAdmin = () => {
     if (isAdminAuthenticated) {
@@ -221,13 +268,15 @@ function AppContent() {
             }}
           />
         ) : currentMode === 'admin' && isAdminAuthenticated ? (
-          <AdminView 
-            onLogout={handleLogout}
-            onGoOperation={() => {
-              setCurrentMode('operacao');
-              window.location.hash = 'operacao';
-            }}
-          />
+          <AdminErrorBoundary>
+            <AdminView 
+              onLogout={handleLogout}
+              onGoOperation={() => {
+                setCurrentMode('operacao');
+                window.location.hash = 'operacao';
+              }}
+            />
+          </AdminErrorBoundary>
         ) : (
           <DeliveryView 
             viewMode={viewMode}

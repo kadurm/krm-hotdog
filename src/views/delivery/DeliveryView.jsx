@@ -582,7 +582,6 @@ export default function DeliveryView({
     if (selectedProduct.hasCustomOptions) {
       if (selectedBread) nameDetails.push(selectedBread);
       if (selectedCreamy) nameDetails.push(selectedCreamy);
-      if (selectedMelted) nameDetails.push(selectedMelted);
       if (selectedSide) {
         const sideName = sideOptions[0]?.name || 'Vinagrete';
         nameDetails.push(`+ ${sideName}`);
@@ -2256,44 +2255,6 @@ export default function DeliveryView({
                               disabled={isPaused}
                               checked={selectedCreamy === opt.name && !isPaused} 
                               onChange={() => !isPaused && setSelectedCreamy(opt.name)} 
-                              style={{ accentColor: 'var(--color-brand)' }} 
-                            />
-                            <span>{opt.name}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Queijo Fatiado */}
-                  <div style={{ marginBottom: '14px' }}>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Fatiado:</strong>
-                    <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                      {meltedOptions.map(opt => {
-                        const isPaused = !opt.active;
-                        return (
-                          <label 
-                            key={opt.id} 
-                            style={{ 
-                              cursor: isPaused ? 'not-allowed' : 'pointer', 
-                              fontSize: '0.9rem', 
-                              color: isPaused ? 'var(--text-muted)' : '#fff',
-                              opacity: isPaused ? 0.5 : 1,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              backgroundColor: selectedMelted === opt.name && !isPaused ? 'rgba(255,255,255,0.06)' : 'transparent',
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              border: selectedMelted === opt.name && !isPaused ? '1px solid var(--border-glass)' : '1px solid transparent'
-                            }}
-                          >
-                            <input 
-                              type="radio" 
-                              name="melted" 
-                              disabled={isPaused}
-                              checked={selectedMelted === opt.name && !isPaused} 
-                              onChange={() => !isPaused && setSelectedMelted(opt.name)} 
                               style={{ accentColor: 'var(--color-brand)' }} 
                             />
                             <span>{opt.name}</span>

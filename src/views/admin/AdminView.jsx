@@ -2528,25 +2528,130 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     />
                   </div>
 
-                  {/* Horários de Funcionamento */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Clock size={15} color="#f97316" /> Horário de Funcionamento
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="time"
-                        value={storeSettings?.openTime || '18:00'}
-                        onChange={(e) => updateStoreSettings({ openTime: e.target.value })}
-                        style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
-                      />
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>às</span>
-                      <input
-                        type="time"
-                        value={storeSettings?.closeTime || '23:30'}
-                        onChange={(e) => updateStoreSettings({ closeTime: e.target.value })}
-                        style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
-                      />
+                  {/* Horários de Funcionamento & Agendamento Automático */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', gridColumn: 'span 2' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <label style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size={16} color="#f97316" /> Horário de Funcionamento da Loja
+                      </label>
+                      
+                      {/* Modo de Operação: Manual vs Automático */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.78rem', color: storeSettings?.autoSchedule ? '#4ade80' : '#eab308', fontWeight: 600 }}>
+                          {storeSettings?.autoSchedule ? '⏰ Agendamento Automático Ativo' : '🖐️ Controle Manual Ativo'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateStoreSettings({ autoSchedule: !storeSettings?.autoSchedule })}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-glass)',
+                            backgroundColor: storeSettings?.autoSchedule ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                            color: storeSettings?.autoSchedule ? '#4ade80' : '#eab308',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {storeSettings?.autoSchedule ? 'Mudar p/ Controle Manual' : 'Ativar Agendamento Automático'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Horário de Abertura</span>
+                        <input
+                          type="time"
+                          value={storeSettings?.openTime || '19:00'}
+                          onChange={(e) => updateStoreSettings({ openTime: e.target.value })}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Horário de Fechamento</span>
+                        <input
+                          type="time"
+                          value={storeSettings?.closeTime || '00:00'}
+                          onChange={(e) => updateStoreSettings({ closeTime: e.target.value })}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Seletor de Dias de Funcionamento */}
+                    <div style={{
+                      marginTop: '4px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(0,0,0,0.25)',
+                      border: '1px solid var(--border-glass)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          Dias de Atendimento da Semana:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const allDays = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+                            const isAll = (storeSettings?.openDays || []).length === 7;
+                            updateStoreSettings({ openDays: isAll ? ['seg', 'ter', 'qua', 'qui', 'sex'] : allDays });
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-brand)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          {(storeSettings?.openDays || []).length === 7 ? 'Marcar apenas Seg a Sex' : 'Marcar Todos os Dias'}
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {[
+                          { id: 'seg', label: 'Seg' },
+                          { id: 'ter', label: 'Ter' },
+                          { id: 'qua', label: 'Qua' },
+                          { id: 'qui', label: 'Qui' },
+                          { id: 'sex', label: 'Sex' },
+                          { id: 'sab', label: 'Sáb' },
+                          { id: 'dom', label: 'Dom' }
+                        ].map(day => {
+                          const isActive = (storeSettings?.openDays || ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']).includes(day.id);
+                          return (
+                            <button
+                              key={day.id}
+                              type="button"
+                              onClick={() => {
+                                const currentDays = storeSettings?.openDays || ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+                                const nextDays = isActive
+                                  ? currentDays.filter(d => d !== day.id)
+                                  : [...currentDays, day.id];
+                                updateStoreSettings({ openDays: nextDays });
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                border: `1px solid ${isActive ? 'var(--color-brand)' : 'var(--border-glass)'}`,
+                                backgroundColor: isActive ? 'rgba(234, 179, 8, 0.25)' : 'var(--bg-tertiary)',
+                                color: isActive ? 'var(--color-brand)' : 'var(--text-secondary)',
+                                fontWeight: 700,
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {day.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                        {storeSettings?.autoSchedule ? (
+                          <span>💡 <strong>Agendamento Automático Ativo:</strong> A loja abre às <strong>{storeSettings?.openTime || '19:00'}</strong> e fecha às <strong>{storeSettings?.closeTime || '00:00'}</strong> nos dias marcados.</span>
+                        ) : (
+                          <span>💡 <strong>Controle Manual Ativo:</strong> Você pode abrir ou fechar a loja a qualquer momento com 1 clique no botão superior.</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

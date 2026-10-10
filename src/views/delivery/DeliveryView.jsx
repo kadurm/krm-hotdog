@@ -31,7 +31,8 @@ export default function DeliveryView({
     validateCoupon,
     lookupCustomer,
     saveCustomer,
-    calculateDeliveryFee
+    calculateDeliveryFee,
+    isStoreOpenNow
   } = useSystem();
   
   const [activeSlide, setActiveSlide] = useState(0);
@@ -712,7 +713,7 @@ export default function DeliveryView({
                         : viewMode === 'grid' ? '#121212'
                         : (activeProduct ? activeProduct.color : '#121212');
 
-  const isStoreOpen = storeSettings?.isOpen ?? true;
+  const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
 
   // Categoria ativa a ser destacada nas pills
   const activePillId = viewMode === 'slider'
@@ -757,7 +758,7 @@ export default function DeliveryView({
           <AlertCircle size={16} />
           <span>
             {storeSettings?.closedNotice || 'No momento a loja está fechada para novos pedidos.'} 
-            {storeSettings?.businessHours?.opening && ` (Horário de atendimento: ${storeSettings.businessHours.opening} às ${storeSettings.businessHours.closing})`}
+            {` (Atendimento: todos os dias das ${storeSettings?.openTime || '19:00'} às ${storeSettings?.closeTime || '00:00'})`}
           </span>
         </div>
       )}
@@ -796,7 +797,7 @@ export default function DeliveryView({
                   borderRadius: '50%',
                   backgroundColor: isStoreOpen ? '#22c55e' : '#ef4444'
                 }} />
-                <span>{isStoreOpen ? `Aberto • ~${storeSettings?.estimatedTime || '30-50m'}` : 'Fechado'}</span>
+                <span>{isStoreOpen ? `Aberto • ~${storeSettings?.estimatedTime || '35-50 min'}` : `Fechado • Abre às ${storeSettings?.openTime || '19:00'}`}</span>
               </div>
             </div>
             

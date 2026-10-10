@@ -327,8 +327,8 @@ const INITIAL_INVENTORY = [
 const INITIAL_STORE_SETTINGS = {
   isOpen: true,
   autoSchedule: false,
-  openTime: '15:00',
-  closeTime: '23:30',
+  openTime: '19:00',
+  closeTime: '00:00',
   openDays: ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
   estimatedTime: '35 a 50 min',
   storeAddress: 'Rua Agapanto, 264 - Sagrada Família, Montes Claros - MG, CEP 39401-022',
@@ -874,30 +874,48 @@ export const SystemProvider = ({ children }) => {
 
   // Verifica se a loja está aberta considerando o toggle manual ou horário automático
   const isStoreOpenNow = () => {
+    // 1. Se o dono desligou manualmente a loja, ela fica sempre fechada
     if (!storeSettings.isOpen) return false;
-    if (!storeSettings.autoSchedule) return true;
 
+    // 2. Se o agendamento automático estiver desativado, segue o interruptor manual do dono
+    if (!storeSettings.autoSchedule) return Boolean(storeSettings.isOpen);
+
+    // 3. Se o agendamento automático estiver ativado, verifica dias e horários
     try {
       const now = new Date();
       const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
       const currentDay = days[now.getDay()];
-      if (!storeSettings.openDays.includes(currentDay)) return false;
+      const yesterday = days[(now.getDay() + 6) % 7];
 
-      const [openHour, openMin] = storeSettings.openTime.split(':').map(Number);
-      const [closeHour, closeMin] = storeSettings.closeTime.split(':').map(Number);
+      const [openHour, openMin] = (storeSettings.openTime || '19:00').split(':').map(Number);
+      const [closeHour, closeMin] = (storeSettings.closeTime || '00:00').split(':').map(Number);
 
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const openMinutes = openHour * 60 + openMin;
+
+      // Se o fechamento for à meia-noite (00:00)
+      if (closeHour === 0 && closeMin === 0) {
+        if (!storeSettings.openDays?.includes(currentDay)) return false;
+        return nowMinutes >= openMinutes && nowMinutes <= 1440;
+      }
+
       const closeMinutes = closeHour * 60 + closeMin;
 
-      if (closeMinutes >= openMinutes) {
+      if (closeMinutes > openMinutes) {
+        // Mesmo dia (ex: 19:00 às 23:30)
+        if (!storeSettings.openDays?.includes(currentDay)) return false;
         return nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
       } else {
-        // Passa da meia-noite (ex: 18:00 às 01:00)
-        return nowMinutes >= openMinutes || nowMinutes <= closeMinutes;
+        // Cruza a meia-noite (ex: 19:00 às 01:00)
+        if (nowMinutes >= openMinutes) {
+          return Boolean(storeSettings.openDays?.includes(currentDay));
+        } else if (nowMinutes <= closeMinutes) {
+          return Boolean(storeSettings.openDays?.includes(yesterday));
+        }
+        return false;
       }
     } catch (e) {
-      return storeSettings.isOpen;
+      return storeSettings.isOpen ?? true;
     }
   };
 

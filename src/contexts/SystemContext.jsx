@@ -41,7 +41,7 @@ const INITIAL_PRODUCTS = [
   // --- Prensados Oficiais ---
   { 
     id: 1, 
-    name: 'Prensadin', 
+    name: 'Prensadinho', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, mussarela, bacon, milho, batata e molhos da casa.', 
     price: 17.50, 
     image: '/images/prensadinho.png',
@@ -365,7 +365,7 @@ const INITIAL_QUOTATIONS = [
 export const SystemProvider = ({ children }) => {
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v8');
+    const saved = localStorage.getItem('nuu_products_v9');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -499,7 +499,7 @@ export const SystemProvider = ({ children }) => {
 
   // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
-    localStorage.setItem('nuu_products_v8', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v9', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
@@ -1362,7 +1362,7 @@ export const SystemProvider = ({ children }) => {
     setProducts(INITIAL_PRODUCTS);
     setInventory(INITIAL_INVENTORY);
     setComplements(INITIAL_COMPLEMENTS);
-    localStorage.setItem('nuu_products_v8', JSON.stringify(INITIAL_PRODUCTS));
+    localStorage.setItem('nuu_products_v9', JSON.stringify(INITIAL_PRODUCTS));
     localStorage.setItem('hd_inventory_v4', JSON.stringify(INITIAL_INVENTORY));
     localStorage.setItem('nuu_complements_v4', JSON.stringify(INITIAL_COMPLEMENTS));
   };

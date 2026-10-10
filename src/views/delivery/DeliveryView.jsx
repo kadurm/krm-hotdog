@@ -99,7 +99,7 @@ export default function DeliveryView({
     try {
       const savedId = localStorage.getItem('nuu_customer_last_order_id');
       if (savedId) {
-        return orders.find(o => o.id === parseInt(savedId)) || null;
+        return orders.find(o => String(o.id) === String(savedId)) || null;
       }
     } catch (e) {}
     return null;
@@ -307,9 +307,9 @@ export default function DeliveryView({
     try {
       const savedId = localStorage.getItem('nuu_customer_last_order_id');
       if (savedId) {
-        const found = orders.find(o => o.id === parseInt(savedId));
+        const found = orders.find(o => String(o.id) === String(savedId));
         if (found) {
-          if (!activeTrackingOrder || activeTrackingOrder.id !== found.id || activeTrackingOrder.status !== found.status) {
+          if (!activeTrackingOrder || String(activeTrackingOrder.id) !== String(found.id) || activeTrackingOrder.status !== found.status) {
             setActiveTrackingOrder(found);
           }
         }

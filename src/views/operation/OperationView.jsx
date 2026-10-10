@@ -4,11 +4,13 @@ import OrderTimerBadge from '../../components/OrderTimerBadge';
 import ThermalPrintReceipt from '../../components/ThermalPrintReceipt';
 import CashShiftModal from '../../components/CashShiftModal';
 import QuickOrderModal from '../../components/QuickOrderModal';
+import SupabaseConfigModal from '../../components/SupabaseConfigModal';
+import { isSupabaseConfigured } from '../../services/supabase';
 import { 
   ChefHat, Bike, DollarSign, PlusCircle, Printer, Clock, 
   Phone, MapPin, CheckCircle2, AlertTriangle, Volume2, VolumeX, 
   LogOut, User, Lock, Store, ShoppingBag, ArrowRight, Shield, 
-  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2
+  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database
 } from 'lucide-react';
 
 export default function OperationView({ onOpenAdmin, onGoDelivery }) {
@@ -38,6 +40,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
   // Modais operacionais
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState(null);
 
   // Estados de identificação / login do operador com senha
@@ -597,6 +600,30 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
             </span>
           </button>
 
+          {/* Status da Sincronização Supabase */}
+          <button
+            type="button"
+            onClick={() => setIsSupabaseModalOpen(true)}
+            title="Conexão com Banco de Dados em Nuvem Supabase"
+            style={{
+              padding: '6px 12px',
+              borderRadius: '99px',
+              border: '1px solid',
+              backgroundColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.12)' : 'rgba(245,158,11,0.12)',
+              borderColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.4)' : 'rgba(245,158,11,0.4)',
+              color: isSupabaseConfigured() ? '#3ecf8e' : '#f59e0b',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Database size={13} />
+            <span>{isSupabaseConfigured() ? 'Supabase: Nuvem' : 'Supabase: Local'}</span>
+          </button>
+
           {/* Controle de Campainha */}
           <button 
             onClick={() => {
@@ -843,7 +870,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
 
                       {/* Itens do Pedido */}
                       <div style={{ backgroundColor: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '6px', marginBottom: '10px' }}>
-                        {order.items.map((item, idx) => (
+                        {(order.items || []).map((item, idx) => (
                           <div key={idx} style={{ fontSize: '0.85rem', color: '#fff', marginBottom: '3px' }}>
                             <strong>{item.quantity}x</strong> {item.name}
                             {item.selectedComplements && item.selectedComplements.length > 0 && (
@@ -920,7 +947,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                       </div>
 
                       <div style={{ backgroundColor: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '6px', marginBottom: '10px' }}>
-                        {order.items.map((item, idx) => (
+                        {(order.items || []).map((item, idx) => (
                           <div key={idx} style={{ fontSize: '0.85rem', color: '#fff', marginBottom: '3px' }}>
                             <strong>{item.quantity}x</strong> {item.name}
                             {item.selectedComplements && item.selectedComplements.length > 0 && (
@@ -1454,6 +1481,11 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
           order={receiptOrder} 
           onClose={() => setReceiptOrder(null)} 
         />
+      )}
+
+      {/* MODAL DE CONFIGURAÇÃO DO SUPABASE */}
+      {isSupabaseModalOpen && (
+        <SupabaseConfigModal onClose={() => setIsSupabaseModalOpen(false)} />
       )}
 
     </div>

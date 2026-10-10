@@ -4,6 +4,8 @@ import {
   getSupabaseCredentials, 
   saveSupabaseCredentials, 
   isSupabaseConfigured,
+  mapSupabaseOrderToApp,
+  mapAppOrderToSupabase,
   SUPABASE_SCHEMA_SQL 
 } from '../services/supabase';
 
@@ -629,13 +631,24 @@ export const SystemProvider = ({ children }) => {
           .channel('public:orders')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
             if (payload.eventType === 'INSERT') {
+              const mapped = mapSupabaseOrderToApp(payload.new);
+              if (!mapped) return;
               setOrders(prev => {
-                if (prev.some(o => o.id === payload.new.id)) return prev;
+                if (prev.some(o => String(o.id) === String(mapped.id))) {
+                  return prev.map(o => String(o.id) === String(mapped.id) ? { ...o, ...mapped } : o);
+                }
                 playNotificationChime();
-                return [payload.new, ...prev];
+                return [mapped, ...prev];
               });
             } else if (payload.eventType === 'UPDATE') {
-              setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+              const mapped = mapSupabaseOrderToApp(payload.new);
+              if (!mapped) return;
+              setOrders(prev => prev.map(o => String(o.id) === String(mapped.id) ? { ...o, ...mapped } : o));
+            } else if (payload.eventType === 'DELETE') {
+              const deletedId = String(payload.old?.id || '');
+              if (deletedId) {
+                setOrders(prev => prev.filter(o => String(o.id) !== deletedId));
+              }
             }
           })
           .subscribe();
@@ -652,6 +665,47 @@ export const SystemProvider = ({ children }) => {
       if (supabase && supabaseSub) {
         supabase.removeChannel(supabaseSub);
       }
+    };
+  }, [supabaseActive]);
+
+  // Busca inicial dos pedidos no Supabase quando conectado
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    let isMounted = true;
+    const fetchRemoteOrders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(100);
+
+        if (!error && Array.isArray(data) && isMounted) {
+          const remoteOrders = data.map(mapSupabaseOrderToApp).filter(Boolean);
+          setOrders(prev => {
+            const map = new Map(prev.map(o => [String(o.id), o]));
+            remoteOrders.forEach(rem => {
+              if (!map.has(String(rem.id))) {
+                map.set(String(rem.id), rem);
+              } else {
+                map.set(String(rem.id), { ...map.get(String(rem.id)), ...rem });
+              }
+            });
+            const merged = Array.from(map.values());
+            merged.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar pedidos remotos do Supabase:', err);
+      }
+    };
+
+    fetchRemoteOrders();
+    return () => {
+      isMounted = false;
     };
   }, [supabaseActive]);
 
@@ -827,6 +881,12 @@ export const SystemProvider = ({ children }) => {
 
   const assignOrderMotoboy = (orderId, motoboyId) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, motoboyId } : o));
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        supabase.from('orders').update({ motoboy_id: motoboyId }).eq('id', orderId).then();
+      } catch (err) {}
+    }
   };
 
   const settleMotoboyPayments = ({ motoboyId, orderIds, totalAmount, notes = '' }) => {
@@ -1114,21 +1174,17 @@ export const SystemProvider = ({ children }) => {
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
-        supabase.from('orders').insert({
-          id: newOrder.id,
-          customer_name: newOrder.customerName,
-          phone: newOrder.phone,
-          type: newOrder.type,
-          address: newOrder.address,
-          neighborhood: newOrder.neighborhood,
-          payment_method: newOrder.paymentMethod,
-          change_for: newOrder.changeFor,
-          items: newOrder.items,
-          total: newOrder.total,
-          status: 'pending',
-          notes: newOrder.notes || ''
-        }).then(({ error }) => {
-          if (error) console.warn('Supabase order insert error:', error);
+        const dbPayload = mapAppOrderToSupabase(newOrder);
+        supabase.from('orders').insert(dbPayload).then(({ error }) => {
+          if (error) {
+            console.warn('Supabase order insert error:', error);
+            // Se ocorreu colisão de ID chave primária (23505), retenta com ID único
+            if (error.code === '23505') {
+              const uniqueId = `${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
+              newOrder.id = uniqueId;
+              supabase.from('orders').insert({ ...dbPayload, id: uniqueId }).then();
+            }
+          }
         });
       } catch (err) {
         console.warn('Supabase sync catch:', err);
@@ -1221,7 +1277,10 @@ export const SystemProvider = ({ children }) => {
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
-        supabase.from('orders').update({ status: newStatus }).eq('id', orderId).then();
+        const updatePayload = { status: newStatus };
+        if (newStatus === 'shipping') updatePayload.shipped_at = new Date().toISOString();
+        if (newStatus === 'delivered') updatePayload.delivered_at = new Date().toISOString();
+        supabase.from('orders').update(updatePayload).eq('id', orderId).then();
       } catch (err) {}
     }
 
@@ -1240,6 +1299,12 @@ export const SystemProvider = ({ children }) => {
       localStorage.setItem('hd_orders', JSON.stringify(next));
       return next;
     });
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        supabase.from('orders').delete().eq('id', orderId).then();
+      } catch (err) {}
+    }
   };
 
   // --- Estoque e Entradas ---

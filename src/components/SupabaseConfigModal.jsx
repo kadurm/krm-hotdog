@@ -10,8 +10,8 @@ import {
 
 export default function SupabaseConfigModal({ onClose, onSaveSuccess }) {
   const currentCreds = getSupabaseCredentials();
-  const [url, setUrl] = useState(currentCreds.url);
-  const [anonKey, setAnonKey] = useState(currentCreds.anonKey);
+  const [url, setUrl] = useState(currentCreds.url || '');
+  const [anonKey, setAnonKey] = useState(currentCreds.key || currentCreds.anonKey || '');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [copiedSql, setCopiedSql] = useState(false);
@@ -26,7 +26,7 @@ export default function SupabaseConfigModal({ onClose, onSaveSuccess }) {
     const cleanKey = anonKey.trim();
 
     saveSupabaseCredentials(cleanUrl, cleanKey);
-    const result = await testSupabaseConnection();
+    const result = await testSupabaseConnection(cleanUrl, cleanKey);
     setTesting(false);
     setTestResult(result);
 

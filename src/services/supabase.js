@@ -10,7 +10,8 @@ export const getSupabaseCredentials = () => {
 
   return {
     url: savedUrl || envUrl,
-    key: savedKey || envKey
+    key: savedKey || envKey,
+    anonKey: savedKey || envKey
   };
 };
 
@@ -61,6 +62,75 @@ export const isSupabaseConfigured = () => {
   return Boolean(url && key);
 };
 
+// Converte linha do banco Supabase para formato de objeto do frontend (camelCase)
+export const mapSupabaseOrderToApp = (row) => {
+  if (!row) return null;
+  let parsedItems = [];
+  if (Array.isArray(row.items)) {
+    parsedItems = row.items;
+  } else if (typeof row.items === 'string') {
+    try {
+      parsedItems = JSON.parse(row.items);
+    } catch (e) {
+      parsedItems = [];
+    }
+  }
+
+  return {
+    id: String(row.id),
+    customerName: row.customer_name || row.customerName || 'Cliente',
+    phone: row.phone || '',
+    type: row.type || 'delivery',
+    address: row.address || '',
+    neighborhood: row.neighborhood || '',
+    paymentMethod: row.payment_method || row.paymentMethod || 'Dinheiro',
+    changeFor: row.change_for != null ? parseFloat(row.change_for) : (row.changeFor != null ? parseFloat(row.changeFor) : null),
+    items: parsedItems,
+    total: typeof row.total === 'number' ? row.total : (parseFloat(row.total) || 0),
+    deliveryFee: row.delivery_fee != null ? parseFloat(row.delivery_fee) : (row.deliveryFee != null ? parseFloat(row.deliveryFee) : 0),
+    discount: row.discount != null ? parseFloat(row.discount) : (row.discount != null ? parseFloat(row.discount) : 0),
+    couponCode: row.coupon_code || row.couponCode || null,
+    status: row.status || 'pending',
+    notes: row.notes || '',
+    date: row.date || row.created_at || new Date().toISOString(),
+    motoboyId: row.motoboy_id || row.motoboyId || null,
+    motoboySettled: Boolean(row.motoboy_settled || row.motoboySettled),
+    shippedAt: row.shipped_at || row.shippedAt || null,
+    deliveredAt: row.delivered_at || row.deliveredAt || null,
+    operatorName: row.operator_name || row.operatorName || ''
+  };
+};
+
+// Converte pedido do aplicativo para o payload exigido pelo Supabase (snake_case)
+export const mapAppOrderToSupabase = (order) => {
+  let changeForNum = null;
+  if (order.changeFor != null && order.changeFor !== '') {
+    changeForNum = parseFloat(String(order.changeFor).replace(',', '.')) || null;
+  }
+
+  return {
+    id: String(order.id),
+    customer_name: order.customerName || 'Cliente',
+    phone: order.phone || '',
+    type: order.type || 'delivery',
+    address: order.address || '',
+    neighborhood: order.neighborhood || '',
+    payment_method: order.paymentMethod || 'Dinheiro',
+    change_for: changeForNum,
+    items: Array.isArray(order.items) ? order.items : [],
+    total: parseFloat(order.total) || 0,
+    delivery_fee: parseFloat(order.deliveryFee) || 0,
+    discount: parseFloat(order.discount) || 0,
+    coupon_code: order.couponCode || null,
+    status: order.status || 'pending',
+    notes: order.notes || '',
+    date: order.date || new Date().toISOString(),
+    motoboy_id: order.motoboyId || null,
+    shipped_at: order.shippedAt || null,
+    delivered_at: order.deliveredAt || null
+  };
+};
+
 export const testSupabaseConnection = async (testUrl, testKey) => {
   const url = testUrl || getSupabaseCredentials().url;
   const key = testKey || getSupabaseCredentials().key;
@@ -71,11 +141,21 @@ export const testSupabaseConnection = async (testUrl, testKey) => {
 
   try {
     const client = createClient(url, key, { auth: { persistSession: false } });
-    const { data, error } = await client.from('store_settings').select('id').limit(1);
+    const { error } = await client.from('orders').select('id').limit(1);
     
-    if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
-      if (error.message && error.message.toLowerCase().includes('apikey')) {
-        return { success: false, message: 'Chave Anon inválida ou sem permissão.' };
+    if (error) {
+      // 42P01 = tabela orders não existe ainda, mas a conexão foi autenticada!
+      if (error.code === '42P01') {
+        return { 
+          success: true, 
+          message: 'Conectado ao Supabase com sucesso! (Observação: Execute o Script SQL na aba ao lado para criar as tabelas).' 
+        };
+      }
+      if (error.message && (error.message.toLowerCase().includes('apikey') || error.message.toLowerCase().includes('jwt'))) {
+        return { success: false, message: 'Chave Anon Key inválida ou expirada.' };
+      }
+      if (error.code === 'PGRST301' || error.message?.toLowerCase().includes('fetch failed')) {
+        return { success: false, message: 'Não foi possível alcançar a URL do Supabase fornecida.' };
       }
     }
     
@@ -262,4 +342,18 @@ ALTER PUBLICATION supabase_realtime ADD TABLE orders;
 ALTER PUBLICATION supabase_realtime ADD TABLE store_settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE products;
 ALTER PUBLICATION supabase_realtime ADD TABLE inventory;
+
+-- 15. Permissões de Acesso Público (Row Level Security desabilitado para o cardápio e PDV conectarem diretamente)
+ALTER TABLE IF EXISTS orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS store_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS complements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inventory DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS motoboys DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS coupons DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS delivery_neighborhoods DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS delivery_radiuses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS customers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS cash_shifts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS transactions DISABLE ROW LEVEL SECURITY;
 `;

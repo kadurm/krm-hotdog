@@ -2477,6 +2477,70 @@ export default function AdminView({ onLogout, onGoOperation }) {
                       style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
                     />
                   </div>
+
+                  {/* WhatsApp Oficial da Loja */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={15} color="#22c55e" /> WhatsApp Oficial da Loja (com DDD)
+                    </label>
+                    <input
+                      type="text"
+                      value={storeSettings?.whatsapp || ''}
+                      onChange={(e) => updateStoreSettings({ whatsapp: e.target.value })}
+                      placeholder="Ex: (31) 98888-7777 ou 31988887777"
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  {/* Chave Pix Oficial */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CreditCard size={15} color="#eab308" /> Chave Pix Oficial da Loja
+                    </label>
+                    <input
+                      type="text"
+                      value={storeSettings?.pixKey || ''}
+                      onChange={(e) => updateStoreSettings({ pixKey: e.target.value })}
+                      placeholder="Ex: Celular, CNPJ, E-mail ou Chave Aleatória"
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  {/* Endereço Físico da Loja */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MapPin size={15} color="#38bdf8" /> Endereço Físico da Loja
+                    </label>
+                    <input
+                      type="text"
+                      value={storeSettings?.storeAddress || ''}
+                      onChange={(e) => updateStoreSettings({ storeAddress: e.target.value })}
+                      placeholder="Ex: Rua Principal, 100 - Centro"
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  {/* Horários de Funcionamento */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Clock size={15} color="#f97316" /> Horário de Funcionamento
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="time"
+                        value={storeSettings?.openTime || '18:00'}
+                        onChange={(e) => updateStoreSettings({ openTime: e.target.value })}
+                        style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>às</span>
+                      <input
+                        type="time"
+                        value={storeSettings?.closeTime || '23:30'}
+                        onChange={(e) => updateStoreSettings({ closeTime: e.target.value })}
+                        style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

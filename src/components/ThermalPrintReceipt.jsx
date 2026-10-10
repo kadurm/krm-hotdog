@@ -98,7 +98,10 @@ export default function ThermalPrintReceipt({ order, onClose }) {
         <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '10px', marginBottom: '10px' }}>
           <div style={{ fontSize: '18px', fontWeight: '900', letterSpacing: '1px' }}>NUU PRENSADO</div>
           <div style={{ fontSize: '11px', marginTop: '2px' }}>O Melhor Prensado da Cidade</div>
-          <div style={{ fontSize: '11px', color: '#333' }}>WhatsApp: (31) 99999-9999</div>
+          <div style={{ fontSize: '11px', color: '#333' }}>WhatsApp: {storeSettings?.whatsapp || storeSettings?.phone || '(31) 99999-9999'}</div>
+          {storeSettings?.storeAddress && (
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>{storeSettings.storeAddress}</div>
+          )}
         </div>
 
         {/* Informações do Pedido */}

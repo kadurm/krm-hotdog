@@ -37,23 +37,25 @@ export default function AdminLoginView({ onLoginSuccess, onCancel }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1.5rem',
+      padding: '1.25rem',
+      overflowY: 'auto',
       backgroundImage: 'radial-gradient(circle at 50% 30%, rgba(168, 35, 25, 0.15) 0%, rgba(9, 13, 22, 1) 70%)'
     }} className="animate-fade-in">
       
       <div className="glass-panel" style={{ 
         width: '100%', 
-        maxWidth: '440px', 
+        maxWidth: '420px', 
         padding: '0', 
         overflow: 'hidden',
         boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
-        border: '1px solid var(--border-glass)'
+        border: '1px solid var(--border-glass)',
+        margin: 'auto'
       }}>
         
         {/* Header do Login com a cor amarela exata #edb143 e Logo sem fundo */}
         <div style={{ 
           backgroundColor: '#edb143', 
-          padding: '2.5rem 2rem 2rem 2rem', 
+          padding: '2rem 1.75rem 1.5rem 1.75rem', 
           textAlign: 'center',
           color: '#1a1a1a',
           position: 'relative'
@@ -83,21 +85,21 @@ export default function AdminLoginView({ onLoginSuccess, onCancel }) {
             src="/logoNuuPrensado-semfundo.png" 
             alt="Nuu Prensado!!" 
             style={{ 
-              height: '110px', 
+              height: '92px', 
               objectFit: 'contain', 
-              margin: '0 auto 0.75rem auto',
+              margin: '0 auto 0.6rem auto',
               display: 'block'
             }} 
           />
 
-          <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#8f2018', letterSpacing: '0.5px' }}>Painel Administrativo</h3>
+          <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#8f2018', letterSpacing: '0.5px' }}>Painel Administrativo</h3>
           <p style={{ fontSize: '0.85rem', color: '#333333', fontWeight: 600, marginTop: '4px' }}>
             Acesso exclusivo para gestão e equipe operacional
           </p>
         </div>
 
         {/* Formulário de Login */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '2rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.75rem' }}>
           
           {error && (
             <div style={{ 

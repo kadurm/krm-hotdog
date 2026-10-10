@@ -594,7 +594,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
 
   return (
     <div className="admin-view animate-fade-in" style={{ flex: 1, padding: '1rem 0' }}>
-      <div className="container" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="admin-container" style={{ display: 'flex', flexDirection: 'column' }}>
         
         {/* Mobile Header Menu (Pizza / Dropdown) */}
         <div className="mobile-admin-header glass-panel" style={{ padding: '12px 16px', marginBottom: '1.25rem', flexDirection: 'column', gap: '10px' }}>
@@ -678,14 +678,23 @@ export default function AdminView({ onLogout, onGoOperation }) {
           className="admin-layout" 
           style={{ 
             display: 'grid', 
-            gridTemplateColumns: isSidebarCollapsed ? '72px 1fr' : '220px 1fr', 
-            gap: '1.5rem',
+            gridTemplateColumns: isSidebarCollapsed ? '72px minmax(0, 1fr)' : '240px minmax(0, 1fr)', 
+            gap: '1.25rem',
+            alignItems: 'start',
             transition: 'grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           
           {/* Desktop-Only Sidebar Navigation */}
-          <aside className="desktop-only-sidebar admin-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <aside className="desktop-only-sidebar admin-sidebar" style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '6px',
+            position: 'sticky',
+            top: '1rem',
+            maxHeight: 'calc(100vh - 2rem)',
+            overflowY: 'auto'
+          }}>
             
             {/* Botão para Minimizar / Expandir */}
             <button 
@@ -1028,7 +1037,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
           </aside>
 
         {/* Main Content Area */}
-        <main className="glass-panel" style={{ padding: '2rem', minHeight: '60vh' }}>
+        <main className="glass-panel admin-main-content">
           
           {/* TAB: DASHBOARD */}
           {activeTab === 'dashboard' && (

@@ -1390,12 +1390,14 @@ export default function DeliveryView({
                             <img 
                               src={product.image} 
                               alt={product.name} 
+                              loading="lazy"
                               style={{ 
                                 width: '100%', 
                                 height: '100%', 
-                                objectFit: 'cover', 
+                                objectFit: product.category === 'bebidas' ? 'contain' : 'contain', 
                                 objectPosition: 'center', 
                                 display: 'block',
+                                padding: product.category === 'bebidas' ? '6px' : '0px',
                                 filter: isPaused ? 'grayscale(80%)' : 'none',
                                 transition: 'transform 0.4s ease'
                               }} 

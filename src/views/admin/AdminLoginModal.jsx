@@ -14,8 +14,8 @@ export default function AdminLoginModal({ isOpen, onLoginSuccess, onCancel }) {
 
     // Credenciais de homologação/administração
     const userClean = username.trim().toLowerCase();
-    if ((userClean === 'admin' && password === 'admin123') ||
-        (userClean === 'admin' && password === 'nuu123')) {
+    const passClean = password.trim();
+    if (userClean === 'nuuadmin' && (passClean === 'NuuAdmin' || passClean === 'nuuadmin')) {
       onLoginSuccess();
     } else {
       setError('Usuário ou senha incorretos. Tente novamente.');
@@ -88,7 +88,7 @@ export default function AdminLoginModal({ isOpen, onLoginSuccess, onCancel }) {
               type="text" 
               required
               autoFocus
-              placeholder="Ex: admin"
+              placeholder="Ex: NuuAdmin"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               style={{ width: '100%' }}
@@ -121,7 +121,7 @@ export default function AdminLoginModal({ isOpen, onLoginSuccess, onCancel }) {
           </div>
 
           <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            Dica de acesso: usuário <strong>admin</strong> | senha <strong>admin123</strong>
+            Dica de acesso: usuário <strong>NuuAdmin</strong> | senha <strong>NuuAdmin</strong>
           </div>
 
         </form>

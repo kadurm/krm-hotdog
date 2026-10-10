@@ -1835,17 +1835,40 @@ export default function DeliveryView({
 
       {/* MODAL DETALHE DO PRODUTO / CUSTOMIZAÇÃO */}
       {selectedProduct && (
-        <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: '480px' }}>
-            <div className="modal-header">
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Personalizar Item</h3>
-              <button onClick={() => setSelectedProduct(null)} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>
+        <div className="modal-overlay" onClick={() => setSelectedProduct(null)}>
+          <div 
+            className="modal-content animate-fade-in" 
+            style={{ 
+              maxWidth: '500px',
+              maxHeight: 'calc(100dvh - 2rem)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.85)',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header" style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-glass)' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>Personalizar Item</h3>
+              <button onClick={() => setSelectedProduct(null)} style={{ color: 'var(--text-secondary)', cursor: 'pointer', background: 'none', border: 'none', display: 'flex', padding: '4px' }}>
                 <X size={20} />
               </button>
             </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div 
+              className="modal-body custom-scrollbar" 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '1.15rem',
+                overflowY: 'auto',
+                flex: '1 1 auto',
+                minHeight: 0,
+                WebkitOverflowScrolling: 'touch',
+                padding: '1.25rem'
+              }}
+            >
               {selectedProduct.image && (
-                <div style={{ width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 20px rgba(0,0,0,0.3)' }}>
+                <div style={{ width: '100%', height: '145px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 14px rgba(0,0,0,0.3)', flexShrink: 0 }}>
                   <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
               )}
@@ -2109,11 +2132,27 @@ export default function DeliveryView({
                 </div>
               </div>
             </div>
-            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-glass)', padding: '1rem 1.5rem' }}>
-              <button onClick={() => setSelectedProduct(null)} className="btn-secondary">
+            <div 
+              className="modal-footer" 
+              style={{ 
+                borderTop: '1px solid var(--border-glass)', 
+                padding: '0.85rem 1.25rem',
+                position: 'sticky',
+                bottom: 0,
+                zIndex: 10,
+                backgroundColor: 'var(--bg-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexShrink: 0,
+                boxShadow: '0 -4px 16px rgba(0,0,0,0.5)'
+              }}
+            >
+              <button onClick={() => setSelectedProduct(null)} className="btn-secondary" style={{ flex: '0 0 auto', padding: '10px 16px' }}>
                 Cancelar
               </button>
-              <button onClick={handleAddToCart} className="btn-primary">
+              <button onClick={handleAddToCart} className="btn-primary" style={{ flex: '1 1 auto', justifyContent: 'center', padding: '10px 18px' }}>
                 Adicionar • R$ {currentTotalPrice.toFixed(2)}
               </button>
             </div>
@@ -2130,10 +2169,11 @@ export default function DeliveryView({
               backgroundColor: 'var(--bg-secondary)', 
               width: '100%', 
               maxWidth: '420px', 
-              height: '100vh', 
+              height: '100dvh', 
+              maxHeight: '100dvh',
               display: 'flex', 
               flexDirection: 'column', 
-              boxShadow: '-4px 0 20px rgba(0,0,0,0.5)',
+              boxShadow: '-4px 0 25px rgba(0,0,0,0.7)',
               borderLeft: '1px solid var(--border-glass)'
             }}
             onClick={(e) => e.stopPropagation()}
@@ -2190,7 +2230,7 @@ export default function DeliveryView({
             </div>
 
             {cart.length > 0 && (
-              <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-primary)' }}>
+              <div style={{ padding: '1.25rem 1.5rem', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-primary)', flexShrink: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.95rem' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Subtotal dos Itens:</span>
                   <span style={{ fontWeight: 600 }}>R$ {cartTotal.toFixed(2)}</span>

@@ -389,13 +389,14 @@ input:focus, select:focus, textarea:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(6px);
-  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 1.5rem 1rem;
+  padding: 1rem;
   overflow-y: auto;
   box-sizing: border-box;
 }
@@ -406,7 +407,8 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 520px;
-  max-height: calc(100vh - 3rem);
+  max-height: calc(100dvh - 2rem);
+  height: fit-content;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -433,6 +435,7 @@ input:focus, select:focus, textarea:focus {
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
+  background-color: var(--bg-secondary);
 }
 
 .modal-body {
@@ -441,6 +444,7 @@ input:focus, select:focus, textarea:focus {
   flex: 1 1 auto;
   min-height: 0;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
@@ -448,6 +452,7 @@ input:focus, select:focus, textarea:focus {
   border-top: 1px solid var(--border-glass);
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.75rem;
   flex-shrink: 0;
   background-color: var(--bg-secondary);

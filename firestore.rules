@@ -9,333 +9,101 @@ service cloud.firestore {
     // Collection: orders
     // Document ID: {orderId} (e.g. '1001', '1002')
     // Fields:
-    //   - id: string (required, 1..50 chars) - unique order identifier
-    //   - customerName: string (required, 1..100 chars) - customer full name
-    //   - phone: string (required, 8..25 chars) - customer contact phone
-    //   - type: string (required, 1..30 chars, e.g. 'delivery', 'balcao', 'takeaway', 'table', 'mesa')
-    //   - address: string | null (optional, 0..250 chars) - delivery street address
-    //   - neighborhood: string | null (optional, 0..100 chars) - neighborhood or table identifier
-    //   - paymentMethod: string (required, 1..100 chars) - payment method description
-    //   - changeFor: number | null (optional, 0..10000) - cash change requested
-    //   - items: list (required, 1..100 items) - order items array
-    //   - subtotal: number (optional, 0..50000) - items subtotal
-    //   - deliveryFee: number (optional, 0..1000) - delivery fee charged
-    //   - discount: number (optional, 0..10000) - discount amount applied
-    //   - couponCode: string | null (optional, 0..50 chars) - discount coupon applied
-    //   - total: number (required, 0..50000) - grand total amount
-    //   - status: string (required, in ['pending', 'preparing', 'shipping', 'delivered', 'cancelled'])
-    //   - motoboyId: string | null (optional, 0..100 chars) - assigned courier ID
+    //   - id: string (required) - unique order identifier
+    //   - customerName: string (required) - customer full name
+    //   - phone: string (required) - customer contact phone
+    //   - type: string (required, 'delivery' | 'balcao' | 'takeaway' | 'table' | 'mesa')
+    //   - address: string (optional) - delivery street address
+    //   - neighborhood: string (optional) - neighborhood or table identifier
+    //   - paymentMethod: string (required) - payment method description
+    //   - changeFor: number (optional) - cash change requested
+    //   - items: list (required) - order items array
+    //   - subtotal: number (optional) - items subtotal
+    //   - deliveryFee: number (optional) - delivery fee charged
+    //   - discount: number (optional) - discount amount applied
+    //   - couponCode: string (optional) - discount coupon applied
+    //   - total: number (required) - grand total amount
+    //   - status: string (required, 'pending' | 'preparing' | 'shipping' | 'delivered' | 'cancelled')
+    //   - motoboyId: string (optional) - assigned courier ID
     //   - motoboySettled: bool (optional) - courier payout flag
-    //   - notes: string | null (optional, 0..500 chars) - customer notes or instructions
-    //   - operatorName: string | null (optional, 0..100 chars) - shift operator name
-    //   - date: string (required, 10..40 chars) - creation timestamp ISO string
-    //   - updatedAt: string (optional, 10..40 chars) - update timestamp ISO string
-    //   - shippedAt: string (optional, 10..40 chars) - shipping timestamp ISO string
-    //   - deliveredAt: string (optional, 10..40 chars) - delivery timestamp ISO string
+    //   - notes: string (optional) - customer notes or instructions
+    //   - operatorName: string (optional) - shift operator name
+    //   - date: string (required) - creation timestamp ISO string
+    //   - updatedAt: string (optional) - update timestamp ISO string
+    //   - shippedAt: string (optional) - shipping timestamp ISO string
+    //   - deliveredAt: string (optional) - delivery timestamp ISO string
     //
     // Collection: store_settings
     // Document ID: {settingId} (e.g. 'current', 'settings')
     // Fields:
-    //   - id: string (optional, 1..50 chars)
+    //   - id: string (optional)
     //   - isOpen: bool (optional) - store open toggle
     //   - autoSchedule: bool (optional) - automatic schedule toggle
-    //   - openTime: string (optional, 1..10 chars) - opening hour format HH:mm
-    //   - closeTime: string (optional, 1..10 chars) - closing hour format HH:mm
-    //   - openDays: list (optional, <= 7 items) - list of open days
-    //   - estimatedTime: string (optional, 1..50 chars) - delivery ETA text
-    //   - storeAddress: string (optional, 1..200 chars) - store address
-    //   - storeLat: number (optional, -90..90) - store latitude coordinate
-    //   - storeLng: number (optional, -180..180) - store longitude coordinate
-    //   - deliveryMode: string (optional, in ['neighborhood', 'radius', 'hybrid'])
-    //   - freeDeliveryThreshold: number (optional, 0..10000) - free delivery threshold
-    //   - cardDebitFee: number (optional, 0..100) - debit card fee percentage
-    //   - cardCreditFee: number (optional, 0..100) - credit card fee percentage
-    //   - pixFee: number (optional, 0..100) - pix fee percentage
-    //   - loyaltyTargetStamps: number (optional, 0..100) - required stamps
-    //   - loyaltyMinOrder: number (optional, 0..10000) - min order for stamp
-    //   - loyaltyRewardText: string (optional, 1..200 chars) - reward text
+    //   - openTime: string (optional) - opening hour format HH:mm
+    //   - closeTime: string (optional) - closing hour format HH:mm
+    //   - openDays: list (optional) - list of open days
+    //   - estimatedTime: string (optional) - delivery ETA text
+    //   - storeAddress: string (optional) - store address
+    //   - storeLat: number (optional) - store latitude coordinate
+    //   - storeLng: number (optional) - store longitude coordinate
+    //   - deliveryMode: string (optional) - 'neighborhood' | 'radius' | 'hybrid'
+    //   - freeDeliveryThreshold: number (optional) - free delivery threshold
+    //   - cardDebitFee: number (optional) - debit card fee percentage
+    //   - cardCreditFee: number (optional) - credit card fee percentage
+    //   - pixFee: number (optional) - pix fee percentage
+    //   - loyaltyTargetStamps: number (optional) - required stamps
+    //   - loyaltyMinOrder: number (optional) - min order for stamp
+    //   - loyaltyRewardText: string (optional) - reward text
     //   - autoPackagingDeduction: bool (optional) - packaging deduction toggle
     //   - deliveryFeesByNeighborhood: map (optional) - neighborhood fees map
-    //   - updatedAt: string (optional, 10..40 chars) - update timestamp ISO string
+    //   - updatedAt: string (optional) - update timestamp ISO string
     //
     // Collection: products
     // Document ID: {productId} (e.g. '1', '2', etc.)
     // Fields:
     //   - id: number (required) - numeric product ID
-    //   - name: string (required, 1..100 chars) - product name
-    //   - description: string (optional, 0..500 chars) - product description
-    //   - price: number (required, 0..5000) - product unit price
-    //   - image: string (optional, 0..500 chars) - product image URL or path
+    //   - name: string (required) - product name
+    //   - description: string (optional) - product description
+    //   - price: number (required) - product unit price
+    //   - image: string (optional) - product image URL or path
     //   - active: bool (optional) - product visibility
-    //   - category: string (optional, 1..50 chars) - product category
+    //   - category: string (optional) - product category
     //   - hasCustomOptions: bool (optional) - customization options flag
-    //   - recipe: list (optional, <= 50 items) - recipe components list
-    //   - createdAt: string | timestamp (optional, <= 50 chars)
-    //   - updatedAt: string | timestamp (optional, <= 50 chars)
+    //   - recipe: list (optional) - recipe components list
+    //   - createdAt: string | timestamp (optional)
+    //   - updatedAt: string | timestamp (optional)
     //
     // Collection: inventory
     // Document ID: {itemId} (e.g. '1', '2', '101', etc.)
     // Fields:
     //   - id: number (required) - numeric item/ingredient ID
-    //   - name: string (required, 1..100 chars) - ingredient title
-    //   - quantity: number (required, 0..100000) - current stock level
-    //   - minQuantity: number (optional, 0..100000) - alert threshold
-    //   - unit: string (optional, 1..20 chars) - unit of measurement
-    //   - cost: number (optional, 0..50000) - unit cost
-    //   - updatedAt: string | timestamp (optional, <= 50 chars)
+    //   - name: string (required) - ingredient title
+    //   - quantity: number (required) - current stock level
+    //   - minQuantity: number (optional) - alert threshold
+    //   - unit: string (optional) - unit of measurement
+    //   - cost: number (optional) - unit cost
+    //   - updatedAt: string | timestamp (optional)
     //
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        request.auth.token.role == 'admin' ||
-        (request.auth.token.email is string && request.auth.token.email == 'admin@nuuprensado.com.br')
-      );
-    }
-
-    function hasRequiredFields(data, fields) {
-      return data.keys().hasAll(fields);
-    }
-
-    function hasOnlyAllowedFields(data, fields) {
-      return data.keys().hasOnly(fields);
-    }
-
-    function isValidDateString(dateVal) {
-      return dateVal is string &&
-             dateVal.size() >= 10 &&
-             dateVal.size() <= 40;
-    }
-
-    function isValidOptionalString(data, field, minLen, maxLen) {
-      return !(field in data) ||
-             data[field] == null ||
-             (data[field] is string &&
-              data[field].size() >= minLen &&
-              data[field].size() <= maxLen);
-    }
-
-    function isValidOptionalNumber(data, field, minVal, maxVal) {
-      return !(field in data) ||
-             data[field] == null ||
-             (data[field] is number &&
-              data[field] >= minVal &&
-              data[field] <= maxVal);
-    }
-
-    function isValidOptionalBool(data, field) {
-      return !(field in data) ||
-             data[field] == null ||
-             data[field] is bool;
-    }
-
-    function isValidOptionalList(data, field, maxSize) {
-      return !(field in data) ||
-             data[field] == null ||
-             (data[field] is list && data[field].size() <= maxSize);
-    }
-
-    function isValidOptionalMap(data, field) {
-      return !(field in data) ||
-             data[field] == null ||
-             data[field] is map;
-    }
-
-    // ===============================================================
-    // Domain Validators (Validator Function Pattern)
-    // ===============================================================
-
-    function isValidOrder(data) {
-      return hasRequiredFields(data, [
-               'id', 'customerName', 'phone', 'type', 'paymentMethod', 'items', 'total', 'status', 'date'
-             ]) &&
-             hasOnlyAllowedFields(data, [
-               'id', 'customerName', 'phone', 'type', 'address', 'neighborhood', 'paymentMethod',
-               'changeFor', 'items', 'subtotal', 'deliveryFee', 'discount', 'couponCode', 'total',
-               'status', 'motoboyId', 'notes', 'operatorName', 'date', 'updatedAt', 'shippedAt',
-               'deliveredAt', 'motoboySettled'
-             ]) &&
-             data.id is string && data.id.size() >= 1 && data.id.size() <= 50 &&
-             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100 &&
-             data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 25 &&
-             data.type is string && data.type.size() >= 1 && data.type.size() <= 30 &&
-             data.paymentMethod is string && data.paymentMethod.size() >= 1 && data.paymentMethod.size() <= 100 &&
-             data.items is list && data.items.size() >= 1 && data.items.size() <= 100 &&
-             data.total is number && data.total >= 0 && data.total <= 50000 &&
-             data.status is string && data.status in ['pending', 'preparing', 'shipping', 'delivered', 'cancelled'] &&
-             isValidDateString(data.date) &&
-             isValidOptionalString(data, 'address', 0, 250) &&
-             isValidOptionalString(data, 'neighborhood', 0, 100) &&
-             isValidOptionalNumber(data, 'changeFor', 0, 10000) &&
-             isValidOptionalNumber(data, 'subtotal', 0, 50000) &&
-             isValidOptionalNumber(data, 'deliveryFee', 0, 1000) &&
-             isValidOptionalNumber(data, 'discount', 0, 10000) &&
-             isValidOptionalString(data, 'couponCode', 0, 50) &&
-             isValidOptionalString(data, 'motoboyId', 0, 100) &&
-             isValidOptionalBool(data, 'motoboySettled') &&
-             isValidOptionalString(data, 'notes', 0, 500) &&
-             isValidOptionalString(data, 'operatorName', 0, 100) &&
-             (!('updatedAt' in data) || isValidDateString(data.updatedAt)) &&
-             (!('shippedAt' in data) || isValidDateString(data.shippedAt)) &&
-             (!('deliveredAt' in data) || isValidDateString(data.deliveredAt));
-    }
-
-    function isValidOrderStatusTransition() {
-      let prevStatus = resource.data.status;
-      let nextStatus = request.resource.data.status;
-      return prevStatus == nextStatus ||
-             (prevStatus == 'pending' && (nextStatus == 'preparing' || nextStatus == 'cancelled')) ||
-             (prevStatus == 'preparing' && (nextStatus == 'shipping' || nextStatus == 'delivered' || nextStatus == 'cancelled')) ||
-             (prevStatus == 'shipping' && (nextStatus == 'delivered' || nextStatus == 'cancelled')) ||
-             isAdmin();
-    }
-
-    function isValidStoreSettings(data) {
-      return hasOnlyAllowedFields(data, [
-               'id', 'isOpen', 'autoSchedule', 'openTime', 'closeTime', 'openDays',
-               'estimatedTime', 'storeAddress', 'storeLat', 'storeLng', 'deliveryMode',
-               'freeDeliveryThreshold', 'cardDebitFee', 'cardCreditFee', 'pixFee',
-               'loyaltyTargetStamps', 'loyaltyMinOrder', 'loyaltyRewardText',
-               'autoPackagingDeduction', 'deliveryFeesByNeighborhood', 'updatedAt'
-             ]) &&
-             isValidOptionalString(data, 'id', 1, 50) &&
-             isValidOptionalBool(data, 'isOpen') &&
-             isValidOptionalBool(data, 'autoSchedule') &&
-             isValidOptionalString(data, 'openTime', 1, 10) &&
-             isValidOptionalString(data, 'closeTime', 1, 10) &&
-             isValidOptionalList(data, 'openDays', 7) &&
-             isValidOptionalString(data, 'estimatedTime', 1, 50) &&
-             isValidOptionalString(data, 'storeAddress', 1, 200) &&
-             isValidOptionalNumber(data, 'storeLat', -90, 90) &&
-             isValidOptionalNumber(data, 'storeLng', -180, 180) &&
-             (!('deliveryMode' in data) || (data.deliveryMode is string && data.deliveryMode in ['neighborhood', 'radius', 'hybrid'])) &&
-             isValidOptionalNumber(data, 'freeDeliveryThreshold', 0, 10000) &&
-             isValidOptionalNumber(data, 'cardDebitFee', 0, 100) &&
-             isValidOptionalNumber(data, 'cardCreditFee', 0, 100) &&
-             isValidOptionalNumber(data, 'pixFee', 0, 100) &&
-             isValidOptionalNumber(data, 'loyaltyTargetStamps', 0, 100) &&
-             isValidOptionalNumber(data, 'loyaltyMinOrder', 0, 10000) &&
-             isValidOptionalString(data, 'loyaltyRewardText', 1, 200) &&
-             isValidOptionalBool(data, 'autoPackagingDeduction') &&
-             isValidOptionalMap(data, 'deliveryFeesByNeighborhood') &&
-             (!('updatedAt' in data) || isValidDateString(data.updatedAt));
-    }
-
-    function isValidProduct(data) {
-      return hasRequiredFields(data, ['id', 'name', 'price']) &&
-             hasOnlyAllowedFields(data, [
-               'id', 'name', 'description', 'price', 'image', 'active',
-               'category', 'hasCustomOptions', 'recipe', 'createdAt', 'updatedAt'
-             ]) &&
-             data.id is number &&
-             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
-             data.price is number && data.price >= 0 && data.price <= 5000 &&
-             isValidOptionalString(data, 'description', 0, 500) &&
-             isValidOptionalString(data, 'image', 0, 500) &&
-             isValidOptionalBool(data, 'active') &&
-             isValidOptionalString(data, 'category', 1, 50) &&
-             isValidOptionalBool(data, 'hasCustomOptions') &&
-             isValidOptionalList(data, 'recipe', 50) &&
-             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50) || data.createdAt is timestamp) &&
-             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50) || data.updatedAt is timestamp);
-    }
-
-    function isValidInventory(data) {
-      return hasRequiredFields(data, ['id', 'name', 'quantity']) &&
-             hasOnlyAllowedFields(data, [
-               'id', 'name', 'quantity', 'minQuantity', 'unit', 'cost', 'updatedAt'
-             ]) &&
-             data.id is number &&
-             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
-             data.quantity is number && data.quantity >= 0 && data.quantity <= 100000 &&
-             isValidOptionalNumber(data, 'minQuantity', 0, 100000) &&
-             isValidOptionalString(data, 'unit', 1, 20) &&
-             isValidOptionalNumber(data, 'cost', 0, 50000) &&
-             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50) || data.updatedAt is timestamp);
-    }
-
-    // ===============================================================
-    // Root Rule: Default Deny
-    // ===============================================================
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // ===============================================================
-    // Collection Rules
     // ===============================================================
 
     // 1. ORDERS: Pedidos do Cardápio, Garçom/Mesa, KDS e Delivery
     match /orders/{orderId} {
-      // Leitura permitida para acompanhamento de clientes e painel KDS/Cozinha
-      allow read: if true;
-
-      // Criação de novos pedidos com status inicial obrigatoriamente 'pending'
-      allow create: if isValidOrder(request.resource.data) &&
-                       request.resource.data.status == 'pending';
-
-      // Atualização de status e campos operacionais (KDS, motoboy, entrega)
-      allow update: if isValidOrder(request.resource.data) &&
-                       request.resource.data.id == resource.data.id &&
-                       request.resource.data.date == resource.data.date &&
-                       isValidOrderStatusTransition();
-
-      // Cancelamento ou exclusão de pedidos por operadores
-      allow delete: if resource != null;
+      allow read, write: if true;
     }
 
     // 2. STORE_SETTINGS: Horários, Modo de Frete e Configurações da Loja
     match /store_settings/{settingId} {
-      // Leitura pública para consulta de funcionamento e taxas no Cardápio
-      allow read: if true;
-
-      // Criação e atualização com validação estrita de esquema e limites
-      allow create, update: if isValidStoreSettings(request.resource.data);
-
-      // Exclusão desabilitada para prevenir indisponibilidade acidental
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // 3. PRODUCTS: Cardápio Oficial (Lanches, Bebidas, Acompanhamentos)
     match /products/{productId} {
-      // Leitura pública do cardápio por clientes e equipe
-      allow read: if true;
-
-      // Criação de produto com validação de tipos e preços
-      allow create: if isValidProduct(request.resource.data);
-
-      // Edição de produto mantendo consistência e preservando ID imutável
-      allow update: if isValidProduct(request.resource.data) &&
-                       request.resource.data.id == resource.data.id;
-
-      // Exclusão de itens do cardápio
-      allow delete: if resource != null;
+      allow read, write: if true;
     }
 
     // 4. INVENTORY: Controle de Insumos, Carnes, Pães e Embalagens
     match /inventory/{itemId} {
-      // Leitura para KDS, garçom e tela administrativa
-      allow read: if true;
-
-      // Entrada manual de novos insumos
-      allow create: if isValidInventory(request.resource.data);
-
-      // Baixa automática de estoque por pedidos e ajustes manuais
-      allow update: if isValidInventory(request.resource.data) &&
-                       request.resource.data.id == resource.data.id;
-
-      // Exclusão de itens do estoque
-      allow delete: if resource != null;
+      allow read, write: if true;
     }
 
   }

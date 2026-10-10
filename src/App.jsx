@@ -4,7 +4,7 @@ import DeliveryView from './views/delivery/DeliveryView';
 import AdminView from './views/admin/AdminView';
 import AdminLoginView from './views/admin/AdminLoginView';
 import OperationView from './views/operation/OperationView';
-import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield } from 'lucide-react';
+import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield, LogOut } from 'lucide-react';
 import { VIEW_CONFIG } from './config/viewConfig';
 import './App.css';
 
@@ -261,7 +261,100 @@ function AppContent() {
                 )}
               </div>
             </div>
+          </div>
+        </header>
+      )}
 
+      {/* Barra Superior Dedicada para o Painel Admin */}
+      {currentMode === 'admin' && isAdminAuthenticated && (
+        <header className="admin-header-bar" style={{
+          backgroundColor: 'rgba(9, 13, 22, 0.95)',
+          borderBottom: '1px solid var(--border-glass)',
+          padding: '0.65rem 1.5rem',
+          backdropFilter: 'blur(12px)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 90,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <span 
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              onClick={() => {
+                setCurrentMode('delivery');
+                window.location.hash = 'delivery';
+              }}
+              title="Voltar ao Cardápio"
+            >
+              <img 
+                src="/logoNuuPrensado-semfundo.png" 
+                alt="Nuu Prensado!!" 
+                style={{ height: '38px', objectFit: 'contain' }}
+              />
+            </span>
+            <span style={{ 
+              backgroundColor: 'rgba(234, 179, 8, 0.15)', 
+              color: 'var(--color-brand-yellow)', 
+              fontSize: '0.75rem', 
+              fontWeight: 800, 
+              padding: '3px 8px', 
+              borderRadius: '6px',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
+              letterSpacing: '0.5px'
+            }}>
+              PAINEL ADMIN
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentMode('operacao');
+                window.location.hash = 'operacao';
+              }}
+              className="btn-primary"
+              style={{ padding: '6px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+            >
+              <ChefHat size={16} />
+              <span>Frente de Operação</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentMode('delivery');
+                window.location.hash = 'delivery';
+              }}
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <span>Ver Cardápio</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 600
+              }}
+              title="Sair do painel administrativo"
+            >
+              <LogOut size={14} />
+              <span>Sair</span>
+            </button>
           </div>
         </header>
       )}

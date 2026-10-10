@@ -39,7 +39,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
     upsertProduct, deleteProduct, toggleProductStatus,
     toggleComplementStatus, upsertComplement, deleteComplement,
     addTransaction, updateTransaction, deleteTransaction,
-    addQuotation, updateQuotation, deleteQuotation 
+    addQuotation, updateQuotation, deleteQuotation, resetToOfficialMenu 
   } = useSystem();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -593,11 +593,11 @@ export default function AdminView({ onLogout, onGoOperation }) {
   };
 
   return (
-    <div className="admin-view animate-fade-in" style={{ flex: 1, padding: '1rem 0' }}>
+    <div className="admin-view animate-fade-in" style={{ flex: 1, padding: '0.75rem 0' }}>
       <div className="admin-container" style={{ display: 'flex', flexDirection: 'column' }}>
         
         {/* Mobile Header Menu (Pizza / Dropdown) */}
-        <div className="mobile-admin-header glass-panel" style={{ padding: '12px 16px', marginBottom: '1.25rem', flexDirection: 'column', gap: '10px' }}>
+        <div className="mobile-admin-header glass-panel" style={{ padding: '12px 16px', marginBottom: '1rem', flexDirection: 'column', gap: '10px' }}>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800, color: '#fff', fontSize: '1rem' }}>
@@ -678,8 +678,8 @@ export default function AdminView({ onLogout, onGoOperation }) {
           className="admin-layout" 
           style={{ 
             display: 'grid', 
-            gridTemplateColumns: isSidebarCollapsed ? '72px minmax(0, 1fr)' : '240px minmax(0, 1fr)', 
-            gap: '1.25rem',
+            gridTemplateColumns: isSidebarCollapsed ? '64px minmax(0, 1fr)' : '210px minmax(0, 1fr)', 
+            gap: '1rem',
             alignItems: 'start',
             transition: 'grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
@@ -691,8 +691,8 @@ export default function AdminView({ onLogout, onGoOperation }) {
             flexDirection: 'column', 
             gap: '6px',
             position: 'sticky',
-            top: '1rem',
-            maxHeight: 'calc(100vh - 2rem)',
+            top: '4rem',
+            maxHeight: 'calc(100vh - 4.5rem)',
             overflowY: 'auto'
           }}>
             
@@ -1887,6 +1887,32 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                       Total: <strong>{products.length}</strong> produtos • <span style={{ color: '#4ade80' }}>{products.filter(p => p.active).length} ativos</span> • <span style={{ color: '#f87171' }}>{products.filter(p => !p.active).length} pausados</span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('Deseja sincronizar o cardápio com os 4 lanches oficiais (Prensadinho, Frango, Pernil e Costela) e suas fichas técnicas?')) {
+                          resetToOfficialMenu();
+                          alert('Cardápio sincronizado com sucesso!');
+                        }
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-glass)',
+                        backgroundColor: 'rgba(255,255,255,0.06)',
+                        color: '#fff',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      title="Restaura os lanches oficiais do Nuu Prensado com suas fichas técnicas e insumos"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Sincronizar Lanches Oficiais</span>
+                    </button>
                   </div>
 
                   <div className="admin-table-container">
@@ -3416,17 +3442,17 @@ export default function AdminView({ onLogout, onGoOperation }) {
       {/* MODAL: CADASTRO/EDIÇÃO DE PRODUTO */}
       {isProductModalOpen && (
         <div className="modal-overlay" onClick={() => setIsProductModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '520px', maxHeight: 'calc(100vh - 3rem)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff', margin: 0 }}>
                 {editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
               </h3>
               <button type="button" onClick={() => setIsProductModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', padding: '1.1rem 1.25rem', overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nome do Produto</label>
                   <input type="text" required value={prodName} onChange={e => setProdName(e.target.value)} placeholder="Ex: X-Salada Premium" />
@@ -3461,9 +3487,9 @@ export default function AdminView({ onLogout, onGoOperation }) {
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     {/* Prévia da Imagem */}
                     <div style={{ 
-                      width: '76px', 
-                      height: '76px', 
-                      borderRadius: '10px', 
+                      width: '62px', 
+                      height: '62px', 
+                      borderRadius: '8px', 
                       backgroundColor: 'rgba(0,0,0,0.3)', 
                       border: '2px dashed var(--border-glass)', 
                       display: 'flex', 
@@ -3559,7 +3585,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
                     Indique a quantidade de cada insumo necessária para produzir 1 unidade deste produto. A baixa do estoque é realizada automaticamente.
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '110px', overflowY: 'auto' }}>
                     {inventory.map(invItem => {
                       const recipeItem = prodRecipe.find(r => r.ingredientId === invItem.id);
                       const currentVal = recipeItem ? recipeItem.quantity : 0;
@@ -3583,13 +3609,13 @@ export default function AdminView({ onLogout, onGoOperation }) {
                 {/* Status de Disponibilidade do Produto */}
                 <div style={{ 
                   borderTop: '1px solid var(--border-glass)', 
-                  paddingTop: '14px',
+                  paddingTop: '10px',
                   display: 'flex', 
                   flexDirection: 'column', 
-                  gap: '8px' 
+                  gap: '6px' 
                 }}>
                   <div style={{ 
-                    padding: '12px 14px', 
+                    padding: '8px 12px', 
                     borderRadius: '8px', 
                     border: '1px solid',
                     borderColor: prodActive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
@@ -3597,10 +3623,10 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center',
-                    gap: '12px'
+                    gap: '10px'
                   }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: prodActive ? '#4ade80' : '#f87171', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: prodActive ? '#4ade80' : '#f87171', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {prodActive ? (
                           <>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
@@ -3613,7 +3639,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                           </>
                         )}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                         {prodActive 
                           ? 'Visível e liberado para pedidos no cardápio dos clientes.' 
                           : 'Ocultado temporariamente das vendas até ser reativado.'}
@@ -3624,14 +3650,15 @@ export default function AdminView({ onLogout, onGoOperation }) {
                       type="button"
                       onClick={() => setProdActive(!prodActive)}
                       style={{ 
-                        fontSize: '0.8rem', 
-                        padding: '6px 12px',
+                        fontSize: '0.75rem', 
+                        padding: '5px 10px',
                         borderRadius: '6px',
                         fontWeight: 700,
                         cursor: 'pointer',
                         border: '1px solid var(--border-glass)',
                         backgroundColor: prodActive ? 'var(--bg-tertiary)' : 'var(--color-brand)',
-                        color: prodActive ? 'var(--text-secondary)' : '#fff'
+                        color: prodActive ? 'var(--text-secondary)' : '#fff',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       {prodActive ? 'Pausar Venda' : 'Ativar Venda'}
@@ -3639,9 +3666,9 @@ export default function AdminView({ onLogout, onGoOperation }) {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn-secondary">Cancelar</button>
-                <button type="submit" className="btn-primary">Salvar Produto</button>
+              <div className="modal-footer" style={{ padding: '0.85rem 1.25rem' }}>
+                <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>Cancelar</button>
+                <button type="submit" className="btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>Salvar Produto</button>
               </div>
             </form>
           </div>

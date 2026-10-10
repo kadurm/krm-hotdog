@@ -271,7 +271,7 @@ const INITIAL_COMPLEMENTS = [
   { id: 'melted-cheddar', name: 'Queijo Cheddar', category: 'complement', group: 'melted', groupName: 'Queijo Fatiado', price: 0, active: true },
 
   // --- Acompanhamento Opcional ---
-  { id: 'side-vinagrete', name: 'Vinagrete Artesanal', category: 'complement', group: 'side', groupName: 'Acompanhamento', price: 0, active: true },
+  { id: 'side-vinagrete', name: 'Vinagrete', category: 'complement', group: 'side', groupName: 'Acompanhamento', price: 0, active: true },
 
   // --- Acréscimos / Adicionais Pagos ---
   { id: 'extra-bacon', name: 'Bacon', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
@@ -518,8 +518,20 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [complements, setComplements] = useState(() => {
-    const saved = localStorage.getItem('nuu_complements_v5');
-    return saved ? JSON.parse(saved) : INITIAL_COMPLEMENTS;
+    const saved = localStorage.getItem('nuu_complements_v6');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    const oldV5 = localStorage.getItem('nuu_complements_v5');
+    if (oldV5) {
+      try {
+        const parsed = JSON.parse(oldV5);
+        return parsed.map(c => c.id === 'side-vinagrete' ? { ...c, name: 'Vinagrete' } : c);
+      } catch (e) {}
+    }
+    return INITIAL_COMPLEMENTS;
   });
 
   const [storeSettings, setStoreSettings] = useState(() => {
@@ -642,7 +654,7 @@ export const SystemProvider = ({ children }) => {
   }, [quotations]);
 
   useEffect(() => {
-    localStorage.setItem('nuu_complements_v5', JSON.stringify(complements));
+    localStorage.setItem('nuu_complements_v6', JSON.stringify(complements));
   }, [complements]);
 
   useEffect(() => {

@@ -1454,7 +1454,7 @@ export default function DeliveryView({
                   <Award size={16} /> Já comprou com a gente? Busque seus dados
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
                 <input
                   type="tel"
                   placeholder="DDD + Seu WhatsApp"
@@ -1462,7 +1462,8 @@ export default function DeliveryView({
                   onChange={(e) => setCustomerSearchPhone(e.target.value)}
                   style={{
                     flex: 1,
-                    padding: '8px 12px',
+                    minWidth: 0,
+                    padding: '9px 12px',
                     borderRadius: '8px',
                     border: '1px solid rgba(255,255,255,0.15)',
                     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -1478,13 +1479,16 @@ export default function DeliveryView({
                     color: '#000',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '8px 16px',
+                    padding: '9px 14px',
                     fontWeight: 800,
-                    fontSize: '0.8rem',
+                    fontSize: '0.82rem',
                     cursor: 'pointer',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    justifyContent: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
                   }}
                 >
                   <Search size={14} /> Buscar
@@ -2556,7 +2560,7 @@ export default function DeliveryView({
                   className="btn-primary" 
                   style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '1.05rem' }}
                 >
-                  Avançar para Checkout <ChevronRight size={18} />
+                  Finalizar compra <ChevronRight size={18} />
                 </button>
               </div>
             )}

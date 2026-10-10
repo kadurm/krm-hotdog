@@ -393,22 +393,6 @@ function AppContent() {
         )}
       </main>
 
-      {/* Footer Limpo e Exclusivo para o Cliente */}
-      {currentMode === 'delivery' && (
-        <footer className="app-footer" style={{ 
-          borderTop: '1px solid var(--border-glass)', 
-          padding: '1.5rem 0', 
-          backgroundColor: 'rgba(9, 13, 22, 0.85)', 
-          backdropFilter: 'blur(12px)',
-          color: 'var(--text-muted)',
-          fontSize: '0.85rem',
-          textAlign: 'center'
-        }}>
-          <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-            <p style={{ margin: 0 }}>© 2026 Nuu Prensado!! - Todos os direitos reservados.</p>
-          </div>
-        </footer>
-      )}
     </>
   );
 }

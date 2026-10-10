@@ -1296,6 +1296,18 @@ export default function DeliveryView({
               </section>
             ))
           )}
+
+          {/* Rodapé Institucional ao final da rolagem do Cardápio */}
+          <footer style={{ 
+            marginTop: '2rem',
+            paddingTop: '2rem',
+            borderTop: '1px solid var(--border-glass)',
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '0.85rem'
+          }}>
+            <p style={{ margin: 0 }}>© 2026 Nuu Prensado!! - Todos os direitos reservados.</p>
+          </footer>
         </div>
       )}
 
@@ -1839,11 +1851,12 @@ export default function DeliveryView({
           <div 
             className="modal-content animate-fade-in" 
             style={{ 
-              maxWidth: '500px',
-              maxHeight: 'calc(100dvh - 2rem)',
+              maxWidth: '540px',
+              maxHeight: 'min(86vh, 86dvh)',
+              height: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.85)',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.95)',
               position: 'relative'
             }}
             onClick={(e) => e.stopPropagation()}
@@ -1868,7 +1881,7 @@ export default function DeliveryView({
               }}
             >
               {selectedProduct.image && (
-                <div style={{ width: '100%', height: '145px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 14px rgba(0,0,0,0.3)', flexShrink: 0 }}>
+                <div style={{ width: '100%', height: '130px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 14px rgba(0,0,0,0.3)', flexShrink: 0 }}>
                   <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
               )}
@@ -2049,50 +2062,57 @@ export default function DeliveryView({
                     Adicionais Extras:
                   </h5>
                   
-                  {extraOptions.map(extra => {
-                    const isPaused = !extra.active;
-                    const isChecked = selectedExtras.includes(extra.id) && !isPaused;
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', 
+                    gap: '8px' 
+                  }}>
+                    {extraOptions.map(extra => {
+                      const isPaused = !extra.active;
+                      const isChecked = selectedExtras.includes(extra.id) && !isPaused;
 
-                    return (
-                      <label 
-                        key={extra.id} 
-                        style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center', 
-                          padding: '8px 12px', 
-                          border: '1px solid',
-                          borderColor: isChecked ? 'var(--color-brand)' : 'var(--border-glass)', 
-                          borderRadius: 'var(--radius-sm)', 
-                          cursor: isPaused ? 'not-allowed' : 'pointer',
-                          opacity: isPaused ? 0.5 : 1,
-                          backgroundColor: isChecked ? 'rgba(234, 179, 8, 0.08)' : 'transparent',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <input 
-                            type="checkbox" 
-                            disabled={isPaused}
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (isPaused) return;
-                              if (e.target.checked) {
-                                setSelectedExtras(prev => [...prev, extra.id]);
-                              } else {
-                                setSelectedExtras(prev => prev.filter(id => id !== extra.id));
-                              }
-                            }}
-                            style={{ accentColor: 'var(--color-brand)' }}
-                          />
-                          <span style={{ fontSize: '0.9rem', fontWeight: isChecked ? 600 : 400 }}>{extra.name}</span>
-                        </div>
-                        <span style={{ fontSize: '0.85rem', color: isPaused ? 'var(--text-muted)' : 'var(--color-brand)', fontWeight: 600 }}>
-                          {isPaused ? 'Indisponível' : `+ R$ ${extra.price.toFixed(2)}`}
-                        </span>
-                      </label>
-                    );
-                  })}
+                      return (
+                        <label 
+                          key={extra.id} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            padding: '8px 10px', 
+                            border: '1px solid',
+                            borderColor: isChecked ? 'var(--color-brand)' : 'var(--border-glass)', 
+                            borderRadius: 'var(--radius-sm)', 
+                            cursor: isPaused ? 'not-allowed' : 'pointer',
+                            opacity: isPaused ? 0.5 : 1,
+                            backgroundColor: isChecked ? 'rgba(234, 179, 8, 0.08)' : 'transparent',
+                            transition: 'all 0.2s',
+                            userSelect: 'none'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input 
+                              type="checkbox" 
+                              disabled={isPaused}
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (isPaused) return;
+                                if (e.target.checked) {
+                                  setSelectedExtras(prev => [...prev, extra.id]);
+                                } else {
+                                  setSelectedExtras(prev => prev.filter(id => id !== extra.id));
+                                }
+                              }}
+                              style={{ accentColor: 'var(--color-brand)' }}
+                            />
+                            <span style={{ fontSize: '0.85rem', fontWeight: isChecked ? 600 : 400 }}>{extra.name}</span>
+                          </div>
+                          <span style={{ fontSize: '0.8rem', color: isPaused ? 'var(--text-muted)' : 'var(--color-brand)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            {isPaused ? 'Indisponível' : `+ R$ ${extra.price.toFixed(2)}`}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

@@ -389,14 +389,14 @@ input:focus, select:focus, textarea:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
+  background-color: rgba(0, 0, 0, 0.88);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 99999;
+  z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 24px 16px;
   overflow-y: auto;
   box-sizing: border-box;
 }
@@ -406,15 +406,16 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 520px;
-  max-height: calc(100dvh - 2rem);
-  height: fit-content;
+  max-width: 540px;
+  max-height: min(86vh, 86dvh);
+  height: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.95);
   animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   margin: auto;
+  flex-shrink: 0;
 }
 
 @keyframes modalScaleIn {
@@ -436,6 +437,9 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   flex-shrink: 0;
   background-color: var(--bg-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .modal-body {
@@ -456,6 +460,10 @@ input:focus, select:focus, textarea:focus {
   gap: 0.75rem;
   flex-shrink: 0;
   background-color: var(--bg-secondary);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
 }
 
 .btn-primary {

@@ -326,18 +326,18 @@ const INITIAL_INVENTORY = [
 // 4. CONFIGURAÇÕES DA LOJA, HORÁRIOS, TAXAS E FIDELIDADE
 const INITIAL_STORE_SETTINGS = {
   isOpen: true,
-  autoSchedule: true,
-  openTime: '18:00',
+  autoSchedule: false,
+  openTime: '15:00',
   closeTime: '23:30',
-  openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
+  openDays: ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
   estimatedTime: '35 a 50 min',
-  storeAddress: 'Rua Principal, 100 - Centro',
-  whatsapp: '',
-  pixKey: '',
-  storeLat: -19.916681,
-  storeLng: -43.934493,
-  deliveryMode: 'hybrid', // 'neighborhood' | 'radius' | 'hybrid'
-  freeDeliveryThreshold: 65.00,
+  storeAddress: 'Rua Agapanto, 264 - Sagrada Família, Montes Claros - MG, CEP 39401-022',
+  whatsapp: '38991611378',
+  pixKey: '3899161-1378',
+  storeLat: -16.7401,
+  storeLng: -43.8746,
+  deliveryMode: 'radius', // 'neighborhood' | 'radius' | 'hybrid'
+  freeDeliveryThreshold: 70.00,
   cardDebitFee: 1.99,
   cardCreditFee: 3.49,
   pixFee: 0.00,
@@ -346,16 +346,27 @@ const INITIAL_STORE_SETTINGS = {
   loyaltyRewardText: '1 Prensadinho Grátis ou R$ 20 OFF',
   autoPackagingDeduction: true,
   deliveryFeesByNeighborhood: {
+    'Sagrada Família': 5.00,
     'Centro': 5.00,
-    'Bela Vista': 7.00,
-    'São José': 8.00,
-    'Industrial': 10.00,
-    'Planalto': 12.00
+    'Cândida Câmara': 5.00,
+    'Todos os Santos': 5.00,
+    'Santa Rita': 5.00,
+    'Alice Maia': 7.50,
+    'Morada do Sol': 7.50,
+    'Major Prates': 7.50,
+    'Ibituruna': 8.00,
+    'São Luiz': 7.50,
+    'Maracanã': 10.00,
+    'Independência': 10.00,
+    'Renascença': 10.00,
+    'Delfino Magalhães': 12.00,
+    'Village do Lago': 12.00
   },
   deliveryRadius: [
-    { id: 'rad-1', maxKm: 3, fee: 5.00, active: true },
-    { id: 'rad-2', maxKm: 6, fee: 8.00, active: true },
-    { id: 'rad-3', maxKm: 10, fee: 12.00, active: true }
+    { id: 'rad-1', maxKm: 3, fee: 5.00, description: 'Até 3 km (Sagrada Família, Centro, Cândida Câmara...)', active: true },
+    { id: 'rad-2', maxKm: 5, fee: 7.50, description: '3 km a 5 km (Major Prates, Morada do Sol, Ibituruna, Alice Maia...)', active: true },
+    { id: 'rad-3', maxKm: 8, fee: 10.00, description: '5 km a 8 km (Renascença, Maracanã, Independência, Delfino...)', active: true },
+    { id: 'rad-4', maxKm: 12, fee: 14.00, description: '8 km a 12 km (Outras regiões de Montes Claros)', active: true }
   ],
   paymentFeeRates: {
     credit: 3.5,
@@ -372,20 +383,31 @@ const INITIAL_STORE_SETTINGS = {
   defaultViewMode: 'grid'
 };
 
-// 5. BAIRROS DE ENTREGA
+// 5. BAIRROS DE ENTREGA (Montes Claros)
 const INITIAL_NEIGHBORHOODS = [
-  { id: 'nb-1', name: 'Centro', fee: 5.00, active: true },
-  { id: 'nb-2', name: 'Bela Vista', fee: 7.00, active: true },
-  { id: 'nb-3', name: 'São José', fee: 8.00, active: true },
-  { id: 'nb-4', name: 'Industrial', fee: 10.00, active: true },
-  { id: 'nb-5', name: 'Planalto', fee: 12.00, active: true }
+  { id: 'nb-1', name: 'Sagrada Família', fee: 5.00, distanceKm: 1, active: true },
+  { id: 'nb-2', name: 'Centro', fee: 5.00, distanceKm: 2.5, active: true },
+  { id: 'nb-3', name: 'Cândida Câmara', fee: 5.00, distanceKm: 2, active: true },
+  { id: 'nb-4', name: 'Todos os Santos', fee: 5.00, distanceKm: 2.5, active: true },
+  { id: 'nb-5', name: 'Santa Rita', fee: 5.00, distanceKm: 2, active: true },
+  { id: 'nb-6', name: 'Alice Maia', fee: 7.50, distanceKm: 3.5, active: true },
+  { id: 'nb-7', name: 'Morada do Sol', fee: 7.50, distanceKm: 4, active: true },
+  { id: 'nb-8', name: 'Major Prates', fee: 7.50, distanceKm: 4.5, active: true },
+  { id: 'nb-9', name: 'Ibituruna', fee: 8.00, distanceKm: 5, active: true },
+  { id: 'nb-10', name: 'São Luiz', fee: 7.50, distanceKm: 4, active: true },
+  { id: 'nb-11', name: 'Maracanã', fee: 10.00, distanceKm: 6, active: true },
+  { id: 'nb-12', name: 'Independência', fee: 10.00, distanceKm: 6.5, active: true },
+  { id: 'nb-13', name: 'Renascença', fee: 10.00, distanceKm: 7, active: true },
+  { id: 'nb-14', name: 'Delfino Magalhães', fee: 12.00, distanceKm: 8, active: true },
+  { id: 'nb-15', name: 'Village do Lago', fee: 12.00, distanceKm: 9, active: true }
 ];
 
-// 6. ZONAS DE RAIO (KM)
+// 6. ZONAS DE RAIO POR QUILOMETRAGEM (KM)
 const INITIAL_RADIUSES = [
-  { id: 'rad-1', maxKm: 3, fee: 5.00, active: true },
-  { id: 'rad-2', maxKm: 6, fee: 8.00, active: true },
-  { id: 'rad-3', maxKm: 10, fee: 12.00, active: true }
+  { id: 'rad-1', maxKm: 3, fee: 5.00, description: 'Até 3 km (Sagrada Família, Centro, Cândida Câmara...)', active: true },
+  { id: 'rad-2', maxKm: 5, fee: 7.50, description: '3 km a 5 km (Major Prates, Morada do Sol, Ibituruna, Alice Maia...)', active: true },
+  { id: 'rad-3', maxKm: 8, fee: 10.00, description: '5 km a 8 km (Renascença, Maracanã, Independência, Delfino...)', active: true },
+  { id: 'rad-4', maxKm: 12, fee: 14.00, description: '8 km a 12 km (Outras regiões de Montes Claros)', active: true }
 ];
 
 // 7. CUPONS DE DESCONTO
@@ -501,18 +523,54 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [storeSettings, setStoreSettings] = useState(() => {
-    const saved = localStorage.getItem('nuu_store_settings_v2');
-    return saved ? { ...INITIAL_STORE_SETTINGS, ...JSON.parse(saved) } : INITIAL_STORE_SETTINGS;
+    const saved = localStorage.getItem('nuu_store_settings_v3');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.storeAddress && parsed.storeAddress.includes('Montes Claros')) {
+          return { ...INITIAL_STORE_SETTINGS, ...parsed };
+        }
+      } catch (e) {}
+    }
+    const oldV2 = localStorage.getItem('nuu_store_settings_v2');
+    if (oldV2) {
+      try {
+        const parsed = JSON.parse(oldV2);
+        if (parsed.storeAddress && parsed.storeAddress.includes('Montes Claros')) {
+          return { ...INITIAL_STORE_SETTINGS, ...parsed };
+        }
+      } catch (e) {}
+    }
+    return INITIAL_STORE_SETTINGS;
   });
 
   const [deliveryNeighborhoods, setDeliveryNeighborhoods] = useState(() => {
-    const saved = localStorage.getItem('nuu_neighborhoods');
-    return saved ? JSON.parse(saved) : INITIAL_NEIGHBORHOODS;
+    const saved = localStorage.getItem('nuu_neighborhoods_v2');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    const old = localStorage.getItem('nuu_neighborhoods');
+    if (old) {
+      try {
+        const parsed = JSON.parse(old);
+        if (Array.isArray(parsed) && parsed.some(n => n.name === 'Sagrada Família')) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_NEIGHBORHOODS;
   });
 
   const [deliveryRadiuses, setDeliveryRadiuses] = useState(() => {
-    const saved = localStorage.getItem('nuu_radiuses');
-    return saved ? JSON.parse(saved) : INITIAL_RADIUSES;
+    const saved = localStorage.getItem('nuu_radiuses_v2');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_RADIUSES;
   });
 
   const [coupons, setCoupons] = useState(() => {
@@ -588,15 +646,15 @@ export const SystemProvider = ({ children }) => {
   }, [complements]);
 
   useEffect(() => {
-    localStorage.setItem('nuu_store_settings_v2', JSON.stringify(storeSettings));
+    localStorage.setItem('nuu_store_settings_v3', JSON.stringify(storeSettings));
   }, [storeSettings]);
 
   useEffect(() => {
-    localStorage.setItem('nuu_neighborhoods', JSON.stringify(deliveryNeighborhoods));
+    localStorage.setItem('nuu_neighborhoods_v2', JSON.stringify(deliveryNeighborhoods));
   }, [deliveryNeighborhoods]);
 
   useEffect(() => {
-    localStorage.setItem('nuu_radiuses', JSON.stringify(deliveryRadiuses));
+    localStorage.setItem('nuu_radiuses_v2', JSON.stringify(deliveryRadiuses));
   }, [deliveryRadiuses]);
 
   useEffect(() => {
@@ -859,17 +917,64 @@ export const SystemProvider = ({ children }) => {
       if (typeof arg3 === 'number') subtotal = arg3;
     }
 
-    const freeThreshold = Number(storeSettings?.freeDeliveryThreshold) || 65.00;
-    if (subtotal >= freeThreshold) {
-      return { fee: 0, isFree: true, reason: 'Frete Grátis por valor atingido!' };
+    const freeThreshold = Number(storeSettings?.freeDeliveryThreshold) || 70.00;
+    if (freeThreshold > 0 && subtotal >= freeThreshold) {
+      return { fee: 0, isFree: true, reason: `Frete Grátis acima de R$ ${freeThreshold.toFixed(2)}!` };
     }
 
-    if (storeSettings?.deliveryMode === 'neighborhood' || (!distanceKm && neighborhoodName)) {
+    const radiusesList = (deliveryRadiuses && deliveryRadiuses.length > 0)
+      ? deliveryRadiuses
+      : (storeSettings?.deliveryRadius || INITIAL_RADIUSES);
+    const sortedRadiuses = [...radiusesList].sort((a, b) => a.maxKm - b.maxKm);
+
+    // 1. Se foi passada distância explicitamente (via GPS ou seleção de faixa em KM):
+    if (distanceKm !== null && distanceKm !== undefined && !isNaN(distanceKm)) {
+      const numKm = Number(distanceKm);
+      const match = sortedRadiuses.find(r => numKm <= r.maxKm && r.active !== false);
+      if (match) {
+        return { 
+          fee: Number(match.fee) || 0, 
+          isFree: false, 
+          distanceKm: numKm,
+          reason: `Raio até ${match.maxKm} km (${match.description || 'da loja'})` 
+        };
+      }
+      const maxBand = sortedRadiuses[sortedRadiuses.length - 1];
+      if (maxBand) {
+        return { 
+          fee: Number(maxBand.fee) || 14.00, 
+          isFree: false, 
+          distanceKm: numKm,
+          reason: `Acima de ${maxBand.maxKm} km (~${numKm.toFixed(1)} km da loja)` 
+        };
+      }
+    }
+
+    // 2. Se o cliente selecionou um bairro de Montes Claros:
+    if (neighborhoodName) {
       const cleanName = (neighborhoodName || '').trim().toLowerCase();
+      const found = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.active !== false);
       
-      // Procura primeiro nos bairros cadastrados
-      const found = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.active);
-      if (found) return { fee: Number(found.fee) || 0, isFree: false, reason: `Taxa do Bairro ${found.name}` };
+      if (found) {
+        // Se a loja estiver no modo de cálculo por raio e o bairro possuir km mapeado:
+        if (storeSettings?.deliveryMode === 'radius' && found.distanceKm) {
+          const matchRadius = sortedRadiuses.find(r => found.distanceKm <= r.maxKm && r.active !== false);
+          if (matchRadius) {
+            return { 
+              fee: Number(matchRadius.fee) || Number(found.fee) || 0, 
+              isFree: false, 
+              distanceKm: found.distanceKm,
+              reason: `Bairro ${found.name} (~${found.distanceKm} km da loja)` 
+            };
+          }
+        }
+        return { 
+          fee: Number(found.fee) || 0, 
+          isFree: false, 
+          distanceKm: found.distanceKm || null,
+          reason: `Bairro ${found.name}${found.distanceKm ? ` (~${found.distanceKm} km)` : ''}` 
+        };
+      }
 
       // Fallback para storeSettings.deliveryFeesByNeighborhood
       if (storeSettings?.deliveryFeesByNeighborhood) {
@@ -882,16 +987,10 @@ export const SystemProvider = ({ children }) => {
       }
     }
 
-    if (distanceKm !== undefined && distanceKm !== null) {
-      const sortedRadiuses = [...(deliveryRadiuses || [])].sort((a, b) => a.maxKm - b.maxKm);
-      const match = sortedRadiuses.find(r => distanceKm <= r.maxKm && r.active);
-      if (match) {
-        return { fee: Number(match.fee) || 0, isFree: false, reason: `Até ${match.maxKm} km da loja` };
-      }
-    }
-
-    // Se um bairro foi selecionado mas não localizado nas regras, usa 7.00
-    return { fee: 7.00, isFree: false, reason: 'Taxa Padrão' };
+    // 3. Taxa inicial base do primeiro raio (ou R$ 5,00)
+    const baseRadius = sortedRadiuses[0];
+    const defaultFee = baseRadius ? Number(baseRadius.fee) : 5.00;
+    return { fee: defaultFee, isFree: false, reason: 'Taxa Padrão' };
   };
 
   // --- Cupons de Desconto ---

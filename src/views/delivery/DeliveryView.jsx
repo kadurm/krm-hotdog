@@ -765,7 +765,19 @@ export default function DeliveryView({
 
       {/* NOVO: CONTROLES FLUTUANTES PARA MOBILE & DESKTOP */}
       {checkoutStep === 'menu' && (
-        <div className="mobile-floating-header" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 16px' }}>
+        <div 
+          className="mobile-floating-header" 
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px', 
+            padding: '12px 16px',
+            backgroundColor: viewMode === 'grid' ? 'rgba(18, 18, 18, 0.92)' : 'transparent',
+            backdropFilter: viewMode === 'grid' ? 'blur(12px)' : 'none',
+            borderBottom: viewMode === 'grid' ? '1px solid rgba(255, 255, 255, 0.06)' : 'none',
+            transition: 'background-color 0.3s ease, border-color 0.3s ease'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -854,9 +866,10 @@ export default function DeliveryView({
           {/* BARRA DE CATEGORIAS (PILLS HORIZONTAIS) */}
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: '10px',
             overflowX: 'auto',
-            paddingBottom: '4px',
+            paddingBottom: '6px',
+            marginTop: '4px',
             width: '100%',
             scrollbarWidth: 'none'
           }}>
@@ -1149,7 +1162,7 @@ export default function DeliveryView({
             maxWidth: '1240px',
             margin: '0 auto',
             width: '100%',
-            padding: '2rem 1.5rem 6rem 1.5rem',
+            padding: '9.5rem 1.5rem 6rem 1.5rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '3rem'

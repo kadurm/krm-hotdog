@@ -822,10 +822,10 @@ input:focus, select:focus, textarea:focus {
   /* AJUSTES DA VISUALIZAÇÃO EM GRADE (MOBILE) */
   /* ========================================= */
   .grid-view-container {
-    padding: 5.5rem 1rem 2rem 1rem !important; /* Padding no topo desvia do cabeçalho flutuante */
+    padding: 9.5rem 1rem 3rem 1rem !important; /* Espaçamento harmônico para desviar das categorias e cabeçalho */
     display: flex !important;
     flex-direction: column !important; /* Força 1 item por linha no celular */
-    gap: 1rem !important;
+    gap: 1.5rem !important;
   }
 
   .grid-card {
@@ -860,33 +860,22 @@ input:focus, select:focus, textarea:focus {
   .checkout-container {
     padding: 5.5rem 1rem 2rem 1rem !important;
   }
-
-  /* ======================================================== */
-  /* NOVAS CLASSES: Controles Flutuantes (Logo e Carrinho)    */
-  /* ======================================================== */
-  .mobile-floating-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    padding: 1rem 1.5rem;
-    z-index: 100; /* Garante que fique acima da animação */
-    pointer-events: none; /* Deixa o swipe passar através das partes vazias */
-  }
-  
-  /* Reativa os eventos de clique apenas nos botões */
-  .mobile-floating-header > div,
-  .mobile-floating-header > button {
-    pointer-events: auto;
-  }
 }
 
-/* Oculta o cabeçalho flutuante no Desktop (onde o original já funciona) */
-@media (min-width: 769px) {
-  .mobile-floating-header {
-    display: none;
-  }
+/* ======================================================== */
+/* Cabeçalho Flutuante e Barra de Categorias               */
+/* ======================================================== */
+.mobile-floating-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.mobile-floating-header > div,
+.mobile-floating-header > button,
+.mobile-floating-header button {
+  pointer-events: auto;
 }

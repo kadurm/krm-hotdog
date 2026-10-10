@@ -5,6 +5,7 @@ import AdminView from './views/admin/AdminView';
 import AdminLoginView from './views/admin/AdminLoginView';
 import OperationView from './views/operation/OperationView';
 import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield } from 'lucide-react';
+import { VIEW_CONFIG } from './config/viewConfig';
 import './App.css';
 
 function AppContent() {
@@ -23,7 +24,7 @@ function AppContent() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Estados compartilhados com a DeliveryView para a barra superior
-  const [viewMode, setViewMode] = useState('slider');
+  const [viewMode, setViewMode] = useState(VIEW_CONFIG.DEFAULT_VIEW_MODE);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState('menu');
@@ -152,7 +153,7 @@ function AppContent() {
                   </button>
                 );
               })()}
-              {checkoutStep === 'menu' && (
+              {checkoutStep === 'menu' && VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW && (
                 <button 
                   onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
                   style={{ 

@@ -8,6 +8,7 @@ import {
   LayoutGrid, MonitorPlay, Copy, Check, Bike, Store, MessageCircle,
   Tag, Award, AlertCircle, MapPin, Search, Gift, Phone
 } from 'lucide-react';
+import { VIEW_CONFIG } from '../../config/viewConfig';
 
 export default function DeliveryView({
   viewMode: propViewMode,
@@ -32,12 +33,13 @@ export default function DeliveryView({
   } = useSystem();
   
   const [activeSlide, setActiveSlide] = useState(0);
-  const [internalViewMode, setInternalViewMode] = useState('slider');
+  const [internalViewMode, setInternalViewMode] = useState(VIEW_CONFIG.DEFAULT_VIEW_MODE);
   const [internalCart, setInternalCart] = useState([]);
   const [internalIsCartOpen, setInternalIsCartOpen] = useState(false);
   const [internalCheckoutStep, setInternalCheckoutStep] = useState('menu');
 
-  const viewMode = propViewMode !== undefined ? propViewMode : internalViewMode;
+  const rawViewMode = propViewMode !== undefined ? propViewMode : internalViewMode;
+  const viewMode = VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW ? rawViewMode : 'grid';
   const setViewMode = propSetViewMode || setInternalViewMode;
   const cart = propCart !== undefined ? propCart : internalCart;
   const setCart = propSetCart || setInternalCart;
@@ -670,14 +672,16 @@ export default function DeliveryView({
                 </button>
               )}
 
-              {/* Botão de Alternar Slider / Grade */}
-              <button 
-                onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
-                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)', cursor: 'pointer' }}
-                title={viewMode === 'slider' ? 'Visualizar em Grade' : 'Visualizar em Slider'}
-              >
-                {viewMode === 'slider' ? <LayoutGrid size={18} /> : <MonitorPlay size={18} />}
-              </button>
+              {/* Botão de Alternar Slider / Grade (disponível quando VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW = true) */}
+              {VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW && (
+                <button 
+                  onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}
+                  style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)', cursor: 'pointer' }}
+                  title={viewMode === 'slider' ? 'Visualizar em Grade' : 'Visualizar em Slider'}
+                >
+                  {viewMode === 'slider' ? <LayoutGrid size={18} /> : <MonitorPlay size={18} />}
+                </button>
+              )}
               
               {/* Botão Carrinho */}
               <button 

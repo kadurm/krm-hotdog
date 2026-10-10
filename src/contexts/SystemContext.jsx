@@ -842,25 +842,53 @@ export const SystemProvider = ({ children }) => {
   };
 
   // --- Cálculo Dinâmico de Frete (Bairro / Raio / Frete Grátis) ---
-  const calculateDeliveryFee = ({ neighborhoodName, distanceKm, subtotal = 0 }) => {
-    if (subtotal >= storeSettings.freeDeliveryThreshold) {
+  const calculateDeliveryFee = (arg1, arg2, arg3) => {
+    let neighborhoodName = '';
+    let distanceKm = null;
+    let subtotal = 0;
+
+    if (typeof arg1 === 'object' && arg1 !== null) {
+      neighborhoodName = arg1.neighborhoodName || '';
+      distanceKm = arg1.distanceKm !== undefined ? arg1.distanceKm : null;
+      subtotal = Number(arg1.subtotal) || 0;
+    } else {
+      neighborhoodName = typeof arg1 === 'string' ? arg1 : '';
+      if (typeof arg2 === 'number') distanceKm = arg2;
+      if (typeof arg3 === 'number') subtotal = arg3;
+    }
+
+    const freeThreshold = Number(storeSettings?.freeDeliveryThreshold) || 65.00;
+    if (subtotal >= freeThreshold) {
       return { fee: 0, isFree: true, reason: 'Frete Grátis por valor atingido!' };
     }
 
-    if (storeSettings.deliveryMode === 'neighborhood' || (!distanceKm && neighborhoodName)) {
-      const found = deliveryNeighborhoods.find(n => n.name.toLowerCase() === (neighborhoodName || '').toLowerCase() && n.active);
-      if (found) return { fee: found.fee, isFree: false, reason: `Taxa do Bairro ${found.name}` };
-    }
+    if (storeSettings?.deliveryMode === 'neighborhood' || (!distanceKm && neighborhoodName)) {
+      const cleanName = (neighborhoodName || '').trim().toLowerCase();
+      
+      // Procura primeiro nos bairros cadastrados
+      const found = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.active);
+      if (found) return { fee: Number(found.fee) || 0, isFree: false, reason: `Taxa do Bairro ${found.name}` };
 
-    if (distanceKm !== undefined && distanceKm !== null) {
-      const sortedRadiuses = [...deliveryRadiuses].sort((a, b) => a.maxKm - b.maxKm);
-      const match = sortedRadiuses.find(r => distanceKm <= r.maxKm && r.active);
-      if (match) {
-        return { fee: match.fee, isFree: false, reason: `Até ${match.maxKm} km da loja` };
+      // Fallback para storeSettings.deliveryFeesByNeighborhood
+      if (storeSettings?.deliveryFeesByNeighborhood) {
+        const matchKey = Object.keys(storeSettings.deliveryFeesByNeighborhood).find(
+          k => k.trim().toLowerCase() === cleanName
+        );
+        if (matchKey) {
+          return { fee: Number(storeSettings.deliveryFeesByNeighborhood[matchKey]) || 0, isFree: false, reason: `Taxa do Bairro ${matchKey}` };
+        }
       }
     }
 
-    // Padrão fallback
+    if (distanceKm !== undefined && distanceKm !== null) {
+      const sortedRadiuses = [...(deliveryRadiuses || [])].sort((a, b) => a.maxKm - b.maxKm);
+      const match = sortedRadiuses.find(r => distanceKm <= r.maxKm && r.active);
+      if (match) {
+        return { fee: Number(match.fee) || 0, isFree: false, reason: `Até ${match.maxKm} km da loja` };
+      }
+    }
+
+    // Se um bairro foi selecionado mas não localizado nas regras, usa 7.00
     return { fee: 7.00, isFree: false, reason: 'Taxa Padrão' };
   };
 

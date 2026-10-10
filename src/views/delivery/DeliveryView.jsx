@@ -26,6 +26,7 @@ export default function DeliveryView({
     orders, 
     complements = [],
     storeSettings,
+    deliveryNeighborhoods = [],
     validateCoupon,
     lookupCustomer,
     saveCustomer,
@@ -104,6 +105,33 @@ export default function DeliveryView({
     } catch (e) {}
     return null;
   });
+
+  // Sincronização em tempo real do pedido de rastreamento com alterações do chapeiro/admin
+  useEffect(() => {
+    if (activeTrackingOrder?.id && orders?.length > 0) {
+      const liveOrder = orders.find(o => String(o.id) === String(activeTrackingOrder.id));
+      if (liveOrder && liveOrder.status !== activeTrackingOrder.status) {
+        setActiveTrackingOrder(liveOrder);
+      }
+    }
+  }, [orders, activeTrackingOrder?.id, activeTrackingOrder?.status]);
+
+  // Lista consolidada de bairros para entrega
+  const availableNeighborhoods = React.useMemo(() => {
+    if (deliveryNeighborhoods && deliveryNeighborhoods.length > 0) {
+      const activeList = deliveryNeighborhoods.filter(n => n.active !== false);
+      if (activeList.length > 0) {
+        return activeList.map(n => ({ name: n.name, fee: Number(n.fee) || 0 }));
+      }
+    }
+    if (storeSettings?.deliveryFeesByNeighborhood) {
+      return Object.entries(storeSettings.deliveryFeesByNeighborhood).map(([name, fee]) => ({
+        name,
+        fee: Number(fee) || 0
+      }));
+    }
+    return [];
+  }, [deliveryNeighborhoods, storeSettings?.deliveryFeesByNeighborhood]);
 
   // Metadados enriquecidos para as categorias do cardápio
   const CATEGORY_META = {
@@ -324,10 +352,16 @@ export default function DeliveryView({
     setActiveSlide(0);
   }, [selectedCategory]);
 
+  const officialPixKey = storeSettings?.pixKey || 'pix@nuuprensado.com';
+
   const handleCopyPix = () => {
-    navigator.clipboard.writeText('pix@nuuprensado.com');
-    setPixCopied(true);
-    setTimeout(() => setPixCopied(false), 2500);
+    try {
+      navigator.clipboard.writeText(officialPixKey);
+      setPixCopied(true);
+      setTimeout(() => setPixCopied(false), 2500);
+    } catch (e) {
+      console.warn('Erro ao copiar chave pix', e);
+    }
   };
 
   // Navegação do Slider
@@ -441,18 +475,22 @@ export default function DeliveryView({
   // Cálculos de Totais
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   
-  // Taxa de entrega dinâmica por bairro ou padrão
-  const deliveryFee = deliveryType === 'delivery' 
-    ? calculateDeliveryFee(selectedNeighborhood, 0)
-    : 0.00;
+  // Taxa de entrega dinâmica por bairro ou retirada (sempre numérica e segura)
+  const deliveryFeeResult = deliveryType === 'delivery' 
+    ? calculateDeliveryFee({ neighborhoodName: selectedNeighborhood, subtotal: cartTotal })
+    : { fee: 0, isFree: true, reason: 'Retirada no Balcão' };
+
+  const deliveryFee = typeof deliveryFeeResult === 'number'
+    ? deliveryFeeResult
+    : (Number(deliveryFeeResult?.fee) || 0);
 
   // Cálculo de desconto por cupom
   let couponDiscount = 0;
   if (appliedCoupon) {
     if (appliedCoupon.type === 'fixed') {
-      couponDiscount = Math.min(cartTotal, appliedCoupon.discount);
+      couponDiscount = Math.min(cartTotal, appliedCoupon.discount || 0);
     } else if (appliedCoupon.type === 'percent') {
-      couponDiscount = (cartTotal * appliedCoupon.discount) / 100;
+      couponDiscount = (cartTotal * (appliedCoupon.discount || 0)) / 100;
     }
   }
 
@@ -478,7 +516,7 @@ export default function DeliveryView({
     e?.preventDefault();
     const clean = (customerSearchPhone || phone).replace(/\D/g, '');
     if (clean.length < 10) {
-      alert('Digite um número de telefone/WhatsApp válido com DDD.');
+      alert('Digite um número de telefone/WhatsApp válido com DDD (mínimo 10 dígitos).');
       return;
     }
     const found = lookupCustomer(clean);
@@ -505,32 +543,57 @@ export default function DeliveryView({
   // Envio do Pedido
   const handleSubmitOrder = (e) => {
     e.preventDefault();
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      alert('Seu carrinho está vazio. Adicione itens antes de finalizar o pedido!');
+      return;
+    }
+
+    if (!customerName.trim()) {
+      alert('Por favor, informe seu nome para identificação do pedido.');
+      return;
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      alert('Por favor, informe seu número de WhatsApp com DDD (mínimo 10 dígitos, ex: 31988887777).');
+      return;
+    }
+
+    if (deliveryType === 'delivery') {
+      if (!selectedNeighborhood) {
+        alert('Por favor, selecione seu bairro para entrega.');
+        return;
+      }
+      if (!address.trim()) {
+        alert('Por favor, digite seu endereço completo (rua, número, complemento e ponto de referência).');
+        return;
+      }
+    }
 
     const finalPayment = paymentMethod === 'Dinheiro' && changeFor 
       ? `Dinheiro (Troco p/ R$ ${changeFor})` 
       : paymentMethod;
 
     const created = createOrder({
-      customerName, 
-      phone, 
+      customerName: customerName.trim(), 
+      phone: cleanPhone, 
       type: deliveryType, 
-      address: deliveryType === 'delivery' ? address : 'Retirada no Balcão',
+      address: deliveryType === 'delivery' ? address.trim() : 'Retirada no Balcão',
       neighborhood: deliveryType === 'delivery' ? selectedNeighborhood : null,
       paymentMethod: finalPayment,
       changeFor: paymentMethod === 'Dinheiro' && changeFor ? changeFor : null,
       items: cart, 
-      deliveryFee: parseFloat(deliveryFee.toFixed(2)),
-      discount: parseFloat(totalDiscount.toFixed(2)),
+      deliveryFee: parseFloat(Number(deliveryFee).toFixed(2)),
+      discount: parseFloat(Number(totalDiscount).toFixed(2)),
       couponCode: appliedCoupon ? appliedCoupon.code : null,
-      total: parseFloat(grandTotal.toFixed(2))
+      total: parseFloat(Number(grandTotal).toFixed(2))
     });
 
     // Salva ou atualiza a memória do cliente e adiciona selo de fidelidade
     saveCustomer({
-      phone,
-      name: customerName,
-      address: deliveryType === 'delivery' ? address : (identifiedCustomer?.address || ''),
+      phone: cleanPhone,
+      name: customerName.trim(),
+      address: deliveryType === 'delivery' ? address.trim() : (identifiedCustomer?.address || ''),
       neighborhood: deliveryType === 'delivery' ? selectedNeighborhood : (identifiedCustomer?.neighborhood || '')
     });
 
@@ -1388,9 +1451,9 @@ export default function DeliveryView({
                       }}
                     >
                       <option value="">Selecione o seu bairro...</option>
-                      {Object.entries(storeSettings?.deliveryFeesByNeighborhood || {}).map(([bairro, fee]) => (
-                        <option key={bairro} value={bairro}>
-                          {bairro} — R$ {Number(fee).toFixed(2)}
+                      {availableNeighborhoods.map((item) => (
+                        <option key={item.name} value={item.name}>
+                          {item.name} — R$ {item.fee.toFixed(2)}
                         </option>
                       ))}
                     </select>
@@ -1504,7 +1567,7 @@ export default function DeliveryView({
                       </button>
                     </div>
                     <code style={{ fontSize: '0.85rem', color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '5px 8px', borderRadius: '4px', letterSpacing: '0.5px' }}>
-                      pix@nuuprensado.com
+                      {officialPixKey}
                     </code>
                   </div>
                 )}
@@ -1687,7 +1750,7 @@ export default function DeliveryView({
                     </button>
                   </div>
                   <div style={{ fontSize: '0.85rem', color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '6px 10px', borderRadius: '4px', fontFamily: 'monospace' }}>
-                    pix@nuuprensado.com
+                    {officialPixKey}
                   </div>
                 </div>
               )}
@@ -1735,14 +1798,34 @@ export default function DeliveryView({
                 </button>
                 <button 
                   onClick={() => {
-                    const text = `Olá Nuu Prensado! Meu pedido é o #${activeTrackingOrder.id} em nome de ${activeTrackingOrder.customerName}. Gostaria de confirmar o status!`;
-                    window.open(`https://wa.me/5531999999999?text=${encodeURIComponent(text)}`, '_blank');
+                    const itemsSummary = activeTrackingOrder.items?.map(it => {
+                      let line = `• ${it.quantity}x ${it.name}`;
+                      if (it.notes) line += ` (Obs: ${it.notes})`;
+                      return line;
+                    }).join('\n') || '';
+
+                    const text = `*Olá, Nuu Prensado! Acabei de fazer um pedido pelo site!*\n\n` +
+                      `*Pedido:* #${activeTrackingOrder.id}\n` +
+                      `*Cliente:* ${activeTrackingOrder.customerName}\n` +
+                      `*Telefone:* ${activeTrackingOrder.phone || ''}\n` +
+                      `*Modalidade:* ${isPickup ? 'Retirada no Balcão' : 'Delivery'}\n` +
+                      (!isPickup && activeTrackingOrder.address ? `*Endereço:* ${activeTrackingOrder.address}${activeTrackingOrder.neighborhood ? ` (${activeTrackingOrder.neighborhood})` : ''}\n` : '') +
+                      `*Pagamento:* ${activeTrackingOrder.paymentMethod}\n\n` +
+                      `*Itens:*\n${itemsSummary}\n\n` +
+                      (activeTrackingOrder.deliveryFee > 0 ? `*Taxa de Entrega:* R$ ${activeTrackingOrder.deliveryFee.toFixed(2)}\n` : '') +
+                      (activeTrackingOrder.discount > 0 ? `*Desconto:* - R$ ${activeTrackingOrder.discount.toFixed(2)}\n` : '') +
+                      `*TOTAL:* R$ ${activeTrackingOrder.total?.toFixed(2)}\n\n` +
+                      `Poderiam confirmar se receberam meu pedido? Obrigado!`;
+
+                    const storeNumber = (storeSettings?.whatsapp || storeSettings?.phone || '31999999999').replace(/\D/g, '');
+                    const phoneWithDDI = storeNumber.startsWith('55') ? storeNumber : `55${storeNumber}`;
+                    window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
                   }}
                   className="btn-secondary" 
                   style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
                   <MessageCircle size={18} color="#25D366" />
-                  Falar no WhatsApp
+                  Confirmar no WhatsApp
                 </button>
               </div>
             </div>

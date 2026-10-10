@@ -90,7 +90,7 @@ const INITIAL_PRODUCTS = [
   },
   { 
     id: 4, 
-    name: 'Prensado de Pernil', 
+    name: 'Prensado Pernil', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de pernil desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 22.00, 
     image: '/Produtos/Prensado de Pernil.jpeg',
@@ -406,7 +406,7 @@ const INITIAL_QUOTATIONS = [
 export const SystemProvider = ({ children }) => {
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v11');
+    const saved = localStorage.getItem('nuu_products_v12');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -540,7 +540,7 @@ export const SystemProvider = ({ children }) => {
 
   // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
-    localStorage.setItem('nuu_products_v11', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v12', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
@@ -1466,7 +1466,7 @@ export const SystemProvider = ({ children }) => {
     setProducts(INITIAL_PRODUCTS);
     setInventory(INITIAL_INVENTORY);
     setComplements(INITIAL_COMPLEMENTS);
-    localStorage.setItem('nuu_products_v11', JSON.stringify(INITIAL_PRODUCTS));
+    localStorage.setItem('nuu_products_v12', JSON.stringify(INITIAL_PRODUCTS));
     localStorage.setItem('hd_inventory_v5', JSON.stringify(INITIAL_INVENTORY));
     localStorage.setItem('nuu_complements_v5', JSON.stringify(INITIAL_COMPLEMENTS));
   };

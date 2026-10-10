@@ -385,7 +385,8 @@ export default function AdminView({ onLogout, onGoOperation }) {
     if (!compName.trim()) return;
 
     let groupName = 'Adicionais Extras';
-    if (compGroup === 'creamy') groupName = 'Queijo Cremoso';
+    if (compGroup === 'bread') groupName = 'Tipo de Pão';
+    else if (compGroup === 'creamy') groupName = 'Queijo Cremoso';
     else if (compGroup === 'melted') groupName = 'Queijo Fatiado';
     else if (compGroup === 'side') groupName = 'Acompanhamento';
     else if (compGroup === 'other') groupName = 'Outros Complementos';
@@ -2105,7 +2106,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                                 borderRadius: '4px', 
                                 backgroundColor: 'var(--bg-secondary)', 
                                 border: '1px solid var(--border-glass)',
-                                color: comp.group === 'extras' ? '#f59e0b' : comp.group === 'creamy' ? '#60a5fa' : comp.group === 'melted' ? '#fbbf24' : '#a3e635'
+                                color: comp.group === 'extras' ? '#f59e0b' : comp.group === 'bread' ? '#38bdf8' : comp.group === 'creamy' ? '#60a5fa' : comp.group === 'melted' ? '#fbbf24' : '#a3e635'
                               }}>
                                 {comp.groupName || comp.group || comp.category}
                               </span>
@@ -3726,6 +3727,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                       style={{ width: '100%', padding: '10px 12px', fontSize: '0.85rem' }}
                     >
                       <option value="extras">🥓 Adicional Extra (+ R$)</option>
+                      <option value="bread">🥖 Tipo de Pão (Escolha)</option>
                       <option value="creamy">🧀 Queijo Cremoso (Escolha)</option>
                       <option value="melted">🥪 Queijo Fatiado (Escolha)</option>
                       <option value="side">🥗 Acompanhamento (Escolha)</option>

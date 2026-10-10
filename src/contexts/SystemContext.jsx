@@ -64,7 +64,7 @@ const INITIAL_PRODUCTS = [
   },
   { 
     id: 2, 
-    name: 'Prensado Frango', 
+    name: 'Prensado de Frango', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de frango desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 22.00, 
     image: '/Produtos/Prensado de Frango.jpeg',
@@ -88,7 +88,7 @@ const INITIAL_PRODUCTS = [
   },
   { 
     id: 4, 
-    name: 'Prensado Pernil', 
+    name: 'Prensado de Pernil', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de pernil desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 22.00, 
     image: '/Produtos/Prensado de Pernil.jpeg',
@@ -112,7 +112,7 @@ const INITIAL_PRODUCTS = [
   },
   { 
     id: 3, 
-    name: 'Prensado Costela', 
+    name: 'Prensado de Costela', 
     description: 'Pão, 2 salsichas, molho de tomate artesanal, Catupiry / Requeijão / Creme Cheese, 150g de costela desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 25.00, 
     image: '/Produtos/Prensado de Costela.jpeg',
@@ -134,12 +134,56 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 102, quantity: 2 }  // Guardanapos
     ]
   },
-  // --- Bebidas Geladas ---
+  // --- Bebidas Geladas Oficiais ---
+  {
+    id: 5,
+    name: 'Coca-Cola 1 Litro',
+    description: 'Refrigerante Coca-Cola garrafa 1 litro estupidamente gelada.',
+    price: 10.00,
+    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 109, quantity: 1 }]
+  },
   {
     id: 6,
+    name: 'Coca-Cola 1 Litro Zero',
+    description: 'Refrigerante Coca-Cola Zero açúcar garrafa 1 litro gelada.',
+    price: 10.00,
+    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 110, quantity: 1 }]
+  },
+  {
+    id: 7,
+    name: 'Mate Couro 1 Litro',
+    description: 'O autêntico refrigerante mineiro Mate Couro garrafa 1 litro bem gelado.',
+    price: 8.50,
+    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 111, quantity: 1 }]
+  },
+  {
+    id: 8,
+    name: 'Guaraná 1 Litro',
+    description: 'Refrigerante Guaraná garrafa 1 litro geladinho.',
+    price: 8.50,
+    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 112, quantity: 1 }]
+  },
+  {
+    id: 9,
     name: 'Coca-Cola Lata 350ml',
-    description: 'Refrigerante Coca-Cola original estupidamente gelada.',
-    price: 6.00,
+    description: 'Refrigerante Coca-Cola em lata 350ml bem gelada.',
+    price: 6.50,
     image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60',
     active: true,
     category: 'bebidas',
@@ -147,10 +191,21 @@ const INITIAL_PRODUCTS = [
     recipe: [{ ingredientId: 104, quantity: 1 }]
   },
   {
-    id: 7,
+    id: 10,
+    name: 'Coca-Cola Zero Lata 350ml',
+    description: 'Refrigerante Coca-Cola Zero açúcar em lata 350ml gelada.',
+    price: 6.50,
+    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    active: true,
+    category: 'bebidas',
+    hasCustomOptions: false,
+    recipe: [{ ingredientId: 108, quantity: 1 }]
+  },
+  {
+    id: 11,
     name: 'Guaraná Antarctica Lata 350ml',
-    description: 'Refrigerante Guaraná Antarctica bem gelado.',
-    price: 6.00,
+    description: 'Refrigerante Guaraná Antarctica em lata 350ml bem gelado.',
+    price: 6.50,
     image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&auto=format&fit=crop&q=60',
     active: true,
     category: 'bebidas',
@@ -158,54 +213,35 @@ const INITIAL_PRODUCTS = [
     recipe: [{ ingredientId: 105, quantity: 1 }]
   },
   {
-    id: 8,
-    name: 'Coca-Cola 2 Litros',
-    description: 'Garrafa pet 2 litros para toda a família.',
-    price: 14.00,
-    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    id: 12,
+    name: 'Fanta Laranja Lata 350ml',
+    description: 'Refrigerante Fanta Laranja em lata 350ml bem gelada.',
+    price: 6.50,
+    image: 'https://images.unsplash.com/photo-1624517452488-04869289c4ca?w=500&auto=format&fit=crop&q=60',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
-    recipe: []
+    recipe: [{ ingredientId: 106, quantity: 1 }]
   },
   {
-    id: 9,
-    name: 'Suco Natural de Laranja 500ml',
-    description: 'Suco de laranja natural feito na hora, 100% fruta.',
-    price: 9.00,
-    image: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=500&auto=format&fit=crop&q=60',
+    id: 13,
+    name: 'Sprite Lata 350ml',
+    description: 'Refrigerante Sprite em lata 350ml bem gelado.',
+    price: 6.50,
+    image: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=500&auto=format&fit=crop&q=60',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
-    recipe: [{ ingredientId: 4, quantity: 4 }] // 4 laranjas
-  },
-  {
-    id: 10,
-    name: 'Água Mineral sem Gás 500ml',
-    description: 'Água mineral natural sem gás gelada.',
-    price: 4.00,
-    image: 'https://images.unsplash.com/photo-1559839914-17aae19cec71?w=500&auto=format&fit=crop&q=60',
-    active: true,
-    category: 'bebidas',
-    hasCustomOptions: false,
-    recipe: []
-  },
-  // --- Acompanhamentos & Porções ---
-  {
-    id: 11,
-    name: 'Batata Frita Canoa Especial',
-    description: 'Porção de batata canoa crocante com toque de páprica e molho especial da casa.',
-    price: 15.00,
-    image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=60',
-    active: true,
-    category: 'acompanhamentos',
-    hasCustomOptions: false,
-    recipe: [{ ingredientId: 6, quantity: 1 }]
+    recipe: [{ ingredientId: 107, quantity: 1 }]
   }
 ];
 
 // 2. COMPLEMENTOS E ADICIONAIS
 const INITIAL_COMPLEMENTS = [
+  // --- Opções Inclusas de Tipo de Pão (Escolha 1) ---
+  { id: 'bread-3-queijos', name: 'Pão 3 Queijos', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true },
+  { id: 'bread-parmesao', name: 'Pão Queijo Parmesão', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true },
+
   // --- Opções Inclusas de Queijo Cremoso (Escolha 1) ---
   { id: 'creamy-catupiry', name: 'Catupiry Original', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
   { id: 'creamy-requeijao', name: 'Requeijão Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
@@ -234,7 +270,8 @@ const INITIAL_COMPLEMENTS = [
 // 3. ESTOQUE & EMBALAGENS (Ficha Técnica e Insumos)
 const INITIAL_INVENTORY = [
   // --- Insumos Base de Lanches ---
-  { id: 1, name: 'Pão de Hot Dog', quantity: 80, minQuantity: 20, unit: 'un', unitCost: 0.80 },
+  { id: 1, name: 'Pão 3 Queijos', quantity: 60, minQuantity: 20, unit: 'un', unitCost: 1.00 },
+  { id: 21, name: 'Pão Queijo Parmesão', quantity: 60, minQuantity: 20, unit: 'un', unitCost: 1.00 },
   { id: 2, name: 'Salsicha Premium', quantity: 150, minQuantity: 30, unit: 'un', unitCost: 0.60 },
   { id: 3, name: 'Bacon Fatiado / Crocante', quantity: 50, minQuantity: 15, unit: 'porção', unitCost: 1.50 },
   { id: 7, name: 'Frango Desfiado Temperado (150g)', quantity: 30, minQuantity: 10, unit: 'porção (150g)', unitCost: 3.50 },
@@ -252,17 +289,19 @@ const INITIAL_INVENTORY = [
   { id: 19, name: 'Maionese Temperada', quantity: 40, minQuantity: 10, unit: 'porção', unitCost: 0.50 },
   { id: 20, name: 'Molho Rosé Especial', quantity: 40, minQuantity: 10, unit: 'porção', unitCost: 0.50 },
   
-  // --- Bebidas e Acompanhamentos ---
-  { id: 4, name: 'Laranja (Fruta)', quantity: 80, minQuantity: 25, unit: 'un', unitCost: 0.50 },
-  { id: 5, name: 'Polpa Verde Detox', quantity: 12, minQuantity: 5, unit: 'un', unitCost: 2.50 },
-  { id: 6, name: 'Batata Canoa Congelada', quantity: 20, minQuantity: 6, unit: 'porção', unitCost: 3.00 },
-  
   // --- Embalagens Automáticas e Bebidas Prontas ---
   { id: 101, name: 'Embalagem Térmica Prensado', quantity: 150, minQuantity: 40, unit: 'un', unitCost: 0.45 },
   { id: 102, name: 'Guardanapo Sachê', quantity: 300, minQuantity: 100, unit: 'un', unitCost: 0.05 },
   { id: 103, name: 'Sacola Delivery Kraft', quantity: 80, minQuantity: 25, unit: 'un', unitCost: 0.80 },
-  { id: 104, name: 'Lata Coca-Cola 350ml', quantity: 48, minQuantity: 12, unit: 'un', unitCost: 3.00 },
-  { id: 105, name: 'Lata Guaraná 350ml', quantity: 36, minQuantity: 12, unit: 'un', unitCost: 2.80 }
+  { id: 104, name: 'Lata Coca-Cola 350ml', quantity: 48, minQuantity: 12, unit: 'un', unitCost: 3.20 },
+  { id: 105, name: 'Lata Guaraná 350ml', quantity: 36, minQuantity: 12, unit: 'un', unitCost: 3.00 },
+  { id: 106, name: 'Lata Fanta Laranja 350ml', quantity: 24, minQuantity: 10, unit: 'un', unitCost: 3.00 },
+  { id: 107, name: 'Lata Sprite 350ml', quantity: 24, minQuantity: 10, unit: 'un', unitCost: 3.00 },
+  { id: 108, name: 'Lata Coca-Cola Zero 350ml', quantity: 24, minQuantity: 10, unit: 'un', unitCost: 3.20 },
+  { id: 109, name: 'Garrafa Coca-Cola 1 Litro', quantity: 20, minQuantity: 6, unit: 'un', unitCost: 5.50 },
+  { id: 110, name: 'Garrafa Coca-Cola 1 Litro Zero', quantity: 15, minQuantity: 5, unit: 'un', unitCost: 5.50 },
+  { id: 111, name: 'Garrafa Mate Couro 1 Litro', quantity: 20, minQuantity: 6, unit: 'un', unitCost: 4.50 },
+  { id: 112, name: 'Garrafa Guaraná 1 Litro', quantity: 20, minQuantity: 6, unit: 'un', unitCost: 4.50 }
 ];
 
 // 4. CONFIGURAÇÕES DA LOJA, HORÁRIOS, TAXAS E FIDELIDADE
@@ -365,7 +404,7 @@ const INITIAL_QUOTATIONS = [
 export const SystemProvider = ({ children }) => {
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v10');
+    const saved = localStorage.getItem('nuu_products_v11');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -380,7 +419,7 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [inventory, setInventory] = useState(() => {
-    const saved = localStorage.getItem('hd_inventory_v4');
+    const saved = localStorage.getItem('hd_inventory_v5');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -436,7 +475,7 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [complements, setComplements] = useState(() => {
-    const saved = localStorage.getItem('nuu_complements_v4');
+    const saved = localStorage.getItem('nuu_complements_v5');
     return saved ? JSON.parse(saved) : INITIAL_COMPLEMENTS;
   });
 
@@ -499,11 +538,11 @@ export const SystemProvider = ({ children }) => {
 
   // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
-    localStorage.setItem('nuu_products_v10', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v11', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('hd_inventory_v4', JSON.stringify(inventory));
+    localStorage.setItem('hd_inventory_v5', JSON.stringify(inventory));
   }, [inventory]);
 
   useEffect(() => {
@@ -523,7 +562,7 @@ export const SystemProvider = ({ children }) => {
   }, [quotations]);
 
   useEffect(() => {
-    localStorage.setItem('nuu_complements_v4', JSON.stringify(complements));
+    localStorage.setItem('nuu_complements_v5', JSON.stringify(complements));
   }, [complements]);
 
   useEffect(() => {
@@ -1362,9 +1401,9 @@ export const SystemProvider = ({ children }) => {
     setProducts(INITIAL_PRODUCTS);
     setInventory(INITIAL_INVENTORY);
     setComplements(INITIAL_COMPLEMENTS);
-    localStorage.setItem('nuu_products_v10', JSON.stringify(INITIAL_PRODUCTS));
-    localStorage.setItem('hd_inventory_v4', JSON.stringify(INITIAL_INVENTORY));
-    localStorage.setItem('nuu_complements_v4', JSON.stringify(INITIAL_COMPLEMENTS));
+    localStorage.setItem('nuu_products_v11', JSON.stringify(INITIAL_PRODUCTS));
+    localStorage.setItem('hd_inventory_v5', JSON.stringify(INITIAL_INVENTORY));
+    localStorage.setItem('nuu_complements_v5', JSON.stringify(INITIAL_COMPLEMENTS));
   };
 
   return (

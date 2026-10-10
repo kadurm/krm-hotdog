@@ -57,12 +57,14 @@ export default function DeliveryView({
   const [itemNotes, setItemNotes] = useState('');
   
   // Agrupamento dinâmico de complementos e adicionais
+  const breadOptions = complements.filter(c => c.group === 'bread');
   const creamyOptions = complements.filter(c => c.group === 'creamy');
   const meltedOptions = complements.filter(c => c.group === 'melted');
   const sideOptions = complements.filter(c => c.group === 'side');
   const extraOptions = complements.filter(c => c.category === 'extra' || c.group === 'extras');
 
   // Estados dinâmicos de personalização do lanche
+  const [selectedBread, setSelectedBread] = useState('Pão 3 Queijos');
   const [selectedCreamy, setSelectedCreamy] = useState('Catupiry');
   const [selectedMelted, setSelectedMelted] = useState('Mussarela');
   const [selectedSide, setSelectedSide] = useState(false);
@@ -151,7 +153,7 @@ export default function DeliveryView({
     { id: 'prensados', label: 'Lanches Prensados', shortLabel: 'Prensados', icon: '🌭' },
     { id: 'bebidas', label: 'Bebidas Geladas', shortLabel: 'Bebidas', icon: '🥤' },
     { id: 'acompanhamentos', label: 'Acompanhamentos', shortLabel: 'Acompanhamentos', icon: '🍟' },
-  ];
+  ].filter(c => c.id === 'todos' || products.some(p => p.category === c.id));
 
   // Ordenação lógica dos produtos por categoria (prensados -> bebidas -> acompanhamentos)
   const orderedProducts = [...products].sort((a, b) => {
@@ -377,6 +379,9 @@ export default function DeliveryView({
     setSelectedExtras([]);
     setSelectedSide(false);
 
+    const activeBread = breadOptions.find(b => b.active);
+    setSelectedBread(activeBread ? activeBread.name : (breadOptions[0]?.name || 'Pão 3 Queijos'));
+
     const activeCreamy = creamyOptions.find(c => c.active);
     setSelectedCreamy(activeCreamy ? activeCreamy.name : (creamyOptions[0]?.name || 'Catupiry'));
 
@@ -389,6 +394,7 @@ export default function DeliveryView({
 
     let nameDetails = [];
     if (selectedProduct.hasCustomOptions) {
+      if (selectedBread) nameDetails.push(selectedBread);
       if (selectedCreamy) nameDetails.push(selectedCreamy);
       if (selectedMelted) nameDetails.push(selectedMelted);
       if (selectedSide) {
@@ -1777,6 +1783,46 @@ export default function DeliveryView({
                     Personalize seu Prensado:
                   </h4>
                   
+                  {/* Tipo de Pão */}
+                  {breadOptions.length > 0 && (
+                    <div style={{ marginBottom: '14px' }}>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tipo de Pão:</strong>
+                      <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                        {breadOptions.map(opt => {
+                          const isPaused = !opt.active;
+                          return (
+                            <label 
+                              key={opt.id} 
+                              style={{ 
+                                cursor: isPaused ? 'not-allowed' : 'pointer', 
+                                fontSize: '0.9rem', 
+                                color: isPaused ? 'var(--text-muted)' : '#fff',
+                                opacity: isPaused ? 0.5 : 1,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                backgroundColor: selectedBread === opt.name && !isPaused ? 'rgba(255,255,255,0.06)' : 'transparent',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: selectedBread === opt.name && !isPaused ? '1px solid var(--border-glass)' : '1px solid transparent'
+                              }}
+                            >
+                              <input 
+                                type="radio" 
+                                name="bread" 
+                                disabled={isPaused}
+                                checked={selectedBread === opt.name && !isPaused} 
+                                onChange={() => !isPaused && setSelectedBread(opt.name)} 
+                                style={{ accentColor: 'var(--color-brand)' }} 
+                              />
+                              <span>{opt.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Queijo Cremoso */}
                   <div style={{ marginBottom: '14px' }}>
                     <strong style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Queijo Cremoso:</strong>

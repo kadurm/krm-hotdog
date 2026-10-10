@@ -1386,7 +1386,7 @@ export default function DeliveryView({
                             overflow: 'hidden', 
                             marginBottom: '1.25rem',
                             position: 'relative',
-                            backgroundColor: '#0a0a0a',
+                            backgroundColor: 'transparent',
                             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
                             border: '1px solid rgba(255,255,255,0.08)',
                             cursor: product.image ? 'pointer' : 'default'
@@ -1401,11 +1401,17 @@ export default function DeliveryView({
                                 loading="lazy"
                                 style={{ 
                                   width: '100%', 
+                                  minWidth: '100%',
+                                  maxWidth: '100%',
                                   height: '100%', 
+                                  minHeight: '100%',
+                                  maxHeight: '100%',
                                   objectFit: 'cover', 
                                   objectPosition: 'center', 
                                   display: 'block',
-                                  padding: '0px',
+                                  margin: 0,
+                                  padding: 0,
+                                  border: 'none',
                                   filter: isPaused ? 'grayscale(80%)' : 'none',
                                   transition: 'transform 0.4s ease'
                                 }} 

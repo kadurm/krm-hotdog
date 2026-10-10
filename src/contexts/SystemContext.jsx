@@ -41,9 +41,9 @@ const INITIAL_PRODUCTS = [
   // --- Prensados Oficiais ---
   { 
     id: 1, 
-    name: 'Prensadinho', 
-    description: 'Pão, molho de tomate artesanal, 2 salsichas, catupiry/cheddar, mussarela, bacon, milho, batata e molhos da casa.', 
-    price: 18.00, 
+    name: 'Prensadin', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, mussarela, bacon, milho, batata e molhos da casa.', 
+    price: 17.50, 
     image: '/images/prensadinho.png',
     active: true, 
     category: 'prensados', 
@@ -52,7 +52,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 1, quantity: 1 },  // Pão
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
       { ingredientId: 10, quantity: 1 }, // Mussarela
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 13, quantity: 1 }, // Milho
@@ -64,9 +64,9 @@ const INITIAL_PRODUCTS = [
   },
   { 
     id: 2, 
-    name: 'Prensado de Frango', 
-    description: 'Pão, molho de tomate artesanal, 2 salsichas, catupiry/cheddar, 150g de frango desfiado, queijo/cheddar, bacon, batata, milho e molhos da casa.', 
-    price: 20.00, 
+    name: 'Prensado Frango', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de frango desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    price: 22.00, 
     image: '/Produtos/Prensadão de Frango.jpeg',
     active: true, 
     category: 'prensados', 
@@ -76,7 +76,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 7, quantity: 1 },  // 150g Frango desfiado
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 14, quantity: 1 }, // Batata
@@ -88,9 +88,9 @@ const INITIAL_PRODUCTS = [
   },
   { 
     id: 4, 
-    name: 'Prensado de Pernil', 
-    description: 'Pão, molho de tomate artesanal, 2 salsichas, catupiry/cheddar, 150g de pernil desfiado, queijo/cheddar, bacon, batata, milho e molhos da casa.', 
-    price: 24.00, 
+    name: 'Prensado Pernil', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de pernil desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    price: 22.00, 
     image: '/Produtos/Prensadão de Pernil.jpeg',
     active: true, 
     category: 'prensados', 
@@ -100,7 +100,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 8, quantity: 1 },  // 150g Pernil desfiado
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 14, quantity: 1 }, // Batata
@@ -112,9 +112,9 @@ const INITIAL_PRODUCTS = [
   },
   { 
     id: 3, 
-    name: 'Prensado de Costela', 
-    description: 'Pão, 2 salsichas, molho de tomate artesanal, catupiry/cheddar, 150g de costela desfiada, queijo/cheddar, bacon, batata, milho e molhos da casa.', 
-    price: 26.00, 
+    name: 'Prensado Costela', 
+    description: 'Pão, 2 salsichas, molho de tomate artesanal, Catupiry / Requeijão / Creme Cheese, 150g de costela desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    price: 25.00, 
     image: '/Produtos/Prensadão de Costela.jpeg',
     active: true, 
     category: 'prensados', 
@@ -124,7 +124,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 9, quantity: 1 },  // 150g Costela desfiada
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 14, quantity: 1 }, // Batata
@@ -206,14 +206,29 @@ const INITIAL_PRODUCTS = [
 
 // 2. COMPLEMENTOS E ADICIONAIS
 const INITIAL_COMPLEMENTS = [
-  { id: 'extra-bacon', name: 'Extra Bacon Crocante', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
-  { id: 'extra-cheese', name: 'Extra Queijo Derretido', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 3.00, active: true },
+  // --- Opções Inclusas de Queijo Cremoso (Escolha 1) ---
   { id: 'creamy-catupiry', name: 'Catupiry Original', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
   { id: 'creamy-requeijao', name: 'Requeijão Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
-  { id: 'creamy-cheddar', name: 'Cheddar Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
+  { id: 'creamy-creamcheese', name: 'Cream Cheese', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
+
+  // --- Opções Inclusas de Queijo Fatiado (Escolha 1) ---
   { id: 'melted-mussarela', name: 'Queijo Mussarela', category: 'complement', group: 'melted', groupName: 'Queijo Fatiado', price: 0, active: true },
   { id: 'melted-cheddar', name: 'Queijo Cheddar', category: 'complement', group: 'melted', groupName: 'Queijo Fatiado', price: 0, active: true },
-  { id: 'side-vinagrete', name: 'Vinagrete Artesanal', category: 'complement', group: 'side', groupName: 'Acompanhamento', price: 0, active: true }
+
+  // --- Acompanhamento Opcional ---
+  { id: 'side-vinagrete', name: 'Vinagrete Artesanal', category: 'complement', group: 'side', groupName: 'Acompanhamento', price: 0, active: true },
+
+  // --- Acréscimos / Adicionais Pagos ---
+  { id: 'extra-bacon', name: 'Bacon', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
+  { id: 'extra-frango', name: 'Frango', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
+  { id: 'extra-costela', name: 'Costela', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 6.00, active: true },
+  { id: 'extra-pernil', name: 'Pernil', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
+  { id: 'extra-maionese-bacon', name: 'Maionese Bacon', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 2.50, active: true },
+  { id: 'extra-maionese-temperada', name: 'Maionese Temperada', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 1.50, active: true },
+  { id: 'extra-molho-rose', name: 'Molho Rosé', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 1.50, active: true },
+  { id: 'extra-catupiry', name: 'Catupiry', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 3.50, active: true },
+  { id: 'extra-cheddar', name: 'Cheddar', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 3.50, active: true },
+  { id: 'extra-cream-cheese', name: 'Cream Cheese', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 3.50, active: true }
 ];
 
 // 3. ESTOQUE & EMBALAGENS (Ficha Técnica e Insumos)
@@ -228,10 +243,14 @@ const INITIAL_INVENTORY = [
   { id: 10, name: 'Queijo Mussarela Fatiado', quantity: 80, minQuantity: 20, unit: 'porção', unitCost: 1.20 },
   { id: 11, name: 'Catupiry / Requeijão Cremoso', quantity: 60, minQuantity: 15, unit: 'porção', unitCost: 1.00 },
   { id: 12, name: 'Queijo Cheddar Cremoso/Fatiado', quantity: 60, minQuantity: 15, unit: 'porção', unitCost: 1.00 },
+  { id: 17, name: 'Cream Cheese Cremoso', quantity: 50, minQuantity: 15, unit: 'porção', unitCost: 1.20 },
   { id: 13, name: 'Milho Verde em Conserva', quantity: 60, minQuantity: 15, unit: 'porção', unitCost: 0.40 },
   { id: 14, name: 'Batata Palha Crocante', quantity: 60, minQuantity: 15, unit: 'porção', unitCost: 0.50 },
   { id: 15, name: 'Molho de Tomate Artesanal', quantity: 60, minQuantity: 15, unit: 'porção', unitCost: 0.60 },
   { id: 16, name: 'Molhos Especiais da Casa', quantity: 80, minQuantity: 20, unit: 'porção', unitCost: 0.50 },
+  { id: 18, name: 'Maionese de Bacon', quantity: 40, minQuantity: 10, unit: 'porção', unitCost: 0.80 },
+  { id: 19, name: 'Maionese Temperada', quantity: 40, minQuantity: 10, unit: 'porção', unitCost: 0.50 },
+  { id: 20, name: 'Molho Rosé Especial', quantity: 40, minQuantity: 10, unit: 'porção', unitCost: 0.50 },
   
   // --- Bebidas e Acompanhamentos ---
   { id: 4, name: 'Laranja (Fruta)', quantity: 80, minQuantity: 25, unit: 'un', unitCost: 0.50 },
@@ -346,7 +365,7 @@ const INITIAL_QUOTATIONS = [
 export const SystemProvider = ({ children }) => {
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v7');
+    const saved = localStorage.getItem('nuu_products_v8');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -361,7 +380,7 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [inventory, setInventory] = useState(() => {
-    const saved = localStorage.getItem('hd_inventory_v3');
+    const saved = localStorage.getItem('hd_inventory_v4');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -417,7 +436,7 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [complements, setComplements] = useState(() => {
-    const saved = localStorage.getItem('nuu_complements_v3');
+    const saved = localStorage.getItem('nuu_complements_v4');
     return saved ? JSON.parse(saved) : INITIAL_COMPLEMENTS;
   });
 
@@ -480,11 +499,11 @@ export const SystemProvider = ({ children }) => {
 
   // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
-    localStorage.setItem('nuu_products_v7', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v8', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('hd_inventory_v3', JSON.stringify(inventory));
+    localStorage.setItem('hd_inventory_v4', JSON.stringify(inventory));
   }, [inventory]);
 
   useEffect(() => {
@@ -504,7 +523,7 @@ export const SystemProvider = ({ children }) => {
   }, [quotations]);
 
   useEffect(() => {
-    localStorage.setItem('nuu_complements_v3', JSON.stringify(complements));
+    localStorage.setItem('nuu_complements_v4', JSON.stringify(complements));
   }, [complements]);
 
   useEffect(() => {
@@ -1343,9 +1362,9 @@ export const SystemProvider = ({ children }) => {
     setProducts(INITIAL_PRODUCTS);
     setInventory(INITIAL_INVENTORY);
     setComplements(INITIAL_COMPLEMENTS);
-    localStorage.setItem('nuu_products_v7', JSON.stringify(INITIAL_PRODUCTS));
-    localStorage.setItem('hd_inventory_v3', JSON.stringify(INITIAL_INVENTORY));
-    localStorage.setItem('nuu_complements_v3', JSON.stringify(INITIAL_COMPLEMENTS));
+    localStorage.setItem('nuu_products_v8', JSON.stringify(INITIAL_PRODUCTS));
+    localStorage.setItem('hd_inventory_v4', JSON.stringify(INITIAL_INVENTORY));
+    localStorage.setItem('nuu_complements_v4', JSON.stringify(INITIAL_COMPLEMENTS));
   };
 
   return (

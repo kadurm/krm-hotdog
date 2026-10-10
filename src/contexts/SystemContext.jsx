@@ -8,6 +8,23 @@ import {
   mapAppOrderToSupabase,
   SUPABASE_SCHEMA_SQL 
 } from '../services/supabase';
+import { 
+  getFirestoreDb, 
+  isFirebaseConfigured, 
+  saveFirebaseConfig,
+  FIRESTORE_RULES_GUIDE 
+} from '../services/firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  limit 
+} from 'firebase/firestore';
 
 // Campainha sonora para novos pedidos na cozinha
 export const playNotificationChime = () => {
@@ -534,6 +551,7 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [supabaseActive, setSupabaseActive] = useState(isSupabaseConfigured);
+  const [firebaseActive, setFirebaseActive] = useState(isFirebaseConfigured);
 
   // Turno de caixa aberto ativo (se houver)
   const activeShift = cashShifts.find(s => s.status === 'open') || null;
@@ -709,11 +727,75 @@ export const SystemProvider = ({ children }) => {
     };
   }, [supabaseActive]);
 
+  // Sincronização em tempo real com Cloud Firestore (Firebase)
+  useEffect(() => {
+    const db = getFirestoreDb();
+    if (!db) return;
+
+    let unsubscribe = null;
+    try {
+      const q = query(collection(db, 'orders'), orderBy('date', 'desc'), limit(100));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const remoteOrders = [];
+        let hasNew = false;
+        
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            hasNew = true;
+          }
+        });
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          remoteOrders.push({
+            ...data,
+            id: String(docSnap.id)
+          });
+        });
+
+        if (remoteOrders.length > 0) {
+          setOrders(prev => {
+            const map = new Map(prev.map(o => [String(o.id), o]));
+            remoteOrders.forEach(rem => {
+              if (!map.has(String(rem.id))) {
+                map.set(String(rem.id), rem);
+              } else {
+                map.set(String(rem.id), { ...map.get(String(rem.id)), ...rem });
+              }
+            });
+            const merged = Array.from(map.values());
+            merged.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            return merged;
+          });
+          if (hasNew) {
+            playNotificationChime();
+          }
+        }
+      }, (err) => {
+        console.warn('Erro no listener do Firebase Firestore:', err);
+      });
+    } catch (err) {
+      console.warn('Exceção ao conectar Firestore:', err);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [firebaseActive]);
+
   // --- Função para Salvar/Conectar Supabase ---
   const saveSupabaseConfig = (url, key) => {
     saveSupabaseCredentials(url, key);
     const configured = Boolean(url && key);
     setSupabaseActive(configured);
+    return configured;
+  };
+
+  // --- Função para Salvar/Conectar Firebase ---
+  const handleSaveFirebaseConfig = (config) => {
+    saveFirebaseConfig(config);
+    const configured = isFirebaseConfigured();
+    setFirebaseActive(configured);
     return configured;
   };
 
@@ -885,6 +967,12 @@ export const SystemProvider = ({ children }) => {
     if (supabase) {
       try {
         supabase.from('orders').update({ motoboy_id: motoboyId }).eq('id', orderId).then();
+      } catch (err) {}
+    }
+    const db = getFirestoreDb();
+    if (db) {
+      try {
+        updateDoc(doc(db, 'orders', String(orderId)), { motoboyId }).catch(() => {});
       } catch (err) {}
     }
   };
@@ -1191,6 +1279,19 @@ export const SystemProvider = ({ children }) => {
       }
     }
 
+    // Salva no Firebase Firestore se configurado
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb) {
+      try {
+        setDoc(doc(firestoreDb, 'orders', String(newOrder.id)), {
+          ...newOrder,
+          updatedAt: new Date().toISOString()
+        }).catch(err => console.warn('Firebase order insert error:', err));
+      } catch (err) {
+        console.warn('Firebase sync catch:', err);
+      }
+    }
+
     // Dispara alerta sonoro e broadcast
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -1284,6 +1385,20 @@ export const SystemProvider = ({ children }) => {
       } catch (err) {}
     }
 
+    // Firebase update se configurado
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb) {
+      try {
+        const fbUpdate = { 
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        };
+        if (newStatus === 'shipping') fbUpdate.shippedAt = new Date().toISOString();
+        if (newStatus === 'delivered') fbUpdate.deliveredAt = new Date().toISOString();
+        updateDoc(doc(firestoreDb, 'orders', String(orderId)), fbUpdate).catch(() => {});
+      } catch (err) {}
+    }
+
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const ch = new BroadcastChannel('nuu_system_channel');
@@ -1303,6 +1418,12 @@ export const SystemProvider = ({ children }) => {
     if (supabase) {
       try {
         supabase.from('orders').delete().eq('id', orderId).then();
+      } catch (err) {}
+    }
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb) {
+      try {
+        deleteDoc(doc(firestoreDb, 'orders', String(orderId))).catch(() => {});
       } catch (err) {}
     }
   };
@@ -1499,6 +1620,9 @@ export const SystemProvider = ({ children }) => {
       supabaseActive,
       SUPABASE_SCHEMA_SQL,
       saveSupabaseConfig,
+      firebaseActive,
+      FIRESTORE_RULES_GUIDE,
+      saveFirebaseConfig: handleSaveFirebaseConfig,
       isStoreOpenNow,
       updateStoreSettings,
       calculateDeliveryFee,

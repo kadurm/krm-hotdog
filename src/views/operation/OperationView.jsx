@@ -5,12 +5,14 @@ import ThermalPrintReceipt from '../../components/ThermalPrintReceipt';
 import CashShiftModal from '../../components/CashShiftModal';
 import QuickOrderModal from '../../components/QuickOrderModal';
 import SupabaseConfigModal from '../../components/SupabaseConfigModal';
+import FirebaseConfigModal from '../../components/FirebaseConfigModal';
 import { isSupabaseConfigured } from '../../services/supabase';
+import { isFirebaseConfigured } from '../../services/firebase';
 import { 
   ChefHat, Bike, DollarSign, PlusCircle, Printer, Clock, 
   Phone, MapPin, CheckCircle2, AlertTriangle, Volume2, VolumeX, 
   LogOut, User, Lock, Store, ShoppingBag, ArrowRight, Shield, 
-  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database
+  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database, Flame
 } from 'lucide-react';
 
 export default function OperationView({ onOpenAdmin, onGoDelivery }) {
@@ -41,6 +43,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState(null);
 
   // Estados de identificação / login do operador com senha
@@ -622,6 +625,30 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
           >
             <Database size={13} />
             <span>{isSupabaseConfigured() ? 'Supabase: Nuvem' : 'Supabase: Local'}</span>
+          </button>
+
+          {/* Status da Sincronização Firebase */}
+          <button
+            type="button"
+            onClick={() => setIsFirebaseModalOpen(true)}
+            title="Conexão com Banco de Dados Firebase Cloud Firestore"
+            style={{
+              padding: '6px 12px',
+              borderRadius: '99px',
+              border: '1px solid',
+              backgroundColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.15)' : 'rgba(255,160,0,0.06)',
+              borderColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.45)' : 'rgba(255,255,255,0.12)',
+              color: isFirebaseConfigured() ? '#ffa000' : '#d4d4d8',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Flame size={13} />
+            <span>{isFirebaseConfigured() ? 'Firebase: Conectado' : 'Firebase: Configurar'}</span>
           </button>
 
           {/* Controle de Campainha */}
@@ -1486,6 +1513,11 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
       {/* MODAL DE CONFIGURAÇÃO DO SUPABASE */}
       {isSupabaseModalOpen && (
         <SupabaseConfigModal onClose={() => setIsSupabaseModalOpen(false)} />
+      )}
+
+      {/* MODAL DE CONFIGURAÇÃO DO FIREBASE */}
+      {isFirebaseModalOpen && (
+        <FirebaseConfigModal onClose={() => setIsFirebaseModalOpen(false)} />
       )}
 
     </div>

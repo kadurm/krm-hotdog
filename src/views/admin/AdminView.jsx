@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useSystem, playNotificationChime } from '../../contexts/SystemContext';
 import ThermalPrintReceipt from '../../components/ThermalPrintReceipt';
 import SupabaseConfigModal from '../../components/SupabaseConfigModal';
+import FirebaseConfigModal from '../../components/FirebaseConfigModal';
 import CashShiftModal from '../../components/CashShiftModal';
 import DeliveryMap from '../../components/DeliveryMap';
 import OrderTimerBadge from '../../components/OrderTimerBadge';
 import { isSupabaseConfigured } from '../../services/supabase';
+import { isFirebaseConfigured } from '../../services/firebase';
 import { 
   LayoutDashboard, ChefHat, Package, BadgeDollarSign, 
   FileText, PlusCircle, Trash2, AlertTriangle, 
@@ -15,7 +17,7 @@ import {
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
   Volume2, VolumeX, Upload, Image, Pause, Play,
   MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag,
-  User, LayoutGrid, MonitorPlay
+  User, LayoutGrid, MonitorPlay, Flame
 } from 'lucide-react';
 
 export default function AdminView({ onLogout, onGoOperation }) {
@@ -48,6 +50,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
   // Estados dos novos modais
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
 
   // Estados para Gestão de Operadores / Equipe
@@ -1015,6 +1018,28 @@ export default function AdminView({ onLogout, onGoOperation }) {
               >
                 <Database size={16} />
                 {!isSidebarCollapsed && <span>{isSupabaseConfigured() ? 'Supabase: Nuvem' : 'Supabase: Local'}</span>}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsFirebaseModalOpen(true)}
+                className="btn-secondary"
+                style={{
+                  width: '100%',
+                  justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                  padding: isSidebarCollapsed ? '10px' : '7px 10px',
+                  fontSize: '0.78rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.12)' : 'rgba(255,160,0,0.06)',
+                  borderColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.4)' : 'rgba(255,255,255,0.12)',
+                  color: isFirebaseConfigured() ? '#ffa000' : '#d4d4d8'
+                }}
+                title="Conexão com Firebase Firestore"
+              >
+                <Flame size={16} />
+                {!isSidebarCollapsed && <span>{isFirebaseConfigured() ? 'Firebase: Conectado' : 'Firebase: Configurar'}</span>}
               </button>
             </div>
 
@@ -4298,6 +4323,13 @@ export default function AdminView({ onLogout, onGoOperation }) {
       {isSupabaseModalOpen && (
         <SupabaseConfigModal 
           onClose={() => setIsSupabaseModalOpen(false)} 
+        />
+      )}
+
+      {/* MODAL: CONFIGURAÇÃO / SINCRONIZAÇÃO FIREBASE */}
+      {isFirebaseModalOpen && (
+        <FirebaseConfigModal 
+          onClose={() => setIsFirebaseModalOpen(false)} 
         />
       )}
 

@@ -1124,7 +1124,7 @@ export default function DeliveryView({
                     style={{ 
                       width: '100%', 
                       height: '100%', 
-                      objectFit: 'contain',
+                      objectFit: 'cover',
                       objectPosition: 'center',
                       display: 'block'
                     }} 
@@ -1402,10 +1402,10 @@ export default function DeliveryView({
                                 style={{ 
                                   width: '100%', 
                                   height: '100%', 
-                                  objectFit: 'contain', 
+                                  objectFit: 'cover', 
                                   objectPosition: 'center', 
                                   display: 'block',
-                                  padding: product.category === 'bebidas' ? '6px' : '0px',
+                                  padding: '0px',
                                   filter: isPaused ? 'grayscale(80%)' : 'none',
                                   transition: 'transform 0.4s ease'
                                 }} 
@@ -2209,7 +2209,7 @@ export default function DeliveryView({
                   }}
                   title="Clique para ampliar a foto"
                 >
-                  <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
                   <div style={{
                     position: 'absolute',
                     bottom: '8px',

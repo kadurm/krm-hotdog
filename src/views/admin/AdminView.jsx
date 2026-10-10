@@ -147,7 +147,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
   const [prodDesc, setProdDesc] = useState('');
   const [prodCat, setProdCat] = useState('prensados');
   const [prodActive, setProdActive] = useState(true);
-  const [prodImage, setProdImage] = useState('/images/prensadinho.png');
+  const [prodImage, setProdImage] = useState('/Produtos/Prensadinho.jfif');
   const [prodRecipe, setProdRecipe] = useState([]);
 
   // Menu Sub-tab & Complement states
@@ -337,7 +337,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
       description: prodDesc,
       category: prodCat,
       active: prodActive,
-      image: prodImage || '/images/prensadinho.png',
+      image: prodImage || '/Produtos/Prensadinho.jfif',
       recipe: recipeClean
     };
     if (editingProduct) {
@@ -3540,7 +3540,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                         type="text" 
                         value={prodImage} 
                         onChange={e => setProdImage(e.target.value)} 
-                        placeholder="Ou digite a URL/caminho da foto (ex: /Produtos/Prensadão de Costela.jpeg)" 
+                        placeholder="Ou digite a URL/caminho da foto (ex: /Produtos/Prensado de Costela.jpeg)" 
                         style={{ fontSize: '0.78rem', padding: '6px 10px' }}
                       />
                     </div>
@@ -3551,9 +3551,10 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fotos Prontas no Sistema (Clique para selecionar):</span>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
                       {[
-                        { name: 'Costela', path: '/Produtos/Prensadão de Costela.jpeg' },
-                        { name: 'Frango', path: '/Produtos/Prensadão de Frango.jpeg' },
-                        { name: 'Pernil', path: '/Produtos/Prensadão de Pernil.jpeg' },
+                        { name: 'Prensadinho', path: '/Produtos/Prensadinho.jfif' },
+                        { name: 'Frango', path: '/Produtos/Prensado de Frango.jpeg' },
+                        { name: 'Pernil', path: '/Produtos/Prensado de Pernil.jpeg' },
+                        { name: 'Costela', path: '/Produtos/Prensado de Costela.jpeg' },
                         { name: 'Logo Nuu', path: '/logoNuuPrensado-semfundo.png' },
                       ].map(preset => (
                         <button

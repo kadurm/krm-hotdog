@@ -44,7 +44,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensadinho', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, mussarela, bacon, milho, batata e molhos da casa.', 
     price: 17.50, 
-    image: '/images/prensadinho.png',
+    image: '/Produtos/Prensadinho.jfif',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: true,
@@ -67,7 +67,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensado Frango', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de frango desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 22.00, 
-    image: '/Produtos/Prensadão de Frango.jpeg',
+    image: '/Produtos/Prensado de Frango.jpeg',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: true,
@@ -91,7 +91,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensado Pernil', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de pernil desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 22.00, 
-    image: '/Produtos/Prensadão de Pernil.jpeg',
+    image: '/Produtos/Prensado de Pernil.jpeg',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: true,
@@ -115,7 +115,7 @@ const INITIAL_PRODUCTS = [
     name: 'Prensado Costela', 
     description: 'Pão, 2 salsichas, molho de tomate artesanal, Catupiry / Requeijão / Creme Cheese, 150g de costela desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 25.00, 
-    image: '/Produtos/Prensadão de Costela.jpeg',
+    image: '/Produtos/Prensado de Costela.jpeg',
     active: true, 
     category: 'prensados', 
     hasCustomOptions: true,
@@ -365,7 +365,7 @@ const INITIAL_QUOTATIONS = [
 export const SystemProvider = ({ children }) => {
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v9');
+    const saved = localStorage.getItem('nuu_products_v10');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -499,7 +499,7 @@ export const SystemProvider = ({ children }) => {
 
   // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
-    localStorage.setItem('nuu_products_v9', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v10', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
@@ -1362,7 +1362,7 @@ export const SystemProvider = ({ children }) => {
     setProducts(INITIAL_PRODUCTS);
     setInventory(INITIAL_INVENTORY);
     setComplements(INITIAL_COMPLEMENTS);
-    localStorage.setItem('nuu_products_v9', JSON.stringify(INITIAL_PRODUCTS));
+    localStorage.setItem('nuu_products_v10', JSON.stringify(INITIAL_PRODUCTS));
     localStorage.setItem('hd_inventory_v4', JSON.stringify(INITIAL_INVENTORY));
     localStorage.setItem('nuu_complements_v4', JSON.stringify(INITIAL_COMPLEMENTS));
   };

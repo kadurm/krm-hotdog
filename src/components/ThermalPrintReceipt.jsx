@@ -1,7 +1,9 @@
 import React, { useRef } from 'react';
+import { useSystem } from '../contexts/SystemContext';
 import { Printer, X, Check, Scissors } from 'lucide-react';
 
 export default function ThermalPrintReceipt({ order, onClose }) {
+  const { storeSettings } = useSystem();
   if (!order) return null;
 
   const handlePrint = () => {

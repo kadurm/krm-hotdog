@@ -1861,8 +1861,7 @@ export default function DeliveryView({
               {/* Opções de Queijo e Vinagrete se tiver customOptions */}
               {selectedProduct.hasCustomOptions && (
                 <div style={{ padding: '1rem', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: '1px solid var(--border-glass)' }}>
-                  <h4 style={{ marginBottom: '12px', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={16} color="var(--color-brand-yellow)" />
+                  <h4 style={{ marginBottom: '12px', color: '#fff', fontSize: '1rem', fontWeight: 700 }}>
                     Personalize seu Prensado:
                   </h4>
                   

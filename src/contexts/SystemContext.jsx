@@ -332,6 +332,8 @@ const INITIAL_STORE_SETTINGS = {
   openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
   estimatedTime: '35 a 50 min',
   storeAddress: 'Rua Principal, 100 - Centro',
+  whatsapp: '',
+  pixKey: '',
   storeLat: -19.916681,
   storeLng: -43.934493,
   deliveryMode: 'hybrid', // 'neighborhood' | 'radius' | 'hybrid'

@@ -55,22 +55,36 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
   const [newOpPin, setNewOpPin] = useState('');
   const [isAddingNewOp, setIsAddingNewOp] = useState(false);
 
-  // Controle de campainha de novos pedidos
+  // Controle de campainha de novos pedidos e auto-impressão de comandas
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(() => {
+    return localStorage.getItem('nuu_auto_print_thermal') === 'true';
+  });
+
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
   const shippingOrders = orders.filter(o => o.status === 'shipping');
   const deliveredOrders = orders.filter(o => o.status === 'delivered');
 
-  const [prevPendingCount, setPrevPendingCount] = useState(pendingOrders.length);
+  const [prevOrdersList, setPrevOrdersList] = useState(orders);
   useEffect(() => {
-    if (pendingOrders.length > prevPendingCount) {
-      if (isSoundEnabled) {
-        playNotificationChime();
+    // Detecta se houve novos pedidos adicionados
+    if (orders.length > prevOrdersList.length) {
+      const prevIds = new Set(prevOrdersList.map(o => String(o.id)));
+      const brandNewOrders = orders.filter(o => !prevIds.has(String(o.id)));
+      
+      if (brandNewOrders.length > 0) {
+        if (isSoundEnabled) {
+          playNotificationChime();
+        }
+        if (autoPrintEnabled) {
+          // Abre o último pedido para impressão automática imediata
+          setReceiptOrder(brandNewOrders[brandNewOrders.length - 1]);
+        }
       }
     }
-    setPrevPendingCount(pendingOrders.length);
-  }, [pendingOrders.length, isSoundEnabled, prevPendingCount]);
+    setPrevOrdersList(orders);
+  }, [orders, isSoundEnabled, autoPrintEnabled, prevOrdersList]);
 
   const handleSelectOperator = (op) => {
     setSelectedOperatorForLogin(op);
@@ -673,6 +687,33 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
             title="Campainha de novos pedidos"
           >
             {isSoundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          </button>
+
+          {/* Toggle de Auto-Impressão de Comanda Térmica (Epson TM-T20 80mm) */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = !autoPrintEnabled;
+              setAutoPrintEnabled(next);
+              localStorage.setItem('nuu_auto_print_thermal', String(next));
+            }}
+            style={{
+              background: autoPrintEnabled ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${autoPrintEnabled ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.15)'}`,
+              color: autoPrintEnabled ? '#60a5fa' : 'var(--text-muted)',
+              padding: '6px 12px',
+              borderRadius: '99px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title={autoPrintEnabled ? 'Impressão Automática ATIVA (Epson 80mm)' : 'Ativar Impressão Automática (Epson 80mm)'}
+          >
+            <Printer size={14} />
+            <span>{autoPrintEnabled ? 'Auto-Imprimir: LIGADO' : 'Auto-Imprimir: DESLIGADO'}</span>
           </button>
 
           {/* Botão Novo Pedido Balcão */}
@@ -1506,6 +1547,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
       {receiptOrder && (
         <ThermalPrintReceipt 
           order={receiptOrder} 
+          autoPrint={autoPrintEnabled}
           onClose={() => setReceiptOrder(null)} 
         />
       )}

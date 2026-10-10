@@ -2,13 +2,22 @@ import React, { useRef } from 'react';
 import { useSystem } from '../contexts/SystemContext';
 import { Printer, X, Check, Scissors } from 'lucide-react';
 
-export default function ThermalPrintReceipt({ order, onClose }) {
+export default function ThermalPrintReceipt({ order, onClose, autoPrint = false }) {
   const { storeSettings } = useSystem();
   if (!order) return null;
 
   const handlePrint = () => {
     window.print();
   };
+
+  React.useEffect(() => {
+    if (autoPrint) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPrint, order?.id]);
 
   const formattedDate = new Date(order.date || Date.now()).toLocaleString('pt-BR', {
     day: '2-digit',
@@ -198,9 +207,26 @@ export default function ThermalPrintReceipt({ order, onClose }) {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
         @media print {
+          html, body {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            color: #000 !important;
+          }
           body * {
             visibility: hidden !important;
+          }
+          .no-print, .thermal-modal-backdrop {
+            background: none !important;
+            backdrop-filter: none !important;
+            position: static !important;
+            padding: 0 !important;
           }
           .no-print {
             display: none !important;
@@ -212,11 +238,22 @@ export default function ThermalPrintReceipt({ order, onClose }) {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
-            max-width: 80mm !important;
+            width: 72mm !important;
+            max-width: 72mm !important;
+            margin: 0 4mm !important;
             box-shadow: none !important;
-            padding: 4mm !important;
-            font-size: 12px !important;
+            border-radius: 0 !important;
+            padding: 2mm 0 8mm 0 !important;
+            font-size: 11px !important;
+            line-height: 1.25 !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            color: #000 !important;
+            background: #fff !important;
+            overflow: visible !important;
+            max-height: none !important;
+          }
+          #thermal-printable-receipt * {
+            color: #000 !important;
           }
         }
       `}} />

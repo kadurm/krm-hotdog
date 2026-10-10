@@ -6,7 +6,7 @@ import {
   Clock, Utensils, ChevronRight, X, Sparkles,
   ChevronUp, ChevronDown, CheckCircle,
   LayoutGrid, MonitorPlay, Copy, Check, Bike, Store, MessageCircle,
-  Tag, Award, AlertCircle, MapPin, Search, Gift, Phone, Navigation
+  Tag, Award, AlertCircle, MapPin, Search, Gift, Phone, Navigation, ZoomIn
 } from 'lucide-react';
 import { VIEW_CONFIG } from '../../config/viewConfig';
 
@@ -56,6 +56,7 @@ export default function DeliveryView({
   const [selectedCategory, setSelectedCategory] = useState('todos');
 
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [previewImageModal, setPreviewImageModal] = useState(null); // { url, title }
   const [productQty, setProductQty] = useState(1);
   const [itemNotes, setItemNotes] = useState('');
   
@@ -1373,6 +1374,11 @@ export default function DeliveryView({
                         {/* Foto Real do Produto na Grade */}
                         <div 
                           className="grid-card-image"
+                          onClick={() => {
+                            if (product.image) {
+                              setPreviewImageModal({ url: product.image, title: product.name });
+                            }
+                          }}
                           style={{ 
                             width: '100%', 
                             height: '200px', 
@@ -1382,25 +1388,46 @@ export default function DeliveryView({
                             position: 'relative',
                             backgroundColor: '#0a0a0a',
                             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                            border: '1px solid rgba(255,255,255,0.08)'
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            cursor: product.image ? 'pointer' : 'default'
                           }}
+                          title={product.image ? 'Clique para ampliar a foto' : ''}
                         >
                           {product.image ? (
-                            <img 
-                              src={product.image} 
-                              alt={product.name} 
-                              loading="lazy"
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: product.category === 'bebidas' ? 'contain' : 'contain', 
-                                objectPosition: 'center', 
-                                display: 'block',
-                                padding: product.category === 'bebidas' ? '6px' : '0px',
-                                filter: isPaused ? 'grayscale(80%)' : 'none',
-                                transition: 'transform 0.4s ease'
-                              }} 
-                            />
+                            <>
+                              <img 
+                                src={product.image} 
+                                alt={product.name} 
+                                loading="lazy"
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'contain', 
+                                  objectPosition: 'center', 
+                                  display: 'block',
+                                  padding: product.category === 'bebidas' ? '6px' : '0px',
+                                  filter: isPaused ? 'grayscale(80%)' : 'none',
+                                  transition: 'transform 0.4s ease'
+                                }} 
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                right: '8px',
+                                background: 'rgba(0,0,0,0.6)',
+                                backdropFilter: 'blur(4px)',
+                                color: '#fff',
+                                borderRadius: '50%',
+                                width: '28px',
+                                height: '28px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                opacity: 0.85
+                              }} title="Ampliar foto">
+                                <ZoomIn size={14} />
+                              </div>
+                            </>
                           ) : (
                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>
                               {theme.floaties?.[0] || section.icon}
@@ -2166,8 +2193,39 @@ export default function DeliveryView({
               }}
             >
               {selectedProduct.image && (
-                <div style={{ width: '100%', height: '130px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 14px rgba(0,0,0,0.3)', flexShrink: 0 }}>
+                <div 
+                  onClick={() => setPreviewImageModal({ url: selectedProduct.image, title: selectedProduct.name })}
+                  style={{ 
+                    width: '100%', 
+                    height: '140px', 
+                    borderRadius: '12px', 
+                    overflow: 'hidden', 
+                    backgroundColor: '#0a0a0a', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.3)', 
+                    flexShrink: 0,
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}
+                  title="Clique para ampliar a foto"
+                >
                   <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '8px',
+                    background: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    color: '#fff',
+                    borderRadius: '50%',
+                    width: '26px',
+                    height: '26px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <ZoomIn size={13} />
+                  </div>
                 </div>
               )}
               <div>
@@ -2517,6 +2575,74 @@ export default function DeliveryView({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE ZOOM / AMPLIAÇÃO DA FOTO DO PRODUTO */}
+      {previewImageModal && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setPreviewImageModal(null)}
+          style={{ zIndex: 9999999, backgroundColor: 'rgba(0, 0, 0, 0.94)' }}
+        >
+          <div 
+            className="animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              backgroundColor: '#0a0a0a',
+              padding: '16px',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.9)'
+            }}
+          >
+            <div style={{
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '12px',
+              color: '#fff'
+            }}>
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                {previewImageModal.title}
+              </h4>
+              <button
+                onClick={() => setPreviewImageModal(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  cursor: 'pointer'
+                }}
+                title="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <img 
+              src={previewImageModal.url} 
+              alt={previewImageModal.title} 
+              style={{
+                maxWidth: '85vw',
+                maxHeight: '75vh',
+                objectFit: 'contain',
+                borderRadius: '8px'
+              }}
+            />
           </div>
         </div>
       )}

@@ -617,53 +617,6 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
             </span>
           </button>
 
-          {/* Status da Sincronização Supabase */}
-          <button
-            type="button"
-            onClick={() => setIsSupabaseModalOpen(true)}
-            title="Conexão com Banco de Dados em Nuvem Supabase"
-            style={{
-              padding: '6px 12px',
-              borderRadius: '99px',
-              border: '1px solid',
-              backgroundColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.12)' : 'rgba(245,158,11,0.12)',
-              borderColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.4)' : 'rgba(245,158,11,0.4)',
-              color: isSupabaseConfigured() ? '#3ecf8e' : '#f59e0b',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Database size={13} />
-            <span>{isSupabaseConfigured() ? 'Supabase: Nuvem' : 'Supabase: Local'}</span>
-          </button>
-
-          {/* Status da Sincronização Firebase */}
-          <button
-            type="button"
-            onClick={() => setIsFirebaseModalOpen(true)}
-            title="Conexão com Banco de Dados Firebase Cloud Firestore"
-            style={{
-              padding: '6px 12px',
-              borderRadius: '99px',
-              border: '1px solid',
-              backgroundColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.15)' : 'rgba(255,160,0,0.06)',
-              borderColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.45)' : 'rgba(255,255,255,0.12)',
-              color: isFirebaseConfigured() ? '#ffa000' : '#d4d4d8',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Flame size={13} />
-            <span>{isFirebaseConfigured() ? 'Firebase: Conectado' : 'Firebase: Configurar'}</span>
-          </button>
 
           {/* Controle de Campainha */}
           <button 

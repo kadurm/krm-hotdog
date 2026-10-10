@@ -396,7 +396,7 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 85px 16px 24px 16px;
   overflow-y: auto;
   box-sizing: border-box;
 }
@@ -407,7 +407,7 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 540px;
-  max-height: min(86vh, 86dvh);
+  max-height: min(80vh, 80dvh);
   height: auto;
   display: flex;
   flex-direction: column;

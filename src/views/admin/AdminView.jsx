@@ -1005,50 +1005,6 @@ export default function AdminView({ onLogout, onGoOperation }) {
                 <DollarSign size={16} />
                 {!isSidebarCollapsed && <span>{currentShift ? 'Caixa: Aberto' : 'Caixa: Fechado'}</span>}
               </button>
-
-              <button
-                type="button"
-                onClick={() => setIsSupabaseModalOpen(true)}
-                className="btn-secondary"
-                style={{
-                  width: '100%',
-                  justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
-                  padding: isSidebarCollapsed ? '10px' : '7px 10px',
-                  fontSize: '0.78rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.1)' : 'rgba(245,158,11,0.1)',
-                  borderColor: isSupabaseConfigured() ? 'rgba(62,207,142,0.3)' : 'rgba(245,158,11,0.3)',
-                  color: isSupabaseConfigured() ? '#3ecf8e' : '#f59e0b'
-                }}
-                title="Conexão com Supabase"
-              >
-                <Database size={16} />
-                {!isSidebarCollapsed && <span>{isSupabaseConfigured() ? 'Supabase: Nuvem' : 'Supabase: Local'}</span>}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsFirebaseModalOpen(true)}
-                className="btn-secondary"
-                style={{
-                  width: '100%',
-                  justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
-                  padding: isSidebarCollapsed ? '10px' : '7px 10px',
-                  fontSize: '0.78rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.12)' : 'rgba(255,160,0,0.06)',
-                  borderColor: isFirebaseConfigured() ? 'rgba(255,160,0,0.4)' : 'rgba(255,255,255,0.12)',
-                  color: isFirebaseConfigured() ? '#ffa000' : '#d4d4d8'
-                }}
-                title="Conexão com Firebase Firestore"
-              >
-                <Flame size={16} />
-                {!isSidebarCollapsed && <span>{isFirebaseConfigured() ? 'Firebase: Conectado' : 'Firebase: Configurar'}</span>}
-              </button>
             </div>
 
             {/* Sair do Painel */}

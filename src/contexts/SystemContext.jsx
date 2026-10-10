@@ -159,7 +159,7 @@ const INITIAL_PRODUCTS = [
     name: 'Coca-Cola 1 Litro',
     description: 'Refrigerante Coca-Cola garrafa 1 litro estupidamente gelada.',
     price: 10.00,
-    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    image: '/images/cola zero 1l.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -170,7 +170,7 @@ const INITIAL_PRODUCTS = [
     name: 'Coca-Cola 1 Litro Zero',
     description: 'Refrigerante Coca-Cola Zero açúcar garrafa 1 litro gelada.',
     price: 10.00,
-    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    image: '/images/cola zero 1l.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -181,7 +181,7 @@ const INITIAL_PRODUCTS = [
     name: 'Mate Couro 1 Litro',
     description: 'O autêntico refrigerante mineiro Mate Couro garrafa 1 litro bem gelado.',
     price: 8.50,
-    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&auto=format&fit=crop&q=60',
+    image: '/images/mate couro 1l.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -192,7 +192,7 @@ const INITIAL_PRODUCTS = [
     name: 'Guaraná 1 Litro',
     description: 'Refrigerante Guaraná garrafa 1 litro geladinho.',
     price: 8.50,
-    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&auto=format&fit=crop&q=60',
+    image: '/images/guarana 1l.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -203,7 +203,7 @@ const INITIAL_PRODUCTS = [
     name: 'Coca-Cola Lata 350ml',
     description: 'Refrigerante Coca-Cola em lata 350ml bem gelada.',
     price: 6.50,
-    image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60',
+    image: '/images/coca 350ml.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -214,7 +214,7 @@ const INITIAL_PRODUCTS = [
     name: 'Coca-Cola Zero Lata 350ml',
     description: 'Refrigerante Coca-Cola Zero açúcar em lata 350ml gelada.',
     price: 6.50,
-    image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60',
+    image: '/images/coca zero 350ml.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -225,7 +225,7 @@ const INITIAL_PRODUCTS = [
     name: 'Guaraná Antarctica Lata 350ml',
     description: 'Refrigerante Guaraná Antarctica em lata 350ml bem gelado.',
     price: 6.50,
-    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&auto=format&fit=crop&q=60',
+    image: '/images/guarana zero 350ml.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -236,7 +236,7 @@ const INITIAL_PRODUCTS = [
     name: 'Fanta Laranja Lata 350ml',
     description: 'Refrigerante Fanta Laranja em lata 350ml bem gelada.',
     price: 6.50,
-    image: 'https://images.unsplash.com/photo-1624517452488-04869289c4ca?w=500&auto=format&fit=crop&q=60',
+    image: '/images/fanta 350ml.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -247,7 +247,7 @@ const INITIAL_PRODUCTS = [
     name: 'Sprite Lata 350ml',
     description: 'Refrigerante Sprite em lata 350ml bem gelado.',
     price: 6.50,
-    image: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=500&auto=format&fit=crop&q=60',
+    image: '/images/sprite 350ml.jfif',
     active: true,
     category: 'bebidas',
     hasCustomOptions: false,
@@ -447,7 +447,7 @@ const INITIAL_QUOTATIONS = [
 export const SystemProvider = ({ children }) => {
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v12');
+    const saved = localStorage.getItem('nuu_products_v13');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -457,6 +457,19 @@ export const SystemProvider = ({ children }) => {
       } catch (e) {
         return INITIAL_PRODUCTS;
       }
+    }
+    const oldV12 = localStorage.getItem('nuu_products_v12');
+    if (oldV12) {
+      try {
+        const parsed = JSON.parse(oldV12);
+        return parsed.map(p => {
+          const initMatch = INITIAL_PRODUCTS.find(ip => ip.id === p.id);
+          if (initMatch && (p.image?.includes('unsplash') || !p.image?.startsWith('/images/') && !p.image?.startsWith('/Produtos/'))) {
+            return { ...p, image: initMatch.image };
+          }
+          return p;
+        });
+      } catch (e) {}
     }
     return INITIAL_PRODUCTS;
   });
@@ -630,7 +643,7 @@ export const SystemProvider = ({ children }) => {
 
   // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
-    localStorage.setItem('nuu_products_v12', JSON.stringify(products));
+    localStorage.setItem('nuu_products_v13', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
@@ -1746,9 +1759,9 @@ export const SystemProvider = ({ children }) => {
     setProducts(INITIAL_PRODUCTS);
     setInventory(INITIAL_INVENTORY);
     setComplements(INITIAL_COMPLEMENTS);
-    localStorage.setItem('nuu_products_v12', JSON.stringify(INITIAL_PRODUCTS));
+    localStorage.setItem('nuu_products_v13', JSON.stringify(INITIAL_PRODUCTS));
     localStorage.setItem('hd_inventory_v5', JSON.stringify(INITIAL_INVENTORY));
-    localStorage.setItem('nuu_complements_v5', JSON.stringify(INITIAL_COMPLEMENTS));
+    localStorage.setItem('nuu_complements_v6', JSON.stringify(INITIAL_COMPLEMENTS));
   };
 
   return (

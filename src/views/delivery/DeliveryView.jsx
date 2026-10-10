@@ -93,6 +93,9 @@ export default function DeliveryView({
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [deliveryType, setDeliveryType] = useState('delivery');
+  const [cep, setCep] = useState('');
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepFeedback, setCepFeedback] = useState(null);
   const [address, setAddress] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('');
   const [deliverySelectionMode, setDeliverySelectionMode] = useState('neighborhood'); // 'neighborhood' | 'radius'
@@ -210,6 +213,77 @@ export default function DeliveryView({
       : (storeSettings?.deliveryRadius || []);
     return list.filter(r => r.active !== false).sort((a, b) => a.maxKm - b.maxKm);
   }, [deliveryRadiuses, storeSettings?.deliveryRadius]);
+
+  // Busca e preenchimento automático de endereço via CEP (ViaCEP)
+  const handleLookupCep = async (inputCep) => {
+    const raw = (inputCep !== undefined ? inputCep : cep) || '';
+    const cleanCep = raw.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
+      setCepFeedback({ success: false, message: 'Digite um CEP válido com 8 números (ex: 39401-022).' });
+      return;
+    }
+    setCepLoading(true);
+    setCepFeedback(null);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        setCepFeedback({ success: false, message: 'CEP não encontrado. Preencha o endereço normalmente abaixo.' });
+        setCepLoading(false);
+        return;
+      }
+
+      const rua = data.logradouro || '';
+      const b = data.bairro || '';
+      const cidade = data.localidade || 'Montes Claros';
+      const uf = data.uf || 'MG';
+
+      // Monta sugestão no campo de endereço permitindo edição a qualquer momento
+      let enderecoFormatado = '';
+      if (rua && b) {
+        enderecoFormatado = `${rua}, nº , Bairro ${b} - ${cidade}/${uf}`;
+      } else if (rua) {
+        enderecoFormatado = `${rua}, nº  - ${cidade}/${uf}`;
+      } else if (b) {
+        enderecoFormatado = `Bairro ${b} - ${cidade}/${uf}`;
+      } else {
+        enderecoFormatado = `${cidade}/${uf}`;
+      }
+
+      setAddress(enderecoFormatado);
+
+      // Associa bairro para cálculo automático de taxa
+      if (b) {
+        setSelectedNeighborhood(b);
+        const match = availableNeighborhoods.find(n => n.name.toLowerCase() === b.toLowerCase());
+        if (match && match.distanceKm) {
+          setSelectedDistanceKm(match.distanceKm);
+        } else {
+          setSelectedDistanceKm(null);
+        }
+      }
+      setCepFeedback({ success: true, message: `Endereço localizado: ${rua ? rua + ', ' : ''}${b || cidade}!` });
+    } catch (e) {
+      setCepFeedback({ success: false, message: 'Não foi possível consultar o CEP. Preencha o endereço normalmente abaixo.' });
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
+  // Detecção automática de bairro ao digitar ou editar o endereço
+  const handleAddressChange = (newAddressText) => {
+    setAddress(newAddressText);
+    if (newAddressText && availableNeighborhoods.length > 0) {
+      const lower = newAddressText.toLowerCase();
+      const match = [...availableNeighborhoods]
+        .sort((a, b) => b.name.length - a.name.length)
+        .find(n => lower.includes(n.name.toLowerCase()));
+      if (match) {
+        setSelectedNeighborhood(match.name);
+        setSelectedDistanceKm(match.distanceKm || null);
+      }
+    }
+  };
 
   // Metadados enriquecidos para as categorias do cardápio
   const CATEGORY_META = {
@@ -642,12 +716,8 @@ export default function DeliveryView({
     }
 
     if (deliveryType === 'delivery') {
-      if (!selectedNeighborhood && !selectedDistanceKm) {
-        alert('Por favor, selecione seu bairro ou a faixa de distância para entrega.');
-        return;
-      }
       if (!address.trim()) {
-        alert('Por favor, digite seu endereço completo (rua, número, complemento e ponto de referência).');
+        alert('Por favor, digite seu endereço completo para entrega.');
         return;
       }
     }
@@ -1562,218 +1632,138 @@ export default function DeliveryView({
                 </div>
               </div>
 
-              {/* Se for delivery, seleciona bairro / raio / gps e digita endereço */}
+              {/* Se for delivery: endereço com busca opcional por CEP e taxa calculada automaticamente */}
               {deliveryType === 'delivery' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} className="animate-fade-in">
-                  {/* Origem da Loja */}
-                  <div style={{
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(234, 179, 8, 0.08)',
-                    border: '1px solid rgba(234, 179, 8, 0.25)',
-                    fontSize: '0.8rem',
-                    color: '#facc15',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <MapPin size={16} color="#eab308" style={{ flexShrink: 0 }} />
-                    <div style={{ lineHeight: '1.3' }}>
-                      <strong>Ponto de Saída:</strong> {storeSettings?.storeAddress || 'Rua Agapanto, 264 - Sagrada Família, Montes Claros - MG'}
-                      <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>
-                        Taxas de entrega calculadas conforme a quilometragem / raio de distância da loja.
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Alternador de Modo de Seleção (Bairros de Montes Claros vs Faixa de Km) */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '6px',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    padding: '4px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-glass)'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => setDeliverySelectionMode('neighborhood')}
-                      style={{
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        backgroundColor: deliverySelectionMode === 'neighborhood' ? 'var(--color-brand)' : 'transparent',
-                        color: deliverySelectionMode === 'neighborhood' ? '#000' : '#fff',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      🏙️ Bairro (Montes Claros)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeliverySelectionMode('radius')}
-                      style={{
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        backgroundColor: deliverySelectionMode === 'radius' ? 'var(--color-brand)' : 'transparent',
-                        color: deliverySelectionMode === 'radius' ? '#000' : '#fff',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      📏 Raio por Km
-                    </button>
-                  </div>
-
-                  {/* Botão de Localização GPS */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }} className="animate-fade-in">
+                  
+                  {/* Campo de CEP Opcional para preenchimento rápido */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <button
-                      type="button"
-                      onClick={handleDetectGPS}
-                      disabled={gpsLoading}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        padding: '9px 14px',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(56, 189, 248, 0.35)',
-                        backgroundColor: 'rgba(56, 189, 248, 0.08)',
-                        color: '#38bdf8',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <Navigation size={15} />
-                      <span>{gpsLoading ? 'Calculando distância via GPS...' : '📍 Detectar minha distância exata via GPS'}</span>
-                    </button>
-
-                    {gpsSuccessMessage && (
-                      <div style={{ fontSize: '0.75rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Check size={13} /> {gpsSuccessMessage}
-                      </div>
-                    )}
-                    {gpsError && (
-                      <div style={{ fontSize: '0.75rem', color: '#f87171', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <AlertCircle size={13} /> {gpsError}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Seleção por Bairro de Montes Claros */}
-                  {deliverySelectionMode === 'neighborhood' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }} className="animate-fade-in">
-                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                        Selecione seu Bairro (Montes Claros)
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        CEP <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional - preenche o endereço)</span>
                       </label>
-                      <select
-                        value={selectedNeighborhood}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Ex: 39401-022"
+                        value={cep}
+                        maxLength={9}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setSelectedNeighborhood(val);
-                          const found = availableNeighborhoods.find(n => n.name === val);
-                          if (found && found.distanceKm) {
-                            setSelectedDistanceKm(found.distanceKm);
-                          } else {
-                            setSelectedDistanceKm(null);
+                          setCep(val);
+                          const clean = val.replace(/\D/g, '');
+                          if (clean.length === 8) {
+                            handleLookupCep(clean);
                           }
                         }}
-                        required
                         style={{
-                          padding: '10px 14px',
+                          flex: 1,
+                          minWidth: 0,
+                          padding: '9px 12px',
                           borderRadius: '8px',
-                          border: '1px solid var(--border-glass)',
-                          backgroundColor: 'var(--bg-tertiary)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          backgroundColor: 'rgba(0,0,0,0.4)',
                           color: '#fff',
-                          fontSize: '0.9rem'
+                          fontSize: '0.85rem'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleLookupCep(cep)}
+                        disabled={cepLoading}
+                        style={{
+                          backgroundColor: '#eab308',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '9px 16px',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
                         }}
                       >
-                        <option value="">Selecione o seu bairro...</option>
-                        {availableNeighborhoods.map((item) => (
-                          <option key={item.name} value={item.name}>
-                            {item.name} {item.distanceKm ? `(~${item.distanceKm} km)` : ''} — R$ {item.fee.toFixed(2)}
-                          </option>
-                        ))}
-                      </select>
+                        {cepLoading ? 'Buscando...' : <><Search size={14} /> Buscar CEP</>}
+                      </button>
                     </div>
-                  )}
 
-                  {/* Seleção por Faixa de Raio / Quilometragem (KM) */}
-                  {deliverySelectionMode === 'radius' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }} className="animate-fade-in">
-                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                        Selecione a Faixa de Distância da Loja (Rua Agapanto)
-                      </label>
-                      <select
-                        value={selectedRadiusId}
-                        onChange={(e) => {
-                          const radId = e.target.value;
-                          setSelectedRadiusId(radId);
-                          const found = availableRadiuses.find(r => r.id === radId);
-                          if (found) {
-                            setSelectedDistanceKm(found.maxKm);
-                            setSelectedNeighborhood(found.description || `Raio até ${found.maxKm} km`);
-                          }
-                        }}
-                        required
-                        style={{
-                          padding: '10px 14px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-glass)',
-                          backgroundColor: 'var(--bg-tertiary)',
-                          color: '#fff',
-                          fontSize: '0.9rem'
-                        }}
-                      >
-                        <option value="">Selecione a distância até a sua casa...</option>
-                        {availableRadiuses.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            Até {item.maxKm} km ({item.description}) — R$ {item.fee.toFixed(2)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                    {cepFeedback && (
+                      <div style={{
+                        fontSize: '0.75rem',
+                        marginTop: '2px',
+                        color: cepFeedback.success ? '#4ade80' : '#f87171',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        {cepFeedback.success ? <Check size={12} /> : <AlertCircle size={12} />}
+                        <span>{cepFeedback.message}</span>
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Badge Informativo da Taxa Calculada */}
-                  {(selectedNeighborhood || selectedDistanceKm !== null) && (
-                    <div style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      backgroundColor: 'rgba(34, 197, 94, 0.08)',
-                      border: '1px solid rgba(34, 197, 94, 0.25)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: '0.83rem'
-                    }}>
-                      <span style={{ color: '#4ade80', fontWeight: 600 }}>
-                        🛵 {deliveryFeeResult?.reason || 'Taxa calculada:'}
-                      </span>
-                      <strong style={{ color: '#fff', fontSize: '0.95rem' }}>
-                        {deliveryFee === 0 ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`}
-                      </strong>
-                    </div>
-                  )}
-
+                  {/* Campo de Endereço Completo (Sempre editável pelo cliente) */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Endereço Completo</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                        Endereço Completo
+                      </label>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        Pode editar quando quiser
+                      </span>
+                    </div>
                     <textarea 
                       required 
                       rows="3"
-                      placeholder="Rua, número, complemento (ex: Apto 201) e ponto de referência"
+                      placeholder="Rua, número, bairro (ex: Sagrada Família), complemento e ponto de referência"
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      onChange={(e) => handleAddressChange(e.target.value)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-glass)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: '#fff',
+                        fontSize: '0.9rem',
+                        resize: 'vertical'
+                      }}
                     />
+                  </div>
+
+                  {/* Card da Taxa de Entrega Calculada Automaticamente */}
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                    border: '1px solid rgba(34, 197, 94, 0.25)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '0.85rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Bike size={18} color="#4ade80" />
+                      <div>
+                        <span style={{ color: '#fff', fontWeight: 600 }}>
+                          Taxa de Entrega:
+                        </span>
+                        <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)' }}>
+                          {deliveryFeeResult?.isFree 
+                            ? '🎉 Frete Grátis no seu pedido!'
+                            : selectedNeighborhood 
+                              ? `Calculada para o bairro ${selectedNeighborhood}` 
+                              : 'Calculada automaticamente para o seu endereço'}
+                        </div>
+                      </div>
+                    </div>
+                    <strong style={{ color: deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)', fontSize: '1.05rem', fontWeight: 800 }}>
+                      {deliveryFee === 0 ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`}
+                    </strong>
                   </div>
                 </div>
               )}

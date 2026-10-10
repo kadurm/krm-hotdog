@@ -3,8 +3,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 export default function DeliveryMap({ 
-  storeLat = -19.916681, 
-  storeLng = -43.934493, 
+  storeLat = -16.7401, 
+  storeLng = -43.8746, 
   radiuses = [], 
   onLocationChange,
   isEditable = true 

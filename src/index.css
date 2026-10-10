@@ -474,6 +474,8 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 4px 14px 0 rgba(168, 35, 25, 0.35);
@@ -493,6 +495,8 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 14px 0 rgba(238, 172, 59, 0.35);

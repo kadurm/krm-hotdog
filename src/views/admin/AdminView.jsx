@@ -17,7 +17,7 @@ import {
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
   Volume2, VolumeX, Upload, Image, Pause, Play,
   MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag,
-  User, LayoutGrid, MonitorPlay, Flame
+  User, LayoutGrid, MonitorPlay, Flame, Navigation
 } from 'lucide-react';
 
 export default function AdminView({ onLogout, onGoOperation }) {
@@ -33,6 +33,9 @@ export default function AdminView({ onLogout, onGoOperation }) {
     deleteOperator,
     storeSettings = {},
     updateStoreSettings,
+    deliveryRadiuses = [],
+    upsertRadius,
+    deleteRadius,
     coupons = [],
     upsertCoupon,
     deleteCoupon,
@@ -111,6 +114,11 @@ export default function AdminView({ onLogout, onGoOperation }) {
   // Estados para Bairros de Entrega
   const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
   const [newNeighborhoodFee, setNewNeighborhoodFee] = useState('7.00');
+
+  // Estados para Faixas de Raio (Km)
+  const [newRadiusKm, setNewRadiusKm] = useState('5');
+  const [newRadiusFee, setNewRadiusFee] = useState('7.50');
+  const [newRadiusDesc, setNewRadiusDesc] = useState('');
 
   const getTabFromHash = () => {
     const hash = window.location.hash;
@@ -2643,13 +2651,134 @@ export default function AdminView({ onLogout, onGoOperation }) {
                 </div>
               </div>
 
-              {/* Bloco 2: Mapa de Entrega & Taxas por Bairro */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              {/* Bloco 2: Modo de Cobrança & Gestão de Raio / Bairros */}
+              <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Bike size={18} color="var(--color-brand)" /> Modo de Cobrança de Frete
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Defina se a taxa de entrega deve ser calculada por raio de quilometragem da loja ou por lista fixa de bairros.
+                  </p>
+                </div>
+                <select
+                  value={storeSettings?.deliveryMode || 'radius'}
+                  onChange={(e) => updateStoreSettings({ deliveryMode: e.target.value })}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: '#fff',
+                    border: '1px solid var(--border-glass)',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="radius">📏 Raio por Quilometragem (KM) [Recomendado]</option>
+                  <option value="neighborhood">🏙️ Bairros Fixos</option>
+                </select>
+              </div>
+
+              {/* Grid: Faixas de Raio (Km), Bairros e Mapa */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                {/* Tabela de Faixas de Raio (Km) */}
+                <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Navigation size={18} color="var(--color-brand)" /> Faixas de Raio (Km)
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                    Taxas progressivas cobradas conforme a distância da Rua Agapanto, 264.
+                  </p>
+
+                  {/* Formulário para adicionar faixa de raio */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="number"
+                        step="0.5"
+                        placeholder="Até Km (ex: 5)"
+                        value={newRadiusKm}
+                        onChange={(e) => setNewRadiusKm(e.target.value)}
+                        style={{ width: '110px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.82rem' }}
+                      />
+                      <input
+                        type="number"
+                        step="0.50"
+                        placeholder="Taxa R$"
+                        value={newRadiusFee}
+                        onChange={(e) => setNewRadiusFee(e.target.value)}
+                        style={{ width: '100px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.82rem' }}
+                      />
+                      <button
+                        onClick={() => {
+                          const km = parseFloat(newRadiusKm);
+                          const fee = parseFloat(newRadiusFee);
+                          if (!km || km <= 0) return alert('Digite a quilometragem máxima da faixa');
+                          if (fee === undefined || isNaN(fee)) return alert('Digite o valor da taxa');
+                          upsertRadius({
+                            maxKm: km,
+                            fee: fee,
+                            description: newRadiusDesc.trim() || `Até ${km} km da loja`,
+                            active: true
+                          });
+                          setNewRadiusKm('');
+                          setNewRadiusFee('7.50');
+                          setNewRadiusDesc('');
+                        }}
+                        className="btn-primary"
+                        style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem' }}
+                      >
+                        + Adicionar
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Descrição (ex: Bairros atendidos nesta faixa...)"
+                      value={newRadiusDesc}
+                      onChange={(e) => setNewRadiusDesc(e.target.value)}
+                      style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.8rem' }}
+                    />
+                  </div>
+
+                  <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                    {(deliveryRadiuses || []).map((rad) => (
+                      <div key={rad.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#fff' }}>
+                            Até {rad.maxKm} km
+                          </div>
+                          {rad.description && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                              {rad.description}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-brand)', fontSize: '0.85rem' }}>
+                            R$ {Number(rad.fee || 0).toFixed(2)}
+                          </span>
+                          <button
+                            onClick={() => deleteRadius(rad.id)}
+                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px' }}
+                            title="Remover Faixa"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Tabela de Taxas por Bairro */}
                 <div className="glass-panel" style={{ padding: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin size={18} color="#38bdf8" /> Taxas por Bairro
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MapPin size={18} color="#38bdf8" /> Bairros (Montes Claros)
                   </h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                    Taxas personalizadas para cada bairro da cidade.
+                  </p>
 
                   {/* Formulário para adicionar bairro */}
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
@@ -2683,7 +2812,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     </button>
                   </div>
 
-                  <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                  <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
                     {Object.entries(storeSettings?.deliveryFeesByNeighborhood || {}).map(([bairro, fee]) => (
                       <div key={bairro} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{bairro}</span>
@@ -2709,19 +2838,20 @@ export default function AdminView({ onLogout, onGoOperation }) {
                 {/* Mapa Interativo de Raios de Entrega */}
                 <div className="glass-panel" style={{ padding: '1.25rem' }}>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin size={18} color="var(--color-brand)" /> Raio de Entrega da Loja
+                    <MapPin size={18} color="var(--color-brand)" /> Mapa do Raio de Entrega
                   </h3>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                    Arraste o pin da loja no mapa para recalcular o centro de operação e os raios de entrega concêntricos.
+                    Centro da loja em Montes Claros (Rua Agapanto, 264) com os círculos concêntricos de entrega.
                   </p>
                   <DeliveryMap 
-                    storeLat={storeSettings?.storeLat || -19.916681}
-                    storeLng={storeSettings?.storeLng || -43.934493}
-                    radiuses={storeSettings?.deliveryRadius || [
+                    storeLat={storeSettings?.storeLat || -16.7401}
+                    storeLng={storeSettings?.storeLng || -43.8746}
+                    radiuses={deliveryRadiuses.length > 0 ? deliveryRadiuses : (storeSettings?.deliveryRadius || [
                       { id: 'rad-1', maxKm: 3, fee: 5.00, active: true },
-                      { id: 'rad-2', maxKm: 6, fee: 8.00, active: true },
-                      { id: 'rad-3', maxKm: 10, fee: 12.00, active: true }
-                    ]}
+                      { id: 'rad-2', maxKm: 5, fee: 7.50, active: true },
+                      { id: 'rad-3', maxKm: 8, fee: 10.00, active: true },
+                      { id: 'rad-4', maxKm: 12, fee: 14.00, active: true }
+                    ])}
                     onLocationChange={(lat, lng) => updateStoreSettings({ storeLat: lat, storeLng: lng })}
                   />
                 </div>

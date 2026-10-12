@@ -84,6 +84,18 @@ service cloud.firestore {
     //   - cost: number (optional) - unit cost
     //   - updatedAt: string | timestamp (optional)
     //
+    // Collection: complements
+    // Document ID: {complementId} (e.g. 'bread-3-queijos', 'extra-bacon', etc.)
+    // Fields:
+    //   - id: string (required) - unique complement identifier
+    //   - name: string (required) - complement name / label
+    //   - category: string (optional) - 'complement' | 'extra'
+    //   - group: string (optional) - group identifier (e.g. 'bread', 'creamy', 'melted', 'side', 'extras')
+    //   - group_name: string (optional) - human-readable group name
+    //   - price: number (optional) - additional price
+    //   - active: bool (optional) - availability status toggle
+    //   - updatedAt: string | timestamp (optional)
+    //
     // ===============================================================
 
     // 1. ORDERS: Pedidos do Cardápio, Garçom/Mesa, KDS e Delivery
@@ -103,6 +115,11 @@ service cloud.firestore {
 
     // 4. INVENTORY: Controle de Insumos, Carnes, Pães e Embalagens
     match /inventory/{itemId} {
+      allow read, write: if true;
+    }
+
+    // 5. COMPLEMENTS: Complementos e Adicionais (Pães, Queijos, Molhos, Extras)
+    match /complements/{complementId} {
       allow read, write: if true;
     }
 

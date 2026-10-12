@@ -66,8 +66,13 @@ export default function DeliveryView({
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [previewImageModal, setPreviewImageModal] = useState(null); // { url, title }
+  const [siteModal, setSiteModal] = useState(null); // { title, message, type: 'info' | 'success' | 'warning', badge?: string }
   const [productQty, setProductQty] = useState(1);
   const [itemNotes, setItemNotes] = useState('');
+
+  const showSiteAlert = (title, message, type = 'info', badge = null) => {
+    setSiteModal({ title, message, type, badge });
+  };
   
   // Agrupamento dinâmico de complementos e adicionais
   const breadOptions = complements.filter(c => c.group === 'bread');
@@ -681,7 +686,11 @@ export default function DeliveryView({
     e?.preventDefault();
     const clean = (customerSearchPhone || phone).replace(/\D/g, '');
     if (clean.length < 10) {
-      alert('Digite um número de telefone/WhatsApp válido com DDD (mínimo 10 dígitos).');
+      showSiteAlert(
+        'Número Inválido',
+        'Digite um número de telefone/WhatsApp válido com DDD (mínimo 10 dígitos, ex: 38 99999-8888).',
+        'warning'
+      );
       return;
     }
     const found = lookupCustomer(clean);
@@ -691,10 +700,20 @@ export default function DeliveryView({
       setPhone(found.phone || clean);
       if (found.address) setAddress(found.address);
       if (found.neighborhood) setSelectedNeighborhood(found.neighborhood);
-      alert(`Bem-vindo de volta, ${found.name || 'Cliente'}! Seus dados foram preenchidos automaticamente.`);
+      showSiteAlert(
+        'Cliente Encontrado! 🎉',
+        `Bem-vindo de volta, ${found.name || 'Cliente'}! Seus dados foram preenchidos automaticamente.`,
+        'success',
+        'Clube Fidelidade'
+      );
     } else {
       setPhone(clean);
-      alert('Telefone registrado. Finalize seu primeiro pedido para acumular selos no Cartão Fidelidade!');
+      showSiteAlert(
+        'Novo Cadastro! 🌭',
+        'Telefone registrado com sucesso! Finalize seu primeiro pedido para acumular selos no Cartão Fidelidade Nuu Prensado.',
+        'info',
+        'Clube Fidelidade'
+      );
     }
   };
 
@@ -702,7 +721,12 @@ export default function DeliveryView({
   const handleApplyLoyaltyReward = () => {
     const rewardVal = storeSettings?.loyalty?.rewardValue || 20;
     setLoyaltyDiscount(rewardVal);
-    alert(`Parabéns! Recompensa fidelidade de R$ ${rewardVal.toFixed(2)} aplicada no seu pedido! 🎉`);
+    showSiteAlert(
+      'Recompensa Aplicada! 🎉',
+      `Parabéns! Recompensa fidelidade de R$ ${rewardVal.toFixed(2)} aplicada no seu pedido!`,
+      'success',
+      'Desconto Ativado'
+    );
   };
 
   // Envio do Pedido
@@ -711,32 +735,56 @@ export default function DeliveryView({
 
     if (!isStoreOpen) {
       if (pauseStatus.isPaused) {
-        alert(`⏸️ A cozinha está em pausa temporária para dar vazão aos pedidos em preparo (retornamos em cerca de ${pauseStatus.remainingMinutes} minutos). Por favor, aguarde alguns instantes para concluir!`);
+        showSiteAlert(
+          'Cozinha em Pausa Temporária',
+          `⏸️ A cozinha está em pausa temporária para dar vazão aos pedidos em preparo (retornamos em cerca de ${pauseStatus.remainingMinutes} minutos). Por favor, aguarde alguns instantes para concluir!`,
+          'warning'
+        );
       } else {
-        alert(storeSettings?.closedNotice || 'No momento a loja está fechada para novos pedidos.');
+        showSiteAlert(
+          'Loja Fechada',
+          storeSettings?.closedNotice || 'No momento a loja está fechada para novos pedidos.',
+          'warning'
+        );
       }
       return;
     }
 
     if (cart.length === 0) {
-      alert('Seu carrinho está vazio. Adicione itens antes de finalizar o pedido!');
+      showSiteAlert(
+        'Carrinho Vazio',
+        'Seu carrinho está vazio. Adicione itens antes de finalizar o pedido!',
+        'warning'
+      );
       return;
     }
 
     if (!customerName.trim()) {
-      alert('Por favor, informe seu nome para identificação do pedido.');
+      showSiteAlert(
+        'Identificação Obrigatória',
+        'Por favor, informe seu nome para identificação do pedido.',
+        'warning'
+      );
       return;
     }
 
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
-      alert('Por favor, informe seu número de WhatsApp com DDD (mínimo 10 dígitos, ex: 31988887777).');
+      showSiteAlert(
+        'WhatsApp Obrigatório',
+        'Por favor, informe seu número de WhatsApp com DDD (mínimo 10 dígitos, ex: 38 99999-8888).',
+        'warning'
+      );
       return;
     }
 
     if (deliveryType === 'delivery') {
       if (!address.trim()) {
-        alert('Por favor, digite seu endereço completo para entrega.');
+        showSiteAlert(
+          'Endereço Obrigatório',
+          'Por favor, digite seu endereço completo para entrega.',
+          'warning'
+        );
         return;
       }
     }
@@ -824,7 +872,7 @@ export default function DeliveryView({
         position: 'fixed',
         top: 0,
         left: 0,
-        zIndex: (isCartOpen || selectedProduct || previewImageModal) ? 99999 : 1,
+        zIndex: (isCartOpen || selectedProduct || previewImageModal || siteModal) ? 99999 : 1,
         overflowY: (viewMode === 'grid' || checkoutStep !== 'menu' || isCartOpen) ? 'auto' : 'hidden', 
         overflowX: 'hidden'
       }}
@@ -1610,6 +1658,12 @@ export default function DeliveryView({
                   placeholder="DDD + Seu WhatsApp"
                   value={customerSearchPhone}
                   onChange={(e) => setCustomerSearchPhone(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleLookupPhone(e);
+                    }
+                  }}
                   style={{
                     flex: 1,
                     minWidth: 0,
@@ -2701,6 +2755,134 @@ export default function DeliveryView({
                 borderRadius: '8px'
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* MODAL OFICIAL DE AVISOS / FEEDBACK DO SITE (SUBSTITUI O ALERT DO NAVEGADOR) */}
+      {siteModal && (
+        <div 
+          className="modal-overlay animate-fade-in" 
+          onClick={() => setSiteModal(null)}
+          style={{ zIndex: 9999999, padding: '16px' }}
+        >
+          <div 
+            className="animate-scale-up" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '430px',
+              backgroundColor: '#111827',
+              backgroundImage: 'linear-gradient(145deg, #161f33 0%, #0d1322 100%)',
+              border: `1px solid ${
+                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.45)' :
+                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.45)' :
+                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.45)' :
+                'rgba(234, 179, 8, 0.45)'
+              }`,
+              borderRadius: '20px',
+              padding: '1.75rem',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.92), 0 0 30px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              position: 'relative'
+            }}
+          >
+            {/* Ícone estilizado com glow */}
+            <div style={{
+              width: '62px',
+              height: '62px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              backgroundColor: 
+                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.16)' :
+                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.16)' :
+                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.16)' :
+                'rgba(234, 179, 8, 0.16)',
+              border: `1px solid ${
+                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.35)' :
+                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.35)' :
+                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.35)' :
+                'rgba(234, 179, 8, 0.35)'
+              }`,
+              boxShadow: `0 0 20px ${
+                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.25)' :
+                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.25)' :
+                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.25)' :
+                'rgba(234, 179, 8, 0.25)'
+              }`
+            }}>
+              {siteModal.type === 'success' ? <CheckCircle size={32} color="#22c55e" /> :
+               siteModal.type === 'warning' ? <AlertCircle size={32} color="#f59e0b" /> :
+               siteModal.type === 'error' ? <AlertCircle size={32} color="#ef4444" /> :
+               <Sparkles size={32} color="#eab308" />}
+            </div>
+
+            {/* Logo oficial e Tag de identificação */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <img 
+                src="/logoNuuPrensado-semfundo.png" 
+                alt="Nuu Prensado" 
+                style={{ height: '24px', objectFit: 'contain' }}
+              />
+              {siteModal.badge && (
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: 'var(--color-brand-yellow)',
+                  backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                  padding: '2px 8px',
+                  borderRadius: '99px',
+                  border: '1px solid rgba(234, 179, 8, 0.3)'
+                }}>
+                  {siteModal.badge}
+                </span>
+              )}
+            </div>
+
+            {/* Título */}
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              color: '#fff',
+              margin: '0 0 0.5rem 0'
+            }}>
+              {siteModal.title}
+            </h3>
+
+            {/* Mensagem */}
+            <p style={{
+              fontSize: '0.92rem',
+              color: '#cbd5e1',
+              lineHeight: 1.5,
+              margin: '0 0 1.5rem 0'
+            }}>
+              {siteModal.message}
+            </p>
+
+            {/* Botão de confirmação */}
+            <button
+              type="button"
+              onClick={() => setSiteModal(null)}
+              autoFocus
+              className="btn-primary"
+              style={{
+                width: '100%',
+                padding: '11px 24px',
+                fontSize: '0.92rem',
+                fontWeight: 800,
+                borderRadius: '12px',
+                justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(184, 38, 27, 0.4)'
+              }}
+            >
+              OK, Entendi
+            </button>
           </div>
         </div>
       )}

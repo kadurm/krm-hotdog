@@ -824,6 +824,7 @@ export default function DeliveryView({
         position: 'fixed',
         top: 0,
         left: 0,
+        zIndex: (isCartOpen || selectedProduct || previewImageModal) ? 99999 : 1,
         overflowY: (viewMode === 'grid' || checkoutStep !== 'menu' || isCartOpen) ? 'auto' : 'hidden', 
         overflowX: 'hidden'
       }}
@@ -1578,7 +1579,7 @@ export default function DeliveryView({
 
       {/* FORMULÁRIO DE CHECKOUT */}
       {checkoutStep === 'form' && (
-        <div style={{ maxWidth: '600px', margin: '2rem auto 4rem auto', width: '100%', padding: '0 1.5rem' }} className="animate-fade-in">
+        <div style={{ maxWidth: '600px', margin: 'clamp(2rem, 8vh, 5.5rem) auto 4rem auto', width: '100%', padding: '0 1.5rem' }} className="animate-fade-in">
           <div className="glass-panel" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '1rem' }}>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>Finalizar Pedido</h2>
@@ -2019,7 +2020,7 @@ export default function DeliveryView({
           activeTrackingOrder.status === 'shipping' ? '68%' : '100%';
 
         return (
-          <div style={{ maxWidth: '620px', margin: '2rem auto 4rem auto', width: '100%', padding: '0 1.5rem' }} className="animate-fade-in">
+          <div style={{ maxWidth: '620px', margin: 'clamp(2rem, 8vh, 5.5rem) auto 4rem auto', width: '100%', padding: '0 1.5rem' }} className="animate-fade-in">
             <div className="glass-panel" style={{ padding: '2rem 1.75rem', textAlign: 'center' }}>
               <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'var(--color-brand-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
                 <Clock size={30} color="var(--color-brand)" />
@@ -2215,17 +2216,19 @@ export default function DeliveryView({
             className="modal-content animate-fade-in" 
             style={{ 
               maxWidth: '540px',
-              maxHeight: 'min(86vh, 86dvh)',
+              maxHeight: 'min(88vh, 88dvh, 740px)',
               height: 'auto',
               display: 'flex',
               flexDirection: 'column',
               boxShadow: '0 25px 60px rgba(0,0,0,0.95)',
-              position: 'relative'
+              position: 'relative',
+              borderRadius: '16px',
+              overflow: 'hidden'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-header" style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-glass)' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>Personalizar Item</h3>
+            <div className="modal-header" style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-glass)', padding: '1rem 1.25rem', flexShrink: 0 }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>Personalizar Item</h3>
               <button onClick={() => setSelectedProduct(null)} style={{ color: 'var(--text-secondary)', cursor: 'pointer', background: 'none', border: 'none', display: 'flex', padding: '4px' }}>
                 <X size={20} />
               </button>
@@ -2554,12 +2557,16 @@ export default function DeliveryView({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-header" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="modal-header" style={{ padding: '1.25rem 1.5rem', flexShrink: 0, borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                 <ShoppingBag size={20} color="var(--color-brand)" /> Carrinho
               </h3>
-              <button onClick={() => setIsCartOpen(false)} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <X size={20} />
+              <button 
+                onClick={() => setIsCartOpen(false)} 
+                style={{ color: 'var(--text-secondary)', cursor: 'pointer', background: 'none', border: 'none', padding: '6px', display: 'flex', alignItems: 'center' }}
+                title="Fechar carrinho"
+              >
+                <X size={22} />
               </button>
             </div>
 

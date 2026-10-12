@@ -6,6 +6,7 @@ import FirebaseConfigModal from '../../components/FirebaseConfigModal';
 import CashShiftModal from '../../components/CashShiftModal';
 import DeliveryMap from '../../components/DeliveryMap';
 import OrderTimerBadge from '../../components/OrderTimerBadge';
+import FidelityCelebrationModal from '../../components/FidelityCelebrationModal';
 import { isSupabaseConfigured } from '../../services/supabase';
 import { isFirebaseConfigured } from '../../services/firebase';
 import { 
@@ -56,7 +57,9 @@ export default function AdminView({ onLogout, onGoOperation }) {
     updateCustomerStamps,
     grantCustomerBonus,
     redeemCustomerReward,
-    deleteCustomer
+    deleteCustomer,
+    fidelityAlert,
+    setFidelityAlert
   } = useSystem();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -6589,6 +6592,12 @@ export default function AdminView({ onLogout, onGoOperation }) {
           </div>
         </div>
       )}
+
+      {/* MODAL DE CELEBRAÇÃO DE VOUCHER DE FIDELIDADE (10º PEDIDO CONCLUÍDO) */}
+      <FidelityCelebrationModal 
+        alert={fidelityAlert} 
+        onClose={() => setFidelityAlert(null)} 
+      />
 
       </div>
     </div>

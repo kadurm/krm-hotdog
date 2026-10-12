@@ -6,6 +6,7 @@ import CashShiftModal from '../../components/CashShiftModal';
 import QuickOrderModal from '../../components/QuickOrderModal';
 import SupabaseConfigModal from '../../components/SupabaseConfigModal';
 import FirebaseConfigModal from '../../components/FirebaseConfigModal';
+import FidelityCelebrationModal from '../../components/FidelityCelebrationModal';
 import { isSupabaseConfigured } from '../../services/supabase';
 import { isFirebaseConfigured } from '../../services/firebase';
 import { 
@@ -42,7 +43,9 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     resumeStore,
     openStore,
     closeStore,
-    updateStoreSettings
+    updateStoreSettings,
+    fidelityAlert,
+    setFidelityAlert
   } = useSystem();
 
   // Abas da operação diária: 'kds' | 'cash' | 'delivery'
@@ -1945,6 +1948,12 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
           </div>
         </div>
       )}
+
+      {/* MODAL DE CELEBRAÇÃO DE VOUCHER DE FIDELIDADE (10º PEDIDO CONCLUÍDO) */}
+      <FidelityCelebrationModal 
+        alert={fidelityAlert} 
+        onClose={() => setFidelityAlert(null)} 
+      />
 
     </div>
   );

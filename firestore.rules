@@ -108,6 +108,21 @@ service cloud.firestore {
     //   - lastOrderAt: string (optional) - last order date/timestamp
     //   - updatedAt: string | timestamp (optional)
     //
+    // Collection: coupons
+    // Document ID: {couponId} (e.g. 'cp-1', 'BEMVINDO10', etc.)
+    // Fields:
+    //   - id: string (optional) - coupon identifier
+    //   - code: string (required) - promotional or loyalty voucher code
+    //   - type: string (optional, 'percent' | 'fixed' | 'free_delivery')
+    //   - value: number (optional) - discount value
+    //   - discount: number (optional) - discount amount or percentage
+    //   - minOrder: number (optional) - minimum order value
+    //   - usesCount: number (optional) - usage count
+    //   - active: bool (optional) - availability status toggle
+    //   - expiresAt: string | timestamp (optional) - expiration date
+    //   - customerPhone: string (optional) - phone for loyalty vouchers
+    //   - updatedAt: string | timestamp (optional)
+    //
     // ===============================================================
 
     // 1. ORDERS: Pedidos do Cardápio, Garçom/Mesa, KDS e Delivery
@@ -137,6 +152,11 @@ service cloud.firestore {
 
     // 6. CUSTOMERS: Clientes e Histórico de Fidelidade
     match /customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    // 7. COUPONS: Cupons Promocionais e Vouchers de Fidelidade
+    match /coupons/{couponId} {
       allow read, write: if true;
     }
 

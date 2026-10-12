@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSystem } from '../../contexts/SystemContext';
 import LoyaltyCard from '../../components/LoyaltyCard';
 import { 
@@ -28,6 +28,7 @@ export default function DeliveryView({
     storeSettings,
     deliveryNeighborhoods = [],
     deliveryRadiuses = [],
+    coupons = [],
     validateCoupon,
     lookupCustomer,
     saveCustomer,
@@ -104,6 +105,19 @@ export default function DeliveryView({
   const [customerSearchPhone, setCustomerSearchPhone] = useState('');
   const [identifiedCustomer, setIdentifiedCustomer] = useState(null);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+
+  // Voucher de Fidelidade disponível (10º Pedido Concluído)
+  const activeFidelityVoucher = useMemo(() => {
+    const rawClean = (phone || customerSearchPhone || '').replace(/\D/g, '');
+    if (!rawClean) return null;
+    return coupons.find(c => 
+      c.active && 
+      c.isFidelityVoucher && 
+      c.customerPhone && 
+      c.customerPhone.replace(/\D/g, '') === rawClean && 
+      (c.usesCount || 0) === 0
+    ) || null;
+  }, [coupons, phone, customerSearchPhone]);
 
   // Checkout States
   const [customerName, setCustomerName] = useState('');
@@ -2220,6 +2234,44 @@ export default function DeliveryView({
                 borderRadius: '8px',
                 border: '1px solid var(--border-glass)'
               }}>
+                {/* Banner de Voucher de Fidelidade Disponível */}
+                {activeFidelityVoucher && !appliedCoupon && (
+                  <div style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.35) 0%, rgba(237, 177, 67, 0.2) 100%)',
+                    border: '1px solid rgba(237, 177, 67, 0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    marginBottom: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-brand-yellow)', fontWeight: 800, fontSize: '0.82rem' }}>
+                      <Gift size={16} />
+                      <span>🎉 VOCÊ TEM 1 LANCHE GRÁTIS DE FIDELIDADE!</span>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#fff' }}>
+                      Voucher ativo do seu 10º pedido: <strong>{activeFidelityVoucher.code}</strong> (R$ 25,00 OFF)
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputCoupon(activeFidelityVoucher.code);
+                        const res = validateCoupon(activeFidelityVoucher.code, cartTotal);
+                        if (res.valid) {
+                          setAppliedCoupon(res.coupon);
+                          setCouponFeedback({ success: true, message: `Voucher ${activeFidelityVoucher.code} aplicado! Seu lanche saiu grátis!` });
+                        }
+                      }}
+                      className="btn-primary"
+                      style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <Check size={14} />
+                      <span>Aplicar Meu Lanche Grátis Agora</span>
+                    </button>
+                  </div>
+                )}
+
                 <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                   Cupom de Desconto
                 </label>

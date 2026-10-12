@@ -668,6 +668,8 @@ export const SystemProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [fidelityAlert, setFidelityAlert] = useState(null);
+
   const [firebaseActive, setFirebaseActive] = useState(isFirebaseConfigured);
 
   // Turno de caixa aberto ativo (se houver)
@@ -1102,6 +1104,52 @@ export const SystemProvider = ({ children }) => {
     };
   }, [firebaseActive]);
 
+  // Sincronização em tempo real de CUPONS e VOUCHERS com Cloud Firestore (Firebase)
+  useEffect(() => {
+    const db = getFirestoreDb();
+    if (!db) return;
+
+    let unsubscribe = null;
+    try {
+      const colRef = collection(db, 'coupons');
+      unsubscribe = onSnapshot(colRef, (snapshot) => {
+        if (!snapshot.empty) {
+          const remoteCoupons = [];
+          snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data && data.code) {
+              remoteCoupons.push(data);
+            }
+          });
+
+          if (remoteCoupons.length > 0) {
+            setCoupons(prev => {
+              const map = new Map(prev.map(c => [c.code.toUpperCase(), c]));
+              remoteCoupons.forEach(rc => {
+                const upper = rc.code.toUpperCase();
+                if (map.has(upper)) {
+                  const local = map.get(upper);
+                  map.set(upper, { ...local, ...rc });
+                } else {
+                  map.set(upper, rc);
+                }
+              });
+              return Array.from(map.values());
+            });
+          }
+        }
+      }, (err) => {
+        console.warn('Erro no listener de coupons Firestore:', err);
+      });
+    } catch (err) {
+      console.warn('Exceção ao conectar coupons Firestore:', err);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [firebaseActive]);
+
   // --- Função para Salvar/Conectar Supabase (legado/desativado) ---
   const saveSupabaseConfig = () => false;
 
@@ -1378,27 +1426,46 @@ export const SystemProvider = ({ children }) => {
   };
 
   const upsertCoupon = (couponData) => {
+    const upper = couponData.code.trim().toUpperCase();
+    const numVal = parseFloat(couponData.value ?? couponData.discount ?? 0);
+    const normalized = {
+      ...couponData,
+      id: couponData.id || ('cp-' + Date.now()),
+      code: upper,
+      value: numVal,
+      discount: numVal
+    };
+
     setCoupons(prev => {
-      const upper = couponData.code.trim().toUpperCase();
-      const numVal = parseFloat(couponData.value ?? couponData.discount ?? 0);
-      const existing = prev.findIndex(c => (c.id && c.id === couponData.id) || c.code.toUpperCase() === upper);
-      const normalized = {
-        ...couponData,
-        code: upper,
-        value: numVal,
-        discount: numVal
-      };
+      const existing = prev.findIndex(c => (c.id && c.id === normalized.id) || c.code.toUpperCase() === upper);
       if (existing > -1) {
         const copy = [...prev];
         copy[existing] = { ...copy[existing], ...normalized };
         return copy;
       }
-      return [...prev, { ...normalized, id: couponData.id || 'cp-' + Date.now(), usesCount: 0 }];
+      return [...prev, { ...normalized, usesCount: normalized.usesCount || 0 }];
     });
+
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb && normalized.code) {
+      try {
+        setDoc(doc(firestoreDb, 'coupons', normalized.code), {
+          ...normalized,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      } catch (err) {}
+    }
   };
 
   const deleteCoupon = (identifier) => {
-    setCoupons(prev => prev.filter(c => c.id !== identifier && c.code.toUpperCase() !== String(identifier).toUpperCase()));
+    const upperId = String(identifier).toUpperCase();
+    setCoupons(prev => prev.filter(c => c.id !== identifier && c.code.toUpperCase() !== upperId));
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb) {
+      try {
+        deleteDoc(doc(firestoreDb, 'coupons', upperId)).catch(() => {});
+      } catch (err) {}
+    }
   };
 
   // --- Gestão de Bairros de Entrega ---
@@ -1968,16 +2035,134 @@ export const SystemProvider = ({ children }) => {
             };
             setInvoices(i => [newNf, ...i]);
 
-            // Pontuação no Cartão Fidelidade
-            if (order.phone && order.total >= storeSettings.loyaltyMinOrder) {
-              const clean = order.phone.replace(/\D/g, '');
-              setCustomers(custs => custs.map(c => {
-                if (c.phone.replace(/\D/g, '') === clean) {
-                  const newStamps = (c.stampsCount || 0) + 1;
-                  return { ...c, stampsCount: newStamps };
-                }
-                return c;
-              }));
+            // --- CARTÃO FIDELIDADE NUU PRENSADO (100% AUTOMÁTICO) ---
+            if (order.phone) {
+              const cleanPhone = String(order.phone).replace(/\D/g, '');
+              if (cleanPhone) {
+                // Total de pedidos entregues para este cliente (incluindo o atual)
+                const prevDeliveredCount = (nextOrders || []).filter(o => 
+                  o.phone && 
+                  String(o.phone).replace(/\D/g, '') === cleanPhone && 
+                  o.status === 'delivered'
+                ).length;
+
+                setCustomers(custs => {
+                  const existingIndex = custs.findIndex(c => c.phone && String(c.phone).replace(/\D/g, '') === cleanPhone);
+                  const currentCust = existingIndex > -1 ? custs[existingIndex] : null;
+                  const currentStamps = currentCust ? (currentCust.stampsCount || 0) : 0;
+                  const newStamps = currentStamps + 1;
+
+                  // Condição automática do 10º pedido: completou 10 selos ou total de pedidos entregues é múltiplo de 10
+                  const isTenthOrder = (newStamps >= 10) || (prevDeliveredCount > 0 && prevDeliveredCount % 10 === 0);
+
+                  let newBonuses = currentCust && Array.isArray(currentCust.bonuses) ? [...currentCust.bonuses] : [];
+                  let finalStamps = newStamps;
+
+                  if (isTenthOrder) {
+                    // Gera o Voucher Único exclusivo (Ex: NUU10-9876)
+                    const suffix = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : Math.floor(1000 + Math.random() * 9000);
+                    const voucherCode = `NUU10-${suffix}`;
+
+                    // Cadastra o cupom oficial no sistema com 1 Lanche Grátis (R$ 25,00)
+                    const fidelityCoupon = {
+                      id: `cp-fid-${Date.now()}`,
+                      code: voucherCode,
+                      type: 'fixed',
+                      value: 25.00,
+                      discount: 25.00,
+                      minOrder: 0,
+                      active: true,
+                      usesCount: 0,
+                      maxUses: 1,
+                      isFidelityVoucher: true,
+                      customerPhone: cleanPhone,
+                      customerName: order.customerName || 'Cliente',
+                      description: `Voucher Fidelidade: 10º Pedido Concluído - 1 Lanche Grátis (R$ 25,00) para ${order.customerName || 'Cliente'}`,
+                      createdAt: new Date().toISOString()
+                    };
+
+                    upsertCoupon(fidelityCoupon);
+
+                    // Registra o bônus no histórico do cliente
+                    const bonusEntry = {
+                      id: 'fid-10-' + Date.now(),
+                      type: 'fidelity_10_voucher',
+                      title: 'Voucher 10º Pedido Concluído (Lanche Grátis)',
+                      code: voucherCode,
+                      value: '1 Lanche Grátis (R$ 25,00)',
+                      voucherCode: voucherCode,
+                      grantedAt: new Date().toISOString(),
+                      orderId: order.id,
+                      notes: `Gerado automaticamente após a conclusão do ${prevDeliveredCount}º pedido no Nuu Prensado.`
+                    };
+                    newBonuses.unshift(bonusEntry);
+
+                    // Reinicia o ciclo de selos (decrementa 10)
+                    finalStamps = Math.max(0, newStamps - 10);
+
+                    // Mensagem Oficial do WhatsApp com o Voucher
+                    const custName = (order.customerName || 'Cliente').trim();
+                    const whatsappMsg = `🎉 *PARABÉNS, ${custName.toUpperCase()}!* 🌭🎉\n\n` +
+                      `Você acabou de completar seu *10º pedido* no *Nuu Prensado* e preencheu todo o seu *Cartão Fidelidade*! ⭐⭐⭐\n\n` +
+                      `Como prometido, seu próximo lanche é *TOTALMENTE GRATUITO* por nossa conta! 🎁\n\n` +
+                      `🎫 *SEU VOUCHER EXCLUSIVO:* *${voucherCode}*\n\n` +
+                      `👉 Para resgatar, basta inserir este cupom no carrinho do nosso cardápio digital ou enviar aqui no WhatsApp no seu próximo pedido!\n\n` +
+                      `Muito obrigado por ser nosso cliente fiel! ❤️🌭`;
+
+                    const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(whatsappMsg)}`;
+
+                    // Notifica globalmente o alerta de celebração
+                    setFidelityAlert({
+                      customerName: custName,
+                      phone: cleanPhone,
+                      voucherCode,
+                      whatsappUrl,
+                      message: whatsappMsg,
+                      orderId: order.id
+                    });
+
+                    // Toca som festivo
+                    playNotificationChime();
+
+                    // Tenta abrir o WhatsApp imediatamente
+                    try {
+                      if (typeof window !== 'undefined') {
+                        window.open(whatsappUrl, '_blank');
+                      }
+                    } catch (e) {
+                      console.warn('Popup WhatsApp:', e);
+                    }
+                  }
+
+                  const updatedCustomer = {
+                    ...(currentCust || { phone: cleanPhone, name: order.customerName || 'Cliente' }),
+                    name: order.customerName && (!currentCust?.name || currentCust.name === 'Cliente') ? order.customerName : (currentCust?.name || 'Cliente'),
+                    address: order.address || currentCust?.address || '',
+                    neighborhood: order.neighborhood || currentCust?.neighborhood || '',
+                    stampsCount: finalStamps,
+                    loyaltyStamps: finalStamps,
+                    totalOrders: (currentCust?.totalOrders || 0) + 1,
+                    lastOrderAt: new Date().toISOString(),
+                    bonuses: newBonuses
+                  };
+
+                  const db = getFirestoreDb();
+                  if (db) {
+                    try {
+                      setDoc(doc(db, 'customers', cleanPhone), {
+                        ...updatedCustomer,
+                        updatedAt: new Date().toISOString()
+                      }, { merge: true }).catch(() => {});
+                    } catch (err) {}
+                  }
+
+                  if (existingIndex > -1) {
+                    return custs.map((c, i) => i === existingIndex ? updatedCustomer : c);
+                  } else {
+                    return [...custs, updatedCustomer];
+                  }
+                });
+              }
             }
           }
           return updated;
@@ -2376,7 +2561,9 @@ export const SystemProvider = ({ children }) => {
       updateQuotation,
       deleteQuotation,
       resetToOfficialMenu,
-      playNotificationChime
+      playNotificationChime,
+      fidelityAlert,
+      setFidelityAlert
     }}>
       {children}
     </SystemContext.Provider>

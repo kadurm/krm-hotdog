@@ -442,8 +442,9 @@ const INITIAL_CUSTOMERS = [
 // 10. EQUIPE E OPERADORES DO TURNO (Atendentes, Chapa, Caixa, Dono)
 const INITIAL_OPERATORS = [
   { id: 'op-1', name: 'Kadu', role: 'Proprietário / Gerente', active: true, pin: '1234' },
-  { id: 'op-2', name: 'Carlos', role: 'Atendente / Caixa', active: true, pin: '0000' },
-  { id: 'op-3', name: 'Juliana', role: 'Atendente / Chapa', active: true, pin: '0000' }
+  { id: 'op-2', name: 'Daniel', role: 'Atendente / Caixa', active: true, pin: '1234' },
+  { id: 'op-3', name: 'Fabiane', role: 'Atendente / Caixa', active: true, pin: '1234' },
+  { id: 'op-4', name: 'Julia', role: 'Atendente / Chapa', active: true, pin: '1234' }
 ];
 
 // Cotações de Fornecedores
@@ -628,15 +629,32 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [operators, setOperators] = useState(() => {
+    const savedV2 = localStorage.getItem('nuu_operators_v2');
+    if (savedV2) {
+      try {
+        return JSON.parse(savedV2);
+      } catch (e) {}
+    }
     const saved = localStorage.getItem('nuu_operators');
-    return saved ? JSON.parse(saved) : INITIAL_OPERATORS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const hasNewMembers = parsed.some(o => ['Daniel', 'Fabiane', 'Julia'].includes(o.name));
+        if (hasNewMembers) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_OPERATORS;
   });
 
   const [currentOperator, setCurrentOperator] = useState(() => {
     const saved = sessionStorage.getItem('nuu_current_operator');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && ['Kadu', 'Daniel', 'Fabiane', 'Julia'].includes(parsed.name)) {
+          return parsed;
+        }
+        return null;
       } catch (e) {
         return null;
       }
@@ -709,6 +727,7 @@ export const SystemProvider = ({ children }) => {
   }, [customers]);
 
   useEffect(() => {
+    localStorage.setItem('nuu_operators_v2', JSON.stringify(operators));
     localStorage.setItem('nuu_operators', JSON.stringify(operators));
   }, [operators]);
 

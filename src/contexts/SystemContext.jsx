@@ -444,7 +444,7 @@ const INITIAL_OPERATORS = [
   { id: 'op-1', name: 'Kadu', role: 'Proprietário', active: true, pin: '1234' },
   { id: 'op-2', name: 'Daniel', role: 'Proprietário', active: true, pin: '1234' },
   { id: 'op-3', name: 'Fabiane', role: 'Atendente', active: true, pin: '1234' },
-  { id: 'op-4', name: 'Julia', role: 'Chapa / Cozinha', active: true, pin: '1234' }
+  { id: 'op-4', name: 'Julia', role: 'Atendente', active: true, pin: '1234' }
 ];
 
 // Cotações de Fornecedores
@@ -629,22 +629,21 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [operators, setOperators] = useState(() => {
-    const savedV3 = localStorage.getItem('nuu_operators_v3');
-    if (savedV3) {
+    const savedV4 = localStorage.getItem('nuu_operators_v4');
+    if (savedV4) {
       try {
-        return JSON.parse(savedV3);
+        return JSON.parse(savedV4);
       } catch (e) {}
     }
-    const saved = localStorage.getItem('nuu_operators_v2') || localStorage.getItem('nuu_operators');
+    const saved = localStorage.getItem('nuu_operators_v3') || localStorage.getItem('nuu_operators_v2') || localStorage.getItem('nuu_operators');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Atualiza Kadu e Daniel para 'Proprietário' se ainda não estiverem
         return parsed.map(o => {
           if (o.name === 'Kadu' || o.name === 'Daniel') {
             return { ...o, role: 'Proprietário' };
           }
-          return o;
+          return { ...o, role: 'Atendente' };
         });
       } catch (e) {}
     }
@@ -660,7 +659,7 @@ export const SystemProvider = ({ children }) => {
           if (parsed.name === 'Kadu' || parsed.name === 'Daniel') {
             return { ...parsed, role: 'Proprietário' };
           }
-          return parsed;
+          return { ...parsed, role: 'Atendente' };
         }
         return null;
       } catch (e) {
@@ -735,6 +734,7 @@ export const SystemProvider = ({ children }) => {
   }, [customers]);
 
   useEffect(() => {
+    localStorage.setItem('nuu_operators_v4', JSON.stringify(operators));
     localStorage.setItem('nuu_operators_v3', JSON.stringify(operators));
     localStorage.setItem('nuu_operators_v2', JSON.stringify(operators));
     localStorage.setItem('nuu_operators', JSON.stringify(operators));

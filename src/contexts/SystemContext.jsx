@@ -1048,6 +1048,60 @@ export const SystemProvider = ({ children }) => {
     };
   }, [firebaseActive]);
 
+  // Sincronização em tempo real de CUSTOMERS com Cloud Firestore (Firebase)
+  useEffect(() => {
+    const db = getFirestoreDb();
+    if (!db) return;
+
+    let unsubscribe = null;
+    try {
+      const colRef = collection(db, 'customers');
+      unsubscribe = onSnapshot(colRef, (snapshot) => {
+        if (!snapshot.empty) {
+          const remoteList = [];
+          snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data && data.phone) {
+              const clean = String(data.phone).replace(/\D/g, '');
+              remoteList.push({ ...data, phone: clean });
+            }
+          });
+
+          if (remoteList.length > 0) {
+            setCustomers(prev => {
+              const map = new Map(prev.map(c => [c.phone.replace(/\D/g, ''), c]));
+              remoteList.forEach(rem => {
+                const phone = rem.phone;
+                if (map.has(phone)) {
+                  const local = map.get(phone);
+                  map.set(phone, {
+                    ...local,
+                    ...rem,
+                    stampsCount: Math.max(local.stampsCount || 0, rem.stampsCount || 0),
+                    loyaltyStamps: Math.max(local.loyaltyStamps || 0, rem.loyaltyStamps || 0),
+                    totalOrders: Math.max(local.totalOrders || 0, rem.totalOrders || 0),
+                    bonuses: Array.isArray(rem.bonuses) ? rem.bonuses : (local.bonuses || [])
+                  });
+                } else {
+                  map.set(phone, rem);
+                }
+              });
+              return Array.from(map.values());
+            });
+          }
+        }
+      }, (err) => {
+        console.warn('Erro no listener de customers Firestore:', err);
+      });
+    } catch (err) {
+      console.warn('Exceção ao conectar customers Firestore:', err);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [firebaseActive]);
+
   // --- Função para Salvar/Conectar Supabase (legado/desativado) ---
   const saveSupabaseConfig = () => false;
 
@@ -1427,15 +1481,162 @@ export const SystemProvider = ({ children }) => {
   const saveCustomer = (customerData) => {
     if (!customerData.phone) return;
     const cleanPhone = customerData.phone.replace(/\D/g, '');
+    let finalCustomer = null;
     setCustomers(prev => {
       const idx = prev.findIndex(c => c.phone.replace(/\D/g, '') === cleanPhone);
       if (idx > -1) {
         const copy = [...prev];
-        copy[idx] = { ...copy[idx], ...customerData, phone: cleanPhone };
+        finalCustomer = { ...copy[idx], ...customerData, phone: cleanPhone };
+        copy[idx] = finalCustomer;
         return copy;
       }
-      return [...prev, { ...customerData, phone: cleanPhone, stampsCount: 0, totalOrders: 0 }];
+      finalCustomer = {
+        name: 'Cliente',
+        address: '',
+        neighborhood: '',
+        stampsCount: 0,
+        loyaltyStamps: 0,
+        totalOrders: 0,
+        bonuses: [],
+        ...customerData,
+        phone: cleanPhone
+      };
+      return [...prev, finalCustomer];
     });
+
+    // Sincroniza com Firebase se configurado
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb && finalCustomer) {
+      try {
+        setDoc(doc(firestoreDb, 'customers', cleanPhone), {
+          ...finalCustomer,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      } catch (err) {}
+    }
+  };
+
+  const updateCustomerStamps = (phone, deltaOrAmount, isAbsolute = false) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/\D/g, '');
+    let updatedCust = null;
+    setCustomers(prev => {
+      const idx = prev.findIndex(c => c.phone.replace(/\D/g, '') === cleanPhone);
+      if (idx > -1) {
+        const current = prev[idx];
+        const newStamps = isAbsolute 
+          ? Math.max(0, parseInt(deltaOrAmount, 10) || 0) 
+          : Math.max(0, (current.stampsCount || 0) + (parseInt(deltaOrAmount, 10) || 0));
+        updatedCust = { ...current, stampsCount: newStamps, loyaltyStamps: newStamps };
+        return prev.map((c, i) => i === idx ? updatedCust : c);
+      }
+      const newStamps = Math.max(0, parseInt(deltaOrAmount, 10) || 0);
+      updatedCust = { phone: cleanPhone, name: 'Cliente', stampsCount: newStamps, loyaltyStamps: newStamps, totalOrders: 0, bonuses: [] };
+      return [...prev, updatedCust];
+    });
+
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb && updatedCust) {
+      try {
+        setDoc(doc(firestoreDb, 'customers', cleanPhone), {
+          ...updatedCust,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      } catch (err) {}
+    }
+  };
+
+  const grantCustomerBonus = (phone, bonusData) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/\D/g, '');
+    const newBonus = {
+      id: 'b-' + Date.now(),
+      date: new Date().toISOString(),
+      ...bonusData
+    };
+    let updatedCust = null;
+
+    setCustomers(prev => {
+      const idx = prev.findIndex(c => c.phone.replace(/\D/g, '') === cleanPhone);
+      if (idx > -1) {
+        const current = prev[idx];
+        const bonuses = Array.isArray(current.bonuses) ? [newBonus, ...current.bonuses] : [newBonus];
+        let newStamps = current.stampsCount || 0;
+        if (bonusData.addStamps) {
+          newStamps = Math.max(0, newStamps + (parseInt(bonusData.addStamps, 10) || 0));
+        }
+        updatedCust = { ...current, bonuses, stampsCount: newStamps, loyaltyStamps: newStamps };
+        return prev.map((c, i) => i === idx ? updatedCust : c);
+      }
+      let newStamps = bonusData.addStamps ? (parseInt(bonusData.addStamps, 10) || 0) : 0;
+      updatedCust = {
+        phone: cleanPhone,
+        name: bonusData.customerName || 'Cliente',
+        bonuses: [newBonus],
+        stampsCount: newStamps,
+        loyaltyStamps: newStamps,
+        totalOrders: 0
+      };
+      return [...prev, updatedCust];
+    });
+
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb && updatedCust) {
+      try {
+        setDoc(doc(firestoreDb, 'customers', cleanPhone), {
+          ...updatedCust,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      } catch (err) {}
+    }
+  };
+
+  const redeemCustomerReward = (phone, rewardNotes = '') => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/\D/g, '');
+    const redeemEntry = {
+      id: 'rew-' + Date.now(),
+      date: new Date().toISOString(),
+      type: 'reward_redeem',
+      title: 'Prensado Grátis Resgatado (10 Selos)',
+      notes: rewardNotes || 'Resgate de 10 selos acumulados do Cartão Fidelidade'
+    };
+    let updatedCust = null;
+
+    setCustomers(prev => {
+      return prev.map(c => {
+        if (c.phone.replace(/\D/g, '') === cleanPhone) {
+          const currentStamps = c.stampsCount || 0;
+          const nextStamps = Math.max(0, currentStamps - 10);
+          const bonuses = Array.isArray(c.bonuses) ? [redeemEntry, ...c.bonuses] : [redeemEntry];
+          updatedCust = { ...c, stampsCount: nextStamps, loyaltyStamps: nextStamps, bonuses };
+          return updatedCust;
+        }
+        return c;
+      });
+    });
+
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb && updatedCust) {
+      try {
+        setDoc(doc(firestoreDb, 'customers', cleanPhone), {
+          ...updatedCust,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      } catch (err) {}
+    }
+  };
+
+  const deleteCustomer = (phone) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/\D/g, '');
+    setCustomers(prev => prev.filter(c => c.phone.replace(/\D/g, '') !== cleanPhone));
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb) {
+      try {
+        deleteDoc(doc(firestoreDb, 'customers', cleanPhone)).catch(() => {});
+      } catch (err) {}
+    }
   };
 
   // --- Gestão de Equipe & Operadores de Turno ---
@@ -2148,6 +2349,10 @@ export const SystemProvider = ({ children }) => {
       settleMotoboyPayments,
       lookupCustomer,
       saveCustomer,
+      updateCustomerStamps,
+      grantCustomerBonus,
+      redeemCustomerReward,
+      deleteCustomer,
       openCashShift,
       closeCashShift,
       addShiftBleed,

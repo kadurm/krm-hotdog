@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSystem, playNotificationChime } from '../../contexts/SystemContext';
 import ThermalPrintReceipt from '../../components/ThermalPrintReceipt';
 import SupabaseConfigModal from '../../components/SupabaseConfigModal';
@@ -18,7 +18,7 @@ import {
   Volume2, VolumeX, Upload, Image, Pause, Play,
   MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag,
   User, LayoutGrid, MonitorPlay, Flame, Navigation,
-  Calendar
+  Calendar, Users, Star, Crown, Gift, Heart, MessageCircle, Trophy
 } from 'lucide-react';
 
 export default function AdminView({ onLogout, onGoOperation }) {
@@ -50,7 +50,13 @@ export default function AdminView({ onLogout, onGoOperation }) {
     upsertProduct, deleteProduct, toggleProductStatus,
     toggleComplementStatus, upsertComplement, deleteComplement,
     addTransaction, updateTransaction, deleteTransaction,
-    addQuotation, updateQuotation, deleteQuotation, resetToOfficialMenu 
+    addQuotation, updateQuotation, deleteQuotation, resetToOfficialMenu,
+    customers = [],
+    saveCustomer,
+    updateCustomerStamps,
+    grantCustomerBonus,
+    redeemCustomerReward,
+    deleteCustomer
   } = useSystem();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -188,7 +194,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
     const hash = window.location.hash;
     if (hash.startsWith('#admin/')) {
       const tab = hash.replace('#admin/', '');
-      if (['dashboard', 'inventory', 'products', 'logistics', 'store', 'cotacao', 'finance', 'nfe', 'team'].includes(tab)) {
+      if (['dashboard', 'inventory', 'products', 'logistics', 'store', 'cotacao', 'finance', 'nfe', 'team', 'customers'].includes(tab)) {
         return tab;
       }
     }
@@ -196,6 +202,337 @@ export default function AdminView({ onLogout, onGoOperation }) {
   };
 
   const [activeTab, setActiveTab] = useState(getTabFromHash);
+
+  // Estados para Gestão de Clientes e Programa Fidelidade
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
+  const [bonusCustomer, setBonusCustomer] = useState(null);
+  const [bonusType, setBonusType] = useState('coupon'); // 'coupon' | 'discount' | 'free_product' | 'stamps' | 'vip_message'
+  const [bonusTitle, setBonusTitle] = useState('Desconto Especial de Fidelidade');
+  const [bonusValue, setBonusValue] = useState('10');
+  const [bonusNotes, setBonusNotes] = useState('');
+  const [bonusAddStamps, setBonusAddStamps] = useState(1);
+  const [isCustomerEditModalOpen, setIsCustomerEditModalOpen] = useState(false);
+  const [custFormName, setCustFormName] = useState('');
+  const [custFormPhone, setCustFormPhone] = useState('');
+  const [custFormAddress, setCustFormAddress] = useState('');
+  const [custFormNeighborhood, setCustFormNeighborhood] = useState('');
+  const [custFormStamps, setCustFormStamps] = useState(0);
+
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [customerTierFilter, setCustomerTierFilter] = useState('all');
+  const [customerSortBy, setCustomerSortBy] = useState('score');
+
+  // Consolidação completa de clientes reais, unindo base cadastrada + histórico de todos os pedidos
+  const consolidatedCustomers = useMemo(() => {
+    const map = new Map();
+
+    // 1. Processa clientes da lista
+    (customers || []).forEach(c => {
+      const cleanPhone = (c.phone || '').replace(/\D/g, '');
+      if (!cleanPhone) return;
+      map.set(cleanPhone, {
+        id: c.id || cleanPhone,
+        phone: cleanPhone,
+        rawPhone: c.phone,
+        name: c.name || 'Cliente',
+        address: c.address || '',
+        neighborhood: c.neighborhood || '',
+        stampsCount: c.stampsCount ?? c.loyaltyStamps ?? 0,
+        bonuses: Array.isArray(c.bonuses) ? c.bonuses : [],
+        orders: [],
+        totalOrders: 0,
+        totalSpent: 0,
+        firstOrderAt: null,
+        lastOrderAt: c.lastOrderAt || null
+      });
+    });
+
+    // 2. Mescla e analisa histórico de todos os pedidos reais
+    (orders || []).forEach(o => {
+      if (!o.phone) return;
+      const cleanPhone = String(o.phone).replace(/\D/g, '');
+      if (!cleanPhone) return;
+
+      if (!map.has(cleanPhone)) {
+        map.set(cleanPhone, {
+          id: cleanPhone,
+          phone: cleanPhone,
+          rawPhone: o.phone,
+          name: o.customerName || 'Cliente',
+          address: o.address || '',
+          neighborhood: o.neighborhood || '',
+          stampsCount: 0,
+          bonuses: [],
+          orders: [],
+          totalOrders: 0,
+          totalSpent: 0,
+          firstOrderAt: null,
+          lastOrderAt: null
+        });
+      }
+
+      const client = map.get(cleanPhone);
+      if (o.customerName && (!client.name || client.name === 'Cliente')) {
+        client.name = o.customerName;
+      }
+      if (o.address && !client.address) {
+        client.address = o.address;
+      }
+      if (o.neighborhood && !client.neighborhood) {
+        client.neighborhood = o.neighborhood;
+      }
+
+      client.orders.push(o);
+
+      if (o.status !== 'canceled') {
+        client.totalOrders += 1;
+        client.totalSpent += (parseFloat(o.total) || 0);
+
+        const oDate = o.date || o.created_at || o.createdAt;
+        if (oDate) {
+          const dTime = new Date(oDate).getTime();
+          if (!isNaN(dTime)) {
+            if (!client.firstOrderAt || dTime < new Date(client.firstOrderAt).getTime()) {
+              client.firstOrderAt = oDate;
+            }
+            if (!client.lastOrderAt || dTime > new Date(client.lastOrderAt).getTime()) {
+              client.lastOrderAt = oDate;
+            }
+          }
+        }
+      }
+    });
+
+    // 3. Calcula Score (0 a 100), Tiers, Itens favoritos e Estatísticas
+    const nowTime = Date.now();
+    return Array.from(map.values()).map(client => {
+      client.orders.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+      const daysSinceLastOrder = client.lastOrderAt
+        ? Math.max(0, Math.floor((nowTime - new Date(client.lastOrderAt).getTime()) / (1000 * 60 * 60 * 24)))
+        : 999;
+
+      // Itens favoritos mais pedidos
+      const itemCounts = {};
+      client.orders.forEach(ord => {
+        if (Array.isArray(ord.items)) {
+          ord.items.forEach(it => {
+            const name = it.name || it.productName || 'Lanche';
+            itemCounts[name] = (itemCounts[name] || 0) + (it.quantity || 1);
+          });
+        }
+      });
+      const favoriteItems = Object.entries(itemCounts)
+        .map(([name, qty]) => ({ name, qty }))
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 5);
+
+      // Score de Fidelidade ponderado
+      let freqScore = 0;
+      if (client.totalOrders >= 10) freqScore = 100;
+      else if (client.totalOrders >= 7) freqScore = 85;
+      else if (client.totalOrders >= 4) freqScore = 70;
+      else if (client.totalOrders >= 2) freqScore = 45;
+      else if (client.totalOrders === 1) freqScore = 20;
+
+      let ltvScore = 0;
+      if (client.totalSpent >= 500) ltvScore = 100;
+      else if (client.totalSpent >= 300) ltvScore = 85;
+      else if (client.totalSpent >= 150) ltvScore = 65;
+      else if (client.totalSpent >= 80) ltvScore = 45;
+      else if (client.totalSpent > 0) ltvScore = 25;
+
+      let recencyScore = 0;
+      if (daysSinceLastOrder <= 7) recencyScore = 100;
+      else if (daysSinceLastOrder <= 15) recencyScore = 85;
+      else if (daysSinceLastOrder <= 30) recencyScore = 65;
+      else if (daysSinceLastOrder <= 60) recencyScore = 40;
+      else recencyScore = 15;
+
+      const stampsScore = Math.min(100, Math.round(((client.stampsCount % 10) / 10) * 100) + (Math.floor(client.stampsCount / 10) * 20));
+
+      const rawScore = Math.round(
+        (freqScore * 0.35) +
+        (ltvScore * 0.30) +
+        (recencyScore * 0.20) +
+        (stampsScore * 0.15)
+      );
+      const score = Math.max(0, Math.min(100, rawScore));
+
+      let tier = 'novo';
+      let tierLabel = 'Novo';
+      let tierColor = '#94a3b8';
+      let tierIcon = '🌱';
+
+      if (score >= 80 || client.totalOrders >= 10) {
+        tier = 'diamond';
+        tierLabel = 'Diamante (VIP)';
+        tierColor = '#38bdf8';
+        tierIcon = '💎';
+      } else if (score >= 60 || client.totalOrders >= 6) {
+        tier = 'gold';
+        tierLabel = 'Ouro';
+        tierColor = '#edb143';
+        tierIcon = '🥇';
+      } else if (score >= 40 || client.totalOrders >= 3) {
+        tier = 'silver';
+        tierLabel = 'Prata';
+        tierColor = '#cbd5e1';
+        tierIcon = '🥈';
+      } else if (score >= 20 || client.totalOrders >= 1) {
+        tier = 'bronze';
+        tierLabel = 'Bronze';
+        tierColor = '#f97316';
+        tierIcon = '🥉';
+      }
+
+      return {
+        ...client,
+        daysSinceLastOrder,
+        favoriteItems,
+        score,
+        tier,
+        tierLabel,
+        tierColor,
+        tierIcon,
+        averageTicket: client.totalOrders > 0 ? (client.totalSpent / client.totalOrders) : 0,
+        scoreBreakdown: { freqScore, ltvScore, recencyScore, stampsScore }
+      };
+    });
+  }, [customers, orders]);
+
+  // Ranking Top 10 Clientes Fiéis
+  const topRankingCustomers = useMemo(() => {
+    return [...consolidatedCustomers]
+      .sort((a, b) => b.score - a.score || b.totalOrders - a.totalOrders || b.totalSpent - a.totalSpent)
+      .slice(0, 10);
+  }, [consolidatedCustomers]);
+
+  // Distribuição geral da base e métricas
+  const customerTiersSummary = useMemo(() => {
+    const summary = {
+      diamond: 0,
+      gold: 0,
+      silver: 0,
+      bronze: 0,
+      novo: 0,
+      rewardAvailable: 0,
+      total: consolidatedCustomers.length,
+      totalRevenue: consolidatedCustomers.reduce((acc, c) => acc + c.totalSpent, 0),
+      recurringCount: consolidatedCustomers.filter(c => c.totalOrders >= 2).length
+    };
+
+    consolidatedCustomers.forEach(c => {
+      if (summary[c.tier] !== undefined) summary[c.tier]++;
+      if (c.stampsCount >= 10) summary.rewardAvailable++;
+    });
+
+    return summary;
+  }, [consolidatedCustomers]);
+
+  // Lista de clientes filtrada e ordenada para a tabela
+  const filteredCustomersList = useMemo(() => {
+    return consolidatedCustomers
+      .filter(c => {
+        if (customerTierFilter === 'diamond' && c.tier !== 'diamond') return false;
+        if (customerTierFilter === 'gold' && c.tier !== 'gold') return false;
+        if (customerTierFilter === 'silver' && c.tier !== 'silver') return false;
+        if (customerTierFilter === 'bronze' && c.tier !== 'bronze') return false;
+        if (customerTierFilter === 'novo' && c.tier !== 'novo') return false;
+        if (customerTierFilter === 'reward_available' && c.stampsCount < 10) return false;
+        if (customerTierFilter === 'at_risk' && c.daysSinceLastOrder < 30) return false;
+
+        if (customerSearchTerm) {
+          const q = customerSearchTerm.toLowerCase();
+          const matchName = (c.name || '').toLowerCase().includes(q);
+          const matchPhone = (c.phone || '').includes(q);
+          const matchNeigh = (c.neighborhood || '').toLowerCase().includes(q);
+          if (!matchName && !matchPhone && !matchNeigh) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (customerSortBy === 'score') return b.score - a.score;
+        if (customerSortBy === 'orders') return b.totalOrders - a.totalOrders;
+        if (customerSortBy === 'ltv') return b.totalSpent - a.totalSpent;
+        if (customerSortBy === 'recent') {
+          return new Date(b.lastOrderAt || 0) - new Date(a.lastOrderAt || 0);
+        }
+        return b.score - a.score;
+      });
+  }, [consolidatedCustomers, customerTierFilter, customerSearchTerm, customerSortBy]);
+
+  const handleOpenCustomerDetails = (client) => {
+    const updated = consolidatedCustomers.find(c => c.phone === client.phone) || client;
+    setSelectedCustomer(updated);
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleOpenBonusModal = (client) => {
+    setBonusCustomer(client);
+    setBonusType('coupon');
+    setBonusTitle('Desconto Especial de Fidelidade');
+    setBonusValue('10');
+    setBonusNotes(`Bônus concedido para ${client.name} em reconhecimento à sua fidelidade no Nuu Prensado.`);
+    setBonusAddStamps(1);
+    setIsBonusModalOpen(true);
+  };
+
+  const handleSaveBonus = (e) => {
+    e.preventDefault();
+    if (!bonusCustomer) return;
+
+    grantCustomerBonus(bonusCustomer.phone, {
+      customerName: bonusCustomer.name,
+      type: bonusType,
+      title: bonusTitle,
+      value: bonusValue,
+      notes: bonusNotes,
+      addStamps: bonusType === 'stamps' ? bonusAddStamps : 0
+    });
+
+    setIsBonusModalOpen(false);
+
+    setTimeout(() => {
+      const refreshed = consolidatedCustomers.find(c => c.phone === bonusCustomer.phone);
+      if (refreshed) setSelectedCustomer(refreshed);
+    }, 100);
+  };
+
+  const handleOpenEditCustomer = (client = null) => {
+    if (client) {
+      setCustFormName(client.name || '');
+      setCustFormPhone(client.phone || '');
+      setCustFormAddress(client.address || '');
+      setCustFormNeighborhood(client.neighborhood || '');
+      setCustFormStamps(client.stampsCount || 0);
+    } else {
+      setCustFormName('');
+      setCustFormPhone('');
+      setCustFormAddress('');
+      setCustFormNeighborhood('');
+      setCustFormStamps(0);
+    }
+    setIsCustomerEditModalOpen(true);
+  };
+
+  const handleSaveCustomerForm = (e) => {
+    e.preventDefault();
+    if (!custFormPhone) return;
+
+    saveCustomer({
+      name: custFormName.trim() || 'Cliente',
+      phone: custFormPhone.trim(),
+      address: custFormAddress.trim(),
+      neighborhood: custFormNeighborhood.trim(),
+      stampsCount: parseInt(custFormStamps, 10) || 0,
+      loyaltyStamps: parseInt(custFormStamps, 10) || 0
+    });
+
+    setIsCustomerEditModalOpen(false);
+  };
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -790,6 +1127,12 @@ export default function AdminView({ onLogout, onGoOperation }) {
       badgeColor: 'var(--color-danger)'
     },
     team: { label: 'Equipe & Operadores', icon: <User size={20} /> },
+    customers: { 
+      label: 'Clientes & Fidelidade', 
+      icon: <Award size={20} />,
+      badge: customerTiersSummary.rewardAvailable > 0 ? `${customerTiersSummary.rewardAvailable} prêmio(s)` : null,
+      badgeColor: '#10b981' 
+    },
     cotacao: { label: 'Cotações', icon: <ShoppingBag size={20} /> },
     finance: { label: 'Financeiro', icon: <BadgeDollarSign size={20} /> },
     nfe: { label: 'Notas Fiscais (NF-e)', icon: <FileText size={20} /> }
@@ -1091,6 +1434,40 @@ export default function AdminView({ onLogout, onGoOperation }) {
             >
               <User size={20} />
               {!isSidebarCollapsed && <span>Equipe & Operadores</span>}
+            </button>
+
+            {/* Clientes & Fidelidade */}
+            <button 
+              onClick={() => changeTab('customers')} 
+              className={`nav-link ${activeTab === 'customers' ? 'active' : ''}`}
+              style={{ 
+                width: '100%', 
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                position: 'relative',
+                padding: isSidebarCollapsed ? '12px 10px' : '8px 14px'
+              }}
+              title="Clientes & Fidelidade"
+            >
+              <Award size={20} />
+              {!isSidebarCollapsed && <span>Clientes & Fidelidade</span>}
+              {customerTiersSummary.rewardAvailable > 0 && (
+                <span style={{ 
+                  position: 'absolute', 
+                  top: isSidebarCollapsed ? '2px' : '50%',
+                  right: isSidebarCollapsed ? '2px' : '12px',
+                  transform: isSidebarCollapsed ? 'none' : 'translateY(-50%)',
+                  backgroundColor: '#10b981', 
+                  color: '#fff', 
+                  fontSize: '0.65rem', 
+                  padding: '2px 5px', 
+                  borderRadius: '99px',
+                  fontWeight: 'bold',
+                  minWidth: '18px',
+                  textAlign: 'center'
+                }}>
+                  {customerTiersSummary.rewardAvailable}
+                </span>
+              )}
             </button>
 
             {/* Cotações */}
@@ -3691,6 +4068,659 @@ export default function AdminView({ onLogout, onGoOperation }) {
             </div>
           )}
 
+          {/* TAB: CLIENTES & HISTÓRICO DE FIDELIDADE */}
+          {activeTab === 'customers' && (
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              
+              {/* Header da Aba */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(237, 177, 67, 0.15)',
+                      border: '1px solid rgba(237, 177, 67, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--color-brand-yellow)'
+                    }}>
+                      <Award size={24} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                        Clientes & Fidelidade Inteligente
+                      </h2>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        Monitore a rotina real de pedidos de cada cliente, acompanhe o ranking de fidelidade com score preditivo e conceda bônus personalizados.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditCustomer()}
+                    className="btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontWeight: 700 }}
+                  >
+                    <PlusCircle size={18} />
+                    <span>+ Cadastrar Cliente</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 5 Cards de KPIs Gerais da Base */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px'
+              }}>
+                <div className="glass-panel" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <span>Base Total de Clientes</span>
+                    <Users size={18} color="var(--color-brand-yellow)" />
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff' }}>
+                    {customerTiersSummary.total}
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Mapeados com histórico e contato
+                  </span>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <span>Clientes VIP (Diamante + Ouro)</span>
+                    <Crown size={18} color="#38bdf8" />
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#38bdf8' }}>
+                    {customerTiersSummary.diamond + customerTiersSummary.gold}
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {customerTiersSummary.diamond} Diamantes 💎 e {customerTiersSummary.gold} Ouro 🥇
+                  </span>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <span>Faturamento Total (LTV)</span>
+                    <BadgeDollarSign size={18} color="#10b981" />
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10b981' }}>
+                    R$ {customerTiersSummary.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Valor gerado por toda a base de clientes
+                  </span>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <span>Taxa de Recorrência</span>
+                    <RotateCcw size={18} color="#a855f7" />
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#a855f7' }}>
+                    {customerTiersSummary.total > 0 ? Math.round((customerTiersSummary.recurringCount / customerTiersSummary.total) * 100) : 0}%
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {customerTiersSummary.recurringCount} clientes já pediram 2+ vezes
+                  </span>
+                </div>
+
+                <div className="glass-panel" style={{ 
+                  padding: '14px 18px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '4px',
+                  border: customerTiersSummary.rewardAvailable > 0 ? '1px solid rgba(16, 185, 129, 0.4)' : undefined,
+                  background: customerTiersSummary.rewardAvailable > 0 ? 'rgba(16, 185, 129, 0.08)' : undefined
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <span>Prêmios Prontos (10 Selos)</span>
+                    <Gift size={18} color="#10b981" />
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10b981' }}>
+                    {customerTiersSummary.rewardAvailable}
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {customerTiersSummary.rewardAvailable > 0 ? 'Clientes aguardando resgate de fidelidade!' : 'Nenhum prêmio pendente no momento'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Seção 2: Gráficos de Ranking de Fidelidade e Quadro Geral da Base */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+                gap: '1rem',
+                alignItems: 'stretch'
+              }}>
+                
+                {/* Painel 1: Ranking dos Melhores Clientes (Leaderboard de Score) */}
+                <div className="glass-panel" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Trophy size={20} color="var(--color-brand-yellow)" />
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+                        Ranking de Fidelidade (Top Clientes)
+                      </h3>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Top 10 por Score
+                    </span>
+                  </div>
+
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Clientes com maior frequência, valor acumulado e engajamento no programa.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+                    {topRankingCustomers.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        Nenhum cliente registrado ou com pedidos ainda.
+                      </div>
+                    ) : (
+                      topRankingCustomers.map((c, idx) => {
+                        const rankMedals = ['🥇', '🥈', '🥉'];
+                        const rankColor = idx === 0 ? '#edb143' : idx === 1 ? '#cbd5e1' : idx === 2 ? '#f97316' : '#94a3b8';
+
+                        return (
+                          <div 
+                            key={c.phone || idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 14px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-glass)',
+                              gap: '12px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '150px' }}>
+                              <div style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                                fontSize: '0.85rem',
+                                color: rankColor
+                              }}>
+                                {idx < 3 ? rankMedals[idx] : `#${idx + 1}`}
+                              </div>
+
+                              <div>
+                                <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>{c.name}</span>
+                                  <span title={c.tierLabel} style={{ fontSize: '0.85rem' }}>{c.tierIcon}</span>
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                  {c.rawPhone || c.phone} • {c.neighborhood || 'Delivery'}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Barra de Progresso do Score */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', maxWidth: '160px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Score</span>
+                                <span style={{ fontWeight: 800, color: c.tierColor }}>{c.score}/100</span>
+                              </div>
+                              <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{
+                                  width: `${c.score}%`,
+                                  height: '100%',
+                                  backgroundColor: c.tierColor,
+                                  borderRadius: '99px',
+                                  transition: 'width 0.4s ease'
+                                }} />
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                <span>{c.totalOrders} ped.</span>
+                                <span>R$ {c.totalSpent.toFixed(0)}</span>
+                                <span>{c.stampsCount % 10}/10 selos</span>
+                              </div>
+                            </div>
+
+                            {/* Ações Rápidas */}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenBonusModal(c)}
+                                className="btn-secondary"
+                                style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-brand-yellow)' }}
+                                title="Conceder Bônus Individual"
+                              >
+                                <Gift size={13} />
+                                <span className="mobile-hidden">Bônus</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCustomerDetails(c)}
+                                className="btn-secondary"
+                                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
+                                title="Ver Rotina e Histórico de Pedidos"
+                              >
+                                Detalhes
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Painel 2: Quadro Geral da Base (Distribuição por Níveis) e Metodologia de Score */}
+                <div className="glass-panel" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <TrendingUp size={20} color="#38bdf8" />
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+                        Quadro Geral da Base de Clientes
+                      </h3>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Distribuição & Potencial
+                    </span>
+                  </div>
+
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Segmentação automática dos clientes por nível de engajamento para direcionar campanhas e bônus.
+                  </p>
+
+                  {/* Barras de Distribuição dos Tiers */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
+                    {[
+                      { key: 'diamond', label: 'Diamante (VIP)', count: customerTiersSummary.diamond, icon: '💎', color: '#38bdf8', minScore: '80+' },
+                      { key: 'gold', label: 'Ouro', count: customerTiersSummary.gold, icon: '🥇', color: '#edb143', minScore: '60 - 79' },
+                      { key: 'silver', label: 'Prata', count: customerTiersSummary.silver, icon: '🥈', color: '#cbd5e1', minScore: '40 - 59' },
+                      { key: 'bronze', label: 'Bronze', count: customerTiersSummary.bronze, icon: '🥉', color: '#f97316', minScore: '20 - 39' },
+                      { key: 'novo', label: 'Novo / Entrada', count: customerTiersSummary.novo, icon: '🌱', color: '#94a3b8', minScore: '0 - 19' }
+                    ].map(tier => {
+                      const pct = customerTiersSummary.total > 0
+                        ? Math.round((tier.count / customerTiersSummary.total) * 100)
+                        : 0;
+
+                      return (
+                        <div key={tier.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#fff' }}>
+                              <span>{tier.icon}</span>
+                              <span>{tier.label}</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({tier.minScore} pts)</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 800, color: tier.color }}>{tier.count} clientes</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({pct}%)</span>
+                            </div>
+                          </div>
+                          
+                          <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '99px', overflow: 'hidden' }}>
+                            <div style={{
+                              width: `${Math.max(pct, tier.count > 0 ? 4 : 0)}%`,
+                              height: '100%',
+                              backgroundColor: tier.color,
+                              borderRadius: '99px',
+                              transition: 'width 0.4s ease'
+                            }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Box Explicativo de Score e Bônus */}
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '12px 14px',
+                    backgroundColor: 'rgba(237, 177, 67, 0.06)',
+                    border: '1px dashed rgba(237, 177, 67, 0.3)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-brand-yellow)', fontWeight: 700, fontSize: '0.82rem' }}>
+                      <Sparkles size={16} />
+                      <span>Como o Score de Fidelidade é Calculado?</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                      O algoritmo analisa 4 pilares ponderados: <strong>Frequência de Pedidos (35%)</strong>, <strong>Volume Gasto / LTV (30%)</strong>, <strong>Recência da Compra (20%)</strong> e <strong>Selos Acumulados (15%)</strong>.
+                      Utilize a nota para definir quem merece bônus exclusivos, promoções relâmpago ou mimos de agradecimento!
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* Seção 3: Barra de Filtros e Busca */}
+              <div className="glass-panel" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  
+                  {/* Busca por Texto */}
+                  <div style={{ position: 'relative', flex: '1', minWidth: '240px' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nome, WhatsApp ou bairro..."
+                      value={customerSearchTerm}
+                      onChange={e => setCustomerSearchTerm(e.target.value)}
+                      style={{ paddingLeft: '38px', width: '100%' }}
+                    />
+                  </div>
+
+                  {/* Filtro por Nível / Condição */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Nível:</span>
+                    <select
+                      value={customerTierFilter}
+                      onChange={e => setCustomerTierFilter(e.target.value)}
+                      style={{ padding: '8px 12px', minWidth: '160px' }}
+                    >
+                      <option value="all">Todos os Níveis ({consolidatedCustomers.length})</option>
+                      <option value="diamond">💎 Diamante / VIP ({customerTiersSummary.diamond})</option>
+                      <option value="gold">🥇 Ouro ({customerTiersSummary.gold})</option>
+                      <option value="silver">🥈 Prata ({customerTiersSummary.silver})</option>
+                      <option value="bronze">🥉 Bronze ({customerTiersSummary.bronze})</option>
+                      <option value="novo">🌱 Novos ({customerTiersSummary.novo})</option>
+                      <option value="reward_available">🎁 Com Prêmio Pronto ({customerTiersSummary.rewardAvailable})</option>
+                      <option value="at_risk">⚠️ Inativos (+30 dias sem pedir)</option>
+                    </select>
+
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, marginLeft: '8px' }}>Ordenar por:</span>
+                    <select
+                      value={customerSortBy}
+                      onChange={e => setCustomerSortBy(e.target.value)}
+                      style={{ padding: '8px 12px', minWidth: '150px' }}
+                    >
+                      <option value="score">Maior Score</option>
+                      <option value="orders">Mais Pedidos</option>
+                      <option value="ltv">Maior Faturamento (LTV)</option>
+                      <option value="recent">Mais Recentes</option>
+                    </select>
+                  </div>
+
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', paddingTop: '4px' }}>
+                  <span>Exibindo <strong>{filteredCustomersList.length}</strong> de <strong>{consolidatedCustomers.length}</strong> clientes</span>
+                  {(customerSearchTerm || customerTierFilter !== 'all') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerSearchTerm('');
+                        setCustomerTierFilter('all');
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-brand-yellow)', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Seção 4: Tabela Completa de Clientes */}
+              <div className="admin-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Cliente / Contato</th>
+                      <th>Nível & Score</th>
+                      <th>Cartão Fidelidade</th>
+                      <th>Consumo (LTV)</th>
+                      <th>Último Pedido</th>
+                      <th style={{ textAlign: 'center' }}>Ações Rápidas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomersList.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                          Nenhum cliente encontrado com os filtros aplicados.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCustomersList.map(c => {
+                        const stampsLeft = Math.max(0, 10 - (c.stampsCount % 10));
+                        const hasReward = c.stampsCount >= 10;
+                        const isAtRisk = c.daysSinceLastOrder >= 30;
+
+                        return (
+                          <tr key={c.phone}>
+                            
+                            {/* Cliente e Contato */}
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '50%',
+                                  backgroundColor: 'rgba(237, 177, 67, 0.15)',
+                                  border: `1px solid ${c.tierColor}`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: c.tierColor,
+                                  fontWeight: 800,
+                                  fontSize: '0.95rem'
+                                }}>
+                                  {c.name ? c.name.charAt(0).toUpperCase() : 'C'}
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <div style={{ fontWeight: 800, color: '#fff', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>{c.name}</span>
+                                    {c.tier === 'diamond' && <Crown size={14} color="#38bdf8" />}
+                                  </div>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Phone size={12} />
+                                    <span>{c.rawPhone || c.phone}</span>
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                    {c.neighborhood ? `${c.neighborhood}` : (c.address ? `${c.address.slice(0, 22)}...` : 'Balcão / Delivery')}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Nível e Score */}
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    backgroundColor: `${c.tierColor}20`,
+                                    border: `1px solid ${c.tierColor}60`,
+                                    color: c.tierColor,
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}>
+                                    <span>{c.tierIcon}</span>
+                                    <span>{c.tierLabel}</span>
+                                  </span>
+                                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#fff' }}>
+                                    {c.score} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>pts</span>
+                                  </span>
+                                </div>
+
+                                <div style={{ width: '120px', height: '5px', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '99px', overflow: 'hidden' }}>
+                                  <div style={{
+                                    width: `${c.score}%`,
+                                    height: '100%',
+                                    backgroundColor: c.tierColor,
+                                    borderRadius: '99px'
+                                  }} />
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Cartão Fidelidade (Selos) */}
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <Award size={15} color={hasReward ? '#10b981' : 'var(--color-brand-yellow)'} />
+                                  <span style={{ fontWeight: 700, color: hasReward ? '#10b981' : '#fff', fontSize: '0.88rem' }}>
+                                    {c.stampsCount % 10} / 10 selos
+                                  </span>
+                                  {hasReward && (
+                                    <span style={{
+                                      backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                      color: '#10b981',
+                                      fontSize: '0.68rem',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      fontWeight: 800
+                                    }}>
+                                      🎁 Prêmio Pronto!
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Mini visualização de bolinhas de selos */}
+                                <div style={{ display: 'flex', gap: '3px' }}>
+                                  {Array.from({ length: 10 }).map((_, sIdx) => {
+                                    const isFilled = sIdx < (c.stampsCount % 10);
+                                    return (
+                                      <div
+                                        key={sIdx}
+                                        style={{
+                                          width: '7px',
+                                          height: '7px',
+                                          borderRadius: '50%',
+                                          backgroundColor: isFilled ? 'var(--color-brand-yellow)' : 'rgba(255, 255, 255, 0.1)',
+                                          border: isFilled ? '1px solid #edb143' : '1px solid rgba(255, 255, 255, 0.05)'
+                                        }}
+                                      />
+                                    );
+                                  })}
+                                </div>
+
+                                {c.bonuses && c.bonuses.length > 0 && (
+                                  <span style={{ fontSize: '0.7rem', color: '#a855f7' }}>
+                                    {c.bonuses.length} bônus registrado(s)
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Consumo / LTV */}
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontWeight: 800, color: '#10b981', fontSize: '0.92rem' }}>
+                                  R$ {c.totalSpent.toFixed(2)}
+                                </span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                  {c.totalOrders} pedido{c.totalOrders === 1 ? '' : 's'}
+                                </span>
+                                {c.totalOrders > 0 && (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                    Méd. R$ {c.averageTicket.toFixed(2)} / ped
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Último Pedido e Recência */}
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                {c.lastOrderAt ? (
+                                  <>
+                                    <span style={{ fontSize: '0.82rem', color: '#fff', fontWeight: 600 }}>
+                                      {new Date(c.lastOrderAt).toLocaleDateString('pt-BR')}
+                                    </span>
+                                    <span style={{
+                                      fontSize: '0.72rem',
+                                      color: isAtRisk ? '#f97316' : 'var(--text-muted)',
+                                      fontWeight: isAtRisk ? 700 : 400
+                                    }}>
+                                      {c.daysSinceLastOrder === 0 ? 'Hoje' : c.daysSinceLastOrder === 1 ? 'Ontem' : `há ${c.daysSinceLastOrder} dias`}
+                                      {isAtRisk && ' ⚠️'}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sem pedidos</span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Ações */}
+                            <td style={{ textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                
+                                {/* WhatsApp */}
+                                <a
+                                  href={`https://wa.me/55${c.phone}?text=${encodeURIComponent(`Olá, ${c.name}! Tudo bem? Passando para agradecer sua preferência no Nuu Prensado! 🌭❤️`)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn-secondary"
+                                  style={{ padding: '6px 8px', fontSize: '0.75rem', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.3)' }}
+                                  title="Conversar no WhatsApp"
+                                >
+                                  <MessageCircle size={14} />
+                                </a>
+
+                                {/* Bônus */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenBonusModal(c)}
+                                  className="btn-secondary"
+                                  style={{ padding: '6px 10px', fontSize: '0.75rem', color: 'var(--color-brand-yellow)', borderColor: 'rgba(237, 177, 67, 0.3)' }}
+                                  title="Conceder Bônus Individual"
+                                >
+                                  <Gift size={14} /> Bônus
+                                </button>
+
+                                {/* Rotina / Detalhes */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenCustomerDetails(c)}
+                                  className="btn-secondary"
+                                  style={{ padding: '6px 10px', fontSize: '0.75rem' }}
+                                  title="Ver Rotina e Histórico de Pedidos"
+                                >
+                                  Rotina
+                                </button>
+
+                                {/* Editar */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditCustomer(c)}
+                                  className="btn-secondary"
+                                  style={{ padding: '6px 8px', fontSize: '0.75rem' }}
+                                  title="Editar Cliente"
+                                >
+                                  <Edit size={14} />
+                                </button>
+
+                              </div>
+                            </td>
+
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -4898,6 +5928,662 @@ export default function AdminView({ onLogout, onGoOperation }) {
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsOperatorModalOpen(false)} className="btn-secondary">Cancelar</button>
                 <button type="submit" className="btn-primary">Salvar Operador</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: ROTINA E HISTÓRICO COMPLETO DO CLIENTE */}
+      {isCustomerModalOpen && selectedCustomer && (
+        <div className="modal-overlay" onClick={() => setIsCustomerModalOpen(false)}>
+          <div 
+            className="modal-content animate-fade-in" 
+            style={{ maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="modal-header" style={{ alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '46px',
+                  height: '46px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(237, 177, 67, 0.15)',
+                  border: `2px solid ${selectedCustomer.tierColor}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: selectedCustomer.tierColor,
+                  fontWeight: 800,
+                  fontSize: '1.2rem'
+                }}>
+                  {selectedCustomer.name ? selectedCustomer.name.charAt(0).toUpperCase() : 'C'}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                      {selectedCustomer.name}
+                    </h3>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: `${selectedCustomer.tierColor}20`,
+                      border: `1px solid ${selectedCustomer.tierColor}60`,
+                      color: selectedCustomer.tierColor,
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span>{selectedCustomer.tierIcon}</span>
+                      <span>{selectedCustomer.tierLabel}</span>
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                    <Phone size={13} />
+                    <span>{selectedCustomer.rawPhone || selectedCustomer.phone}</span>
+                    {selectedCustomer.neighborhood && (
+                      <>
+                        <span>•</span>
+                        <MapPin size={13} />
+                        <span>{selectedCustomer.neighborhood}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setIsCustomerModalOpen(false)} 
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* DADOS DE CONTATO E CONSUMO */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '8px'
+              }}>
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Score de Fidelidade</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: selectedCustomer.tierColor }}>
+                    {selectedCustomer.score} <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>/ 100</span>
+                  </div>
+                </div>
+
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Total de Pedidos</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>
+                    {selectedCustomer.totalOrders}
+                  </div>
+                </div>
+
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Gasto Total (LTV)</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981' }}>
+                    R$ {selectedCustomer.totalSpent.toFixed(2)}
+                  </div>
+                </div>
+
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Ticket Médio</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#edb143' }}>
+                    R$ {selectedCustomer.averageTicket.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {selectedCustomer.address && (
+                <div style={{ padding: '8px 12px', backgroundColor: 'rgba(255, 255, 255, 0.02)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <strong>Endereço de Entrega:</strong> {selectedCustomer.address} {selectedCustomer.neighborhood ? `(${selectedCustomer.neighborhood})` : ''}
+                </div>
+              )}
+
+              {/* CARTÃO FIDELIDADE NUU PRENSADO */}
+              <div style={{
+                padding: '16px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.25) 0%, rgba(237, 177, 67, 0.15) 100%)',
+                border: '1px solid rgba(237, 177, 67, 0.4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Award size={20} color="var(--color-brand-yellow)" />
+                    <span style={{ fontWeight: 800, color: '#fff', fontSize: '0.95rem', letterSpacing: '0.5px' }}>
+                      CARTÃO FIDELIDADE • NUU PRENSADO
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--color-brand-yellow)' }}>
+                    {selectedCustomer.stampsCount % 10} de 10 Selos
+                  </span>
+                </div>
+
+                {/* Grid dos 10 Selos */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gap: '10px',
+                  padding: '10px 0'
+                }}>
+                  {Array.from({ length: 10 }).map((_, sIdx) => {
+                    const isFilled = sIdx < (selectedCustomer.stampsCount % 10);
+                    return (
+                      <div
+                        key={sIdx}
+                        style={{
+                          aspectRatio: '1',
+                          borderRadius: '50%',
+                          backgroundColor: isFilled ? 'var(--color-brand-yellow)' : 'rgba(255, 255, 255, 0.05)',
+                          border: isFilled ? '2px solid #fff' : '2px dashed rgba(255, 255, 255, 0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexDirection: 'column',
+                          color: isFilled ? '#a82319' : 'var(--text-muted)',
+                          fontWeight: 800,
+                          fontSize: '0.9rem',
+                          boxShadow: isFilled ? '0 0 10px rgba(237, 177, 67, 0.5)' : 'none',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        {isFilled ? '🌭' : `${sIdx + 1}`}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Alerta de Prêmio Pronto */}
+                {selectedCustomer.stampsCount >= 10 && (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid #10b981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: 800, fontSize: '0.88rem' }}>
+                      <Gift size={20} />
+                      <span>🎉 PRÊMIO PRONTO: 1 Hot Dog Nuu Prensado Cortesia!</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        redeemCustomerReward(selectedCustomer.phone);
+                        setTimeout(() => {
+                          const refreshed = consolidatedCustomers.find(c => c.phone === selectedCustomer.phone);
+                          if (refreshed) setSelectedCustomer(refreshed);
+                        }, 100);
+                      }}
+                      className="btn-primary"
+                      style={{ backgroundColor: '#10b981', border: 'none', padding: '6px 12px', fontSize: '0.8rem', fontWeight: 800 }}
+                    >
+                      Resgatar Prêmio (10 Selos)
+                    </button>
+                  </div>
+                )}
+
+                {/* Ajustes Manuais de Selos */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '10px' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Total histórico de selos: {selectedCustomer.stampsCount}
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateCustomerStamps(selectedCustomer.phone, -1);
+                        setTimeout(() => {
+                          const refreshed = consolidatedCustomers.find(c => c.phone === selectedCustomer.phone);
+                          if (refreshed) setSelectedCustomer(refreshed);
+                        }, 100);
+                      }}
+                      className="btn-secondary"
+                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                      title="Diminuir 1 selo"
+                    >
+                      -1 Selo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateCustomerStamps(selectedCustomer.phone, 1);
+                        setTimeout(() => {
+                          const refreshed = consolidatedCustomers.find(c => c.phone === selectedCustomer.phone);
+                          if (refreshed) setSelectedCustomer(refreshed);
+                        }, 100);
+                      }}
+                      className="btn-primary"
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700 }}
+                      title="Adicionar 1 selo"
+                    >
+                      +1 Selo
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ITENS MAIS PEDIDOS (FAVORITOS) */}
+              {selectedCustomer.favoriteItems && selectedCustomer.favoriteItems.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Heart size={16} color="#ef4444" />
+                    <span>Lanches Favoritos do Cliente</span>
+                  </h4>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {selectedCustomer.favoriteItems.map((fav, fIdx) => (
+                      <div
+                        key={fIdx}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span style={{ fontWeight: 700, color: '#fff' }}>{fav.name}</span>
+                        <span style={{ color: 'var(--color-brand-yellow)', fontWeight: 800 }}>({fav.qty}x)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* BÔNUS CONCEDIDOS ANTERIORMENTE */}
+              {selectedCustomer.bonuses && selectedCustomer.bonuses.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Gift size={16} color="#a855f7" />
+                    <span>Bônus e Recompensas Concedidas ({selectedCustomer.bonuses.length})</span>
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedCustomer.bonuses.map((b, bIdx) => (
+                      <div
+                        key={bIdx}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: 'rgba(168, 85, 247, 0.08)',
+                          border: '1px solid rgba(168, 85, 247, 0.25)',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.78rem'
+                        }}
+                      >
+                        <div>
+                          <strong style={{ color: '#fff' }}>{b.title}</strong>
+                          {b.value && <span style={{ marginLeft: '6px', color: '#a855f7', fontWeight: 800 }}>({b.value})</span>}
+                          {b.notes && <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{b.notes}</div>}
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {b.grantedAt ? new Date(b.grantedAt).toLocaleDateString('pt-BR') : 'Registrado'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* HISTÓRICO REAL DE PEDIDOS DO CLIENTE */}
+              <div>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Clock size={16} color="var(--color-brand-yellow)" />
+                  <span>Histórico Cronológico de Pedidos ({selectedCustomer.orders.length})</span>
+                </h4>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+                  {selectedCustomer.orders.length === 0 ? (
+                    <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      Nenhum pedido registrado no sistema para este número ainda.
+                    </div>
+                  ) : (
+                    selectedCustomer.orders.map((ord, oIdx) => {
+                      const orderDate = ord.date || ord.created_at || ord.createdAt;
+                      const orderStatusMap = {
+                        pending: { label: 'Pendente', color: '#f59e0b' },
+                        preparing: { label: 'Na Chapa', color: '#3b82f6' },
+                        shipping: { label: 'Em Entrega', color: '#a855f7' },
+                        delivered: { label: 'Concluído', color: '#10b981' },
+                        canceled: { label: 'Cancelado', color: '#ef4444' }
+                      };
+                      const statusInfo = orderStatusMap[ord.status] || { label: ord.status, color: '#94a3b8' };
+
+                      return (
+                        <div
+                          key={ord.id || oIdx}
+                          style={{
+                            padding: '10px 14px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-glass)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '12px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 800, color: '#fff', fontSize: '0.85rem' }}>
+                                #{ord.id ? String(ord.id).slice(-6) : 'S/N'}
+                              </span>
+                              <span style={{
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: `${statusInfo.color}20`,
+                                color: statusInfo.color,
+                                fontSize: '0.7rem',
+                                fontWeight: 700
+                              }}>
+                                {statusInfo.label}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                {orderDate ? new Date(orderDate).toLocaleString('pt-BR') : 'Data não informada'}
+                              </span>
+                            </div>
+
+                            {/* Itens do pedido */}
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                              {Array.isArray(ord.items)
+                                ? ord.items.map(it => `${it.quantity || 1}x ${it.name || it.productName || 'Item'}`).join(', ')
+                                : 'Itens do lanche'}
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 800, color: '#10b981', fontSize: '0.92rem' }}>
+                              R$ {(parseFloat(ord.total) || 0).toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                              {ord.paymentMethod || 'Dinheiro/PIX'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={`https://wa.me/55${selectedCustomer.phone}?text=${encodeURIComponent(`Olá, ${selectedCustomer.name}! Passando para agradecer sua fidelidade no Nuu Prensado! 🌭❤️`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary"
+                  style={{ color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <MessageCircle size={16} /> WhatsApp
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenBonusModal(selectedCustomer);
+                  }}
+                  className="btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Gift size={16} /> Conceder Bônus
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCustomerModalOpen(false)}
+                className="btn-secondary"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: CONCESSÃO DE BÔNUS INDIVIDUAL */}
+      {isBonusModalOpen && bonusCustomer && (
+        <div className="modal-overlay" onClick={() => setIsBonusModalOpen(false)}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                  <Gift size={20} color="var(--color-brand-yellow)" />
+                  <span>Conceder Bônus Individual</span>
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Para: <strong>{bonusCustomer.name}</strong> • Score: <strong>{bonusCustomer.score} pts ({bonusCustomer.tierLabel})</strong>
+                </p>
+              </div>
+              <button onClick={() => setIsBonusModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBonus}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                
+                {/* Tipo de Bônus */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Tipo de Benefício *</label>
+                  <select
+                    value={bonusType}
+                    onChange={e => {
+                      const t = e.target.value;
+                      setBonusType(t);
+                      if (t === 'coupon') {
+                        setBonusTitle('Desconto Especial de Fidelidade');
+                        setBonusValue('10%');
+                      } else if (t === 'stamps') {
+                        setBonusTitle('Selos Extras de Fidelidade');
+                        setBonusValue('+2 Selos');
+                      } else if (t === 'free_product') {
+                        setBonusTitle('Cortesia de Lanche Nuu');
+                        setBonusValue('1 Nuu Prensado Clássico');
+                      } else {
+                        setBonusTitle('Agradecimento e Reconhecimento VIP');
+                        setBonusValue('Status VIP');
+                      }
+                    }}
+                  >
+                    <option value="coupon">Cupom / Desconto (%)</option>
+                    <option value="discount">Desconto em Dinheiro (R$)</option>
+                    <option value="stamps">Selos Extras no Cartão Fidelidade</option>
+                    <option value="free_product">Produto / Lanche Cortesia</option>
+                    <option value="vip_message">Reconhecimento / Mensagem VIP</option>
+                  </select>
+                </div>
+
+                {/* Título do Bônus */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Título do Bônus *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bonusTitle}
+                    onChange={e => setBonusTitle(e.target.value)}
+                    placeholder="Ex: Desconto Especial de Fidelidade"
+                  />
+                </div>
+
+                {/* Valor ou Quantidade */}
+                {bonusType === 'stamps' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Quantidade de Selos Extras *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      required
+                      value={bonusAddStamps}
+                      onChange={e => setBonusAddStamps(parseInt(e.target.value, 10) || 1)}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Serão creditados imediatamente no cartão de fidelidade do cliente.
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Valor / Descrição do Benefício *</label>
+                    <input
+                      type="text"
+                      required
+                      value={bonusValue}
+                      onChange={e => setBonusValue(e.target.value)}
+                      placeholder="Ex: 15% OFF, R$ 10,00 ou 1 Hot Dog Nuu Prensado"
+                    />
+                  </div>
+                )}
+
+                {/* Justificativa / Motivo */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Motivo / Justificativa</label>
+                  <textarea
+                    rows="2"
+                    value={bonusNotes}
+                    onChange={e => setBonusNotes(e.target.value)}
+                    placeholder="Ex: Cliente VIP bateu 10 pedidos este mês e ganhou benefício especial."
+                  />
+                </div>
+
+                {/* Mensagem Pronta de WhatsApp */}
+                <div style={{
+                  padding: '10px 12px',
+                  backgroundColor: 'rgba(37, 211, 102, 0.08)',
+                  border: '1px dashed rgba(37, 211, 102, 0.4)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#25D366', fontWeight: 700, fontSize: '0.78rem' }}>
+                    <MessageCircle size={14} />
+                    <span>Mensagem Pronta para WhatsApp:</span>
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                    "Olá {bonusCustomer.name}! Passando para te avisar que você ganhou um bônus especial no Nuu Prensado: <strong>{bonusTitle} ({bonusType === 'stamps' ? `+${bonusAddStamps} selos` : bonusValue})</strong>! Muito obrigado pela sua preferência! 🌭❤️"
+                  </div>
+                  <a
+                    href={`https://wa.me/55${bonusCustomer.phone}?text=${encodeURIComponent(`Olá, ${bonusCustomer.name}! Passando para te avisar que você ganhou um bônus especial no Nuu Prensado: ${bonusTitle} (${bonusType === 'stamps' ? `+${bonusAddStamps} selos` : bonusValue})! Muito obrigado pela sua preferência! 🌭❤️`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '0.72rem', color: '#25D366', fontWeight: 700, textDecoration: 'underline', alignSelf: 'flex-start' }}
+                  >
+                    Abrir conversa no WhatsApp com esta mensagem
+                  </a>
+                </div>
+
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setIsBonusModalOpen(false)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="btn-primary" style={{ fontWeight: 800 }}>Conceder Bônus</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CADASTRO / EDIÇÃO DE CLIENTE */}
+      {isCustomerEditModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsCustomerEditModalOpen(false)}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <Users size={20} color="var(--color-brand-yellow)" />
+                <span>Salvar Dados do Cliente</span>
+              </h3>
+              <button onClick={() => setIsCustomerEditModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomerForm}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Nome Completo *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: João da Silva"
+                    value={custFormName}
+                    onChange={e => setCustFormName(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>WhatsApp / Telefone (com DDD) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: (31) 99999-9999"
+                    value={custFormPhone}
+                    onChange={e => setCustFormPhone(e.target.value)}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    O número do telefone é o identificador único para rastreamento de fidelidade e pedidos.
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Bairro</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Centro"
+                    value={custFormNeighborhood}
+                    onChange={e => setCustFormNeighborhood(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Endereço Completo</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Rua das Flores, 123 - Apto 101"
+                    value={custFormAddress}
+                    onChange={e => setCustFormAddress(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Selos de Fidelidade Acumulados</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={custFormStamps}
+                    onChange={e => setCustFormStamps(e.target.value)}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    A cada 10 selos, o cliente tem direito a 1 Hot Dog Nuu Prensado cortesia.
+                  </span>
+                </div>
+
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setIsCustomerEditModalOpen(false)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="btn-primary" style={{ fontWeight: 800 }}>Salvar Cliente</button>
               </div>
             </form>
           </div>

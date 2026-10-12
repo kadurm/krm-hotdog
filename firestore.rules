@@ -96,6 +96,18 @@ service cloud.firestore {
     //   - active: bool (optional) - availability status toggle
     //   - updatedAt: string | timestamp (optional)
     //
+    // Collection: customers
+    // Document ID: {customerId} (e.g. phone '31999998888' or auto-id)
+    // Fields:
+    //   - phone: string (required) - customer contact phone / unique key
+    //   - name: string (optional) - customer full name
+    //   - address: string (optional) - delivery street address
+    //   - neighborhood: string (optional) - delivery neighborhood
+    //   - stampsCount: number (optional) - loyalty stamp accumulation count
+    //   - totalOrders: number (optional) - count of total orders placed
+    //   - lastOrderAt: string (optional) - last order date/timestamp
+    //   - updatedAt: string | timestamp (optional)
+    //
     // ===============================================================
 
     // 1. ORDERS: Pedidos do Cardápio, Garçom/Mesa, KDS e Delivery
@@ -120,6 +132,11 @@ service cloud.firestore {
 
     // 5. COMPLEMENTS: Complementos e Adicionais (Pães, Queijos, Molhos, Extras)
     match /complements/{complementId} {
+      allow read, write: if true;
+    }
+
+    // 6. CUSTOMERS: Clientes e Histórico de Fidelidade
+    match /customers/{customerId} {
       allow read, write: if true;
     }
 

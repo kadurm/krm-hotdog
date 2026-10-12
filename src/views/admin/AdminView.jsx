@@ -34,6 +34,11 @@ export default function AdminView({ onLogout, onGoOperation }) {
     deleteOperator,
     storeSettings = {},
     updateStoreSettings,
+    getStorePauseStatus,
+    pauseStore,
+    resumeStore,
+    openStore,
+    closeStore,
     deliveryRadiuses = [],
     upsertRadius,
     deleteRadius,
@@ -2378,41 +2383,99 @@ export default function AdminView({ onLogout, onGoOperation }) {
                   <Sliders size={18} color="var(--color-brand)" /> Status de Atendimento & Horários
                 </h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', alignItems: 'center' }}>
-                  {/* Toggle Aberta/Fechada */}
-                  <div style={{
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    border: `1px solid ${storeSettings?.isOpen ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: '1rem', color: storeSettings?.isOpen ? '#4ade80' : '#f87171' }}>
-                        {storeSettings?.isOpen ? '🟢 LOJA ABERTA' : '🔴 LOJA FECHADA'}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'center' }}>
+                  {/* Card de Status da Loja & Ações Rápidas */}
+                  {(() => {
+                    const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
+                    return (
+                      <div style={{
+                        backgroundColor: 'rgba(0,0,0,0.35)',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: `1px solid ${pauseStatus.isPaused ? 'rgba(234,179,8,0.45)' : storeSettings?.isOpen ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '1rem', color: pauseStatus.isPaused ? '#facc15' : storeSettings?.isOpen ? '#4ade80' : '#f87171' }}>
+                              {pauseStatus.isPaused ? `⏸️ LOJA PAUSADA (~${pauseStatus.remainingMinutes} min)` : storeSettings?.isOpen ? '🟢 LOJA ABERTA' : '🔴 LOJA FECHADA'}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                              {pauseStatus.isPaused ? (pauseStatus.pauseReason || 'Pausa temporária na cozinha') : storeSettings?.isOpen ? 'Recebendo novos pedidos online' : 'Pedidos online suspensos'}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {pauseStatus.isPaused ? (
+                              <button
+                                type="button"
+                                onClick={() => resumeStore()}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  fontWeight: 800,
+                                  fontSize: '0.78rem',
+                                  cursor: 'pointer',
+                                  backgroundColor: '#16a34a',
+                                  color: '#fff'
+                                }}
+                              >
+                                Retomar Agora
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => updateStoreSettings({ isOpen: !storeSettings?.isOpen, pausedUntil: null, pauseReason: null })}
+                                style={{
+                                  padding: '6px 14px',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  fontWeight: 800,
+                                  fontSize: '0.78rem',
+                                  cursor: 'pointer',
+                                  backgroundColor: storeSettings?.isOpen ? '#ef4444' : '#22c55e',
+                                  color: '#fff'
+                                }}
+                              >
+                                {storeSettings?.isOpen ? 'Fechar Loja' : 'Abrir Loja'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Botões de Pausa Rápida */}
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                            Pausa Rápida de Cozinha (Cardápio Online):
+                          </span>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {[15, 30, 45, 60].map(m => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => pauseStore(m, 'Muitos pedidos sendo preparados no momento')}
+                                style={{
+                                  flex: 1,
+                                  padding: '5px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(234,179,8,0.3)',
+                                  backgroundColor: 'rgba(234,179,8,0.1)',
+                                  color: '#fef08a',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {m} min
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {storeSettings?.isOpen ? 'Recebendo novos pedidos' : 'Pedidos temporariamente pausados'}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => updateStoreSettings({ isOpen: !storeSettings?.isOpen })}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontWeight: 800,
-                        fontSize: '0.82rem',
-                        cursor: 'pointer',
-                        backgroundColor: storeSettings?.isOpen ? '#ef4444' : '#22c55e',
-                        color: '#fff'
-                      }}
-                    >
-                      {storeSettings?.isOpen ? 'Fechar Loja' : 'Abrir Loja'}
-                    </button>
-                  </div>
+                    );
+                  })()}
 
                   {/* Tempo Estimado e Frete Grátis */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

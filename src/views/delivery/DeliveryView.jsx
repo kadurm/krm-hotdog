@@ -32,9 +32,18 @@ export default function DeliveryView({
     lookupCustomer,
     saveCustomer,
     calculateDeliveryFee,
-    isStoreOpenNow
+    isStoreOpenNow,
+    getStorePauseStatus
   } = useSystem();
   
+  const [storeTick, setStoreTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setStoreTick(t => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
+
   const [activeSlide, setActiveSlide] = useState(0);
   const [internalViewMode, setInternalViewMode] = useState(VIEW_CONFIG.DEFAULT_VIEW_MODE);
   const [internalCart, setInternalCart] = useState([]);
@@ -699,6 +708,16 @@ export default function DeliveryView({
   // Envio do Pedido
   const handleSubmitOrder = (e) => {
     e.preventDefault();
+
+    if (!isStoreOpen) {
+      if (pauseStatus.isPaused) {
+        alert(`⏸️ A cozinha está em pausa temporária para dar vazão aos pedidos em preparo (retornamos em cerca de ${pauseStatus.remainingMinutes} minutos). Por favor, aguarde alguns instantes para concluir!`);
+      } else {
+        alert(storeSettings?.closedNotice || 'No momento a loja está fechada para novos pedidos.');
+      }
+      return;
+    }
+
     if (cart.length === 0) {
       alert('Seu carrinho está vazio. Adicione itens antes de finalizar o pedido!');
       return;
@@ -810,7 +829,27 @@ export default function DeliveryView({
       }}
     >
       {/* BANNER DE STATUS DA LOJA */}
-      {!isStoreOpen && checkoutStep === 'menu' && (
+      {pauseStatus.isPaused && checkoutStep === 'menu' ? (
+        <div style={{
+          backgroundColor: '#b45309',
+          color: '#fff',
+          padding: '10px 16px',
+          fontSize: '0.84rem',
+          fontWeight: 700,
+          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          zIndex: 100,
+          boxShadow: '0 2px 14px rgba(180, 83, 9, 0.5)'
+        }}>
+          <Clock size={17} />
+          <span>
+            ⏸️ <strong>Cozinha em Pausa Temporária:</strong> {pauseStatus.pauseReason || 'Muitos pedidos sendo preparados no momento'}. Retomamos os pedidos em aproximadamente <strong>{pauseStatus.remainingMinutes} min</strong>!
+          </span>
+        </div>
+      ) : !isStoreOpen && checkoutStep === 'menu' ? (
         <div style={{
           backgroundColor: '#991b1b',
           color: '#fff',
@@ -831,7 +870,7 @@ export default function DeliveryView({
             {` (Atendimento: todos os dias das ${storeSettings?.openTime || '19:00'} às ${storeSettings?.closeTime || '00:00'})`}
           </span>
         </div>
-      )}
+      ) : null}
 
       {/* NOVO: CONTROLES FLUTUANTES PARA MOBILE & DESKTOP */}
       {checkoutStep === 'menu' && (
@@ -867,9 +906,9 @@ export default function DeliveryView({
                 gap: '6px',
                 padding: '4px 10px',
                 borderRadius: '99px',
-                backgroundColor: isStoreOpen ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                border: `1px solid ${isStoreOpen ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
-                color: isStoreOpen ? '#4ade80' : '#f87171',
+                backgroundColor: pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.18)' : isStoreOpen ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                border: `1px solid ${pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.5)' : isStoreOpen ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
+                color: pauseStatus.isPaused ? '#fef08a' : isStoreOpen ? '#4ade80' : '#f87171',
                 fontSize: '0.72rem',
                 fontWeight: 700
               }}>
@@ -877,9 +916,15 @@ export default function DeliveryView({
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: isStoreOpen ? '#22c55e' : '#ef4444'
+                  backgroundColor: pauseStatus.isPaused ? '#f59e0b' : isStoreOpen ? '#22c55e' : '#ef4444'
                 }} />
-                <span>{isStoreOpen ? `Aberto • ~${storeSettings?.estimatedTime || '35-50 min'}` : `Fechado • Abre às ${storeSettings?.openTime || '19:00'}`}</span>
+                <span>
+                  {pauseStatus.isPaused 
+                    ? `Pausada • Volta em ~${pauseStatus.remainingMinutes} min` 
+                    : isStoreOpen 
+                      ? `Aberto • ~${storeSettings?.estimatedTime || '35-50 min'}` 
+                      : `Fechado • Abre às ${storeSettings?.openTime || '19:00'}`}
+                </span>
               </div>
             </div>
             
@@ -1168,7 +1213,7 @@ export default function DeliveryView({
                     opacity: isStoreOpen ? 1 : 0.6
                   }}
                 >
-                  {isStoreOpen ? 'Pedir Agora' : 'Loja Fechada'}
+                  {isStoreOpen ? 'Pedir Agora' : pauseStatus.isPaused ? `Pausada (~${pauseStatus.remainingMinutes} min)` : 'Loja Fechada'}
                 </button>
               </div>
 
@@ -1506,7 +1551,7 @@ export default function DeliveryView({
                               opacity: (isPaused || !isStoreOpen) ? 0.5 : 1
                             }}
                           >
-                            {!isStoreOpen ? 'Fechado' : isPaused ? 'Esgotado' : 'Pedir'}
+                            {!isStoreOpen ? (pauseStatus.isPaused ? `Pausada (~${pauseStatus.remainingMinutes}m)` : 'Fechado') : isPaused ? 'Esgotado' : 'Pedir'}
                           </button>
                         </div>
                       </div>

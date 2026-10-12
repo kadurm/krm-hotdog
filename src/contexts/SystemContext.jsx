@@ -330,6 +330,8 @@ const INITIAL_INVENTORY = [
 const INITIAL_STORE_SETTINGS = {
   isOpen: true,
   autoSchedule: false,
+  pausedUntil: null,
+  pauseReason: null,
   openTime: '19:00',
   closeTime: '00:00',
   openDays: ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
@@ -1071,8 +1073,87 @@ export const SystemProvider = ({ children }) => {
     } catch (e) {}
   };
 
-  // Verifica se a loja está aberta considerando o toggle manual ou horário automático
+  // Verifica o status de pausa temporária da loja
+  const getStorePauseStatus = () => {
+    if (!storeSettings?.pausedUntil) {
+      return { isPaused: false, remainingMinutes: 0, pausedUntil: null, pauseReason: '' };
+    }
+    const pauseEnd = new Date(storeSettings.pausedUntil).getTime();
+    if (isNaN(pauseEnd) || Date.now() >= pauseEnd) {
+      return { isPaused: false, remainingMinutes: 0, pausedUntil: null, pauseReason: '' };
+    }
+    const remainingMs = pauseEnd - Date.now();
+    const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+    return {
+      isPaused: true,
+      remainingMinutes,
+      pausedUntil: storeSettings.pausedUntil,
+      pauseReason: storeSettings.pauseReason || 'Muitos pedidos sendo preparados no momento'
+    };
+  };
+
+  // Pausa a chegada de novos pedidos temporariamente por X minutos
+  const pauseStore = (minutes = 15, reason = 'Muitos pedidos sendo preparados no momento') => {
+    const mins = Math.max(1, parseInt(minutes, 10) || 15);
+    const pauseUntilDate = new Date(Date.now() + mins * 60000).toISOString();
+    updateStoreSettings({
+      isOpen: true,
+      pausedUntil: pauseUntilDate,
+      pauseReason: reason
+    });
+  };
+
+  // Retoma o recebimento de pedidos imediatamente
+  const resumeStore = () => {
+    updateStoreSettings({
+      isOpen: true,
+      pausedUntil: null,
+      pauseReason: null
+    });
+  };
+
+  // Abre a loja
+  const openStore = () => {
+    updateStoreSettings({
+      isOpen: true,
+      pausedUntil: null,
+      pauseReason: null
+    });
+  };
+
+  // Fecha a loja
+  const closeStore = (reason = '') => {
+    updateStoreSettings({
+      isOpen: false,
+      pausedUntil: null,
+      pauseReason: reason || null
+    });
+  };
+
+  // Observador automático para reabrir assim que a pausa expirar
+  useEffect(() => {
+    if (!storeSettings?.pausedUntil) return;
+    const checkPauseExpired = () => {
+      const pauseEnd = new Date(storeSettings.pausedUntil).getTime();
+      if (!isNaN(pauseEnd) && Date.now() >= pauseEnd) {
+        updateStoreSettings({ pausedUntil: null, pauseReason: null });
+      }
+    };
+    checkPauseExpired();
+    const interval = setInterval(checkPauseExpired, 10000);
+    return () => clearInterval(interval);
+  }, [storeSettings?.pausedUntil]);
+
+  // Verifica se a loja está aberta considerando pausa temporária, toggle manual ou horário automático
   const isStoreOpenNow = () => {
+    // 0. Se a loja estiver com pausa temporária programada por minutos
+    if (storeSettings.pausedUntil) {
+      const pauseEnd = new Date(storeSettings.pausedUntil).getTime();
+      if (!isNaN(pauseEnd) && Date.now() < pauseEnd) {
+        return false;
+      }
+    }
+
     // 1. Se o dono desligou manualmente a loja, ela fica sempre fechada
     if (!storeSettings.isOpen) return false;
 
@@ -2046,8 +2127,12 @@ export const SystemProvider = ({ children }) => {
       saveSupabaseConfig,
       firebaseActive,
       FIRESTORE_RULES_GUIDE,
-      saveFirebaseConfig: handleSaveFirebaseConfig,
       isStoreOpenNow,
+      getStorePauseStatus,
+      pauseStore,
+      resumeStore,
+      openStore,
+      closeStore,
       updateStoreSettings,
       calculateDeliveryFee,
       validateCoupon,

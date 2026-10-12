@@ -12,7 +12,8 @@ import {
   ChefHat, Bike, DollarSign, PlusCircle, Printer, Clock, 
   Phone, MapPin, CheckCircle2, AlertTriangle, Volume2, VolumeX, 
   LogOut, User, Lock, Store, ShoppingBag, ArrowRight, Shield, 
-  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database, Flame
+  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database, Flame,
+  Pause, Play, Power, ChevronDown, AlertCircle
 } from 'lucide-react';
 
 export default function OperationView({ onOpenAdmin, onGoDelivery }) {
@@ -33,7 +34,15 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     addShiftBleed,
     addShiftSupply,
     closeCashShift,
-    shiftHistory = []
+    shiftHistory = [],
+    storeSettings,
+    isStoreOpenNow,
+    getStorePauseStatus,
+    pauseStore,
+    resumeStore,
+    openStore,
+    closeStore,
+    updateStoreSettings
   } = useSystem();
 
   // Abas da operação diária: 'kds' | 'cash' | 'delivery'
@@ -44,7 +53,20 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
+  const [isStoreControlModalOpen, setIsStoreControlModalOpen] = useState(false);
+  const [customPauseMinutes, setCustomPauseMinutes] = useState('20');
+  const [selectedPauseReason, setSelectedPauseReason] = useState('Muitos pedidos sendo preparados no momento');
   const [receiptOrder, setReceiptOrder] = useState(null);
+
+  // Timer para manter a contagem regressiva em tempo real na tela
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setClockTick(t => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
+  const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
 
   // Estados de identificação / login do operador com senha
   const [selectedOperatorForLogin, setSelectedOperatorForLogin] = useState(null);
@@ -585,6 +607,57 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
               <RotateCcw size={13} />
             </button>
           </div>
+
+          {/* Status e Controle da Loja Online (Aberta / Pausada / Fechada) */}
+          <button
+            type="button"
+            onClick={() => setIsStoreControlModalOpen(true)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '99px',
+              border: '1px solid',
+              backgroundColor: pauseStatus.isPaused 
+                ? 'rgba(234, 179, 8, 0.22)' 
+                : isStoreOpen 
+                  ? 'rgba(34, 197, 94, 0.16)' 
+                  : 'rgba(239, 68, 68, 0.18)',
+              borderColor: pauseStatus.isPaused 
+                ? '#f59e0b' 
+                : isStoreOpen 
+                  ? '#22c55e' 
+                  : '#ef4444',
+              color: pauseStatus.isPaused 
+                ? '#fef08a' 
+                : isStoreOpen 
+                  ? '#4ade80' 
+                  : '#f87171',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              boxShadow: pauseStatus.isPaused ? '0 0 14px rgba(234, 179, 8, 0.35)' : 'none',
+              transition: 'all 0.2s ease'
+            }}
+            title="Clique para pausar temporariamente (15, 30, 45 min) ou fechar/abrir a loja online"
+          >
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: pauseStatus.isPaused ? '#f59e0b' : isStoreOpen ? '#22c55e' : '#ef4444',
+              boxShadow: pauseStatus.isPaused ? '0 0 8px #f59e0b' : isStoreOpen ? '0 0 8px #22c55e' : '0 0 8px #ef4444'
+            }} />
+            <span>
+              {pauseStatus.isPaused 
+                ? `Loja Pausada (~${pauseStatus.remainingMinutes} min)` 
+                : isStoreOpen 
+                  ? 'Loja Aberta' 
+                  : 'Loja Fechada'}
+            </span>
+            <ChevronDown size={14} style={{ opacity: 0.8 }} />
+          </button>
 
           {/* Status do Caixa do Turno */}
           <button
@@ -1513,6 +1586,364 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
       {/* MODAL DE CONFIGURAÇÃO DO FIREBASE */}
       {isFirebaseModalOpen && (
         <FirebaseConfigModal onClose={() => setIsFirebaseModalOpen(false)} />
+      )}
+
+      {/* MODAL DE CONTROLE DE LOJA ONLINE (PAUSAR TEMPORARIAMENTE OU FECHAR) */}
+      {isStoreControlModalOpen && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setIsStoreControlModalOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.82)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+            zIndex: 9999
+          }}
+        >
+          <div 
+            className="modal-content animate-scale-up" 
+            style={{ 
+              maxWidth: '520px', 
+              width: '100%',
+              backgroundColor: '#0c1322',
+              border: '1px solid rgba(234, 179, 8, 0.35)',
+              borderRadius: '20px',
+              padding: '1.75rem',
+              color: '#fff',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.9)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header do Modal */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                  border: '1px solid var(--color-brand)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--color-brand-yellow)'
+                }}>
+                  <Store size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Controle da Loja Online</h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Gerencie a chegada de pedidos do cardápio em tempo real</span>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsStoreControlModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Card de Status Atual */}
+            <div style={{
+              borderRadius: '14px',
+              padding: '1.15rem',
+              border: '1px solid',
+              backgroundColor: pauseStatus.isPaused 
+                ? 'rgba(234, 179, 8, 0.12)' 
+                : isStoreOpen 
+                  ? 'rgba(34, 197, 94, 0.12)' 
+                  : 'rgba(239, 68, 68, 0.12)',
+              borderColor: pauseStatus.isPaused 
+                ? 'rgba(234, 179, 8, 0.45)' 
+                : isStoreOpen 
+                  ? 'rgba(34, 197, 94, 0.45)' 
+                  : 'rgba(239, 68, 68, 0.45)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{
+                  fontSize: '0.92rem',
+                  fontWeight: 800,
+                  color: pauseStatus.isPaused ? '#facc15' : isStoreOpen ? '#4ade80' : '#f87171',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    backgroundColor: pauseStatus.isPaused ? '#f59e0b' : isStoreOpen ? '#22c55e' : '#ef4444',
+                    boxShadow: pauseStatus.isPaused ? '0 0 10px #f59e0b' : isStoreOpen ? '0 0 10px #22c55e' : '0 0 10px #ef4444'
+                  }} />
+                  {pauseStatus.isPaused 
+                    ? 'LOJA PAUSADA TEMPORARIAMENTE' 
+                    : isStoreOpen 
+                      ? 'LOJA ABERTA & RECEBENDO PEDIDOS' 
+                      : 'LOJA FECHADA'}
+                </span>
+
+                {pauseStatus.isPaused && (
+                  <span style={{
+                    backgroundColor: 'rgba(234, 179, 8, 0.3)',
+                    border: '1px solid rgba(234, 179, 8, 0.6)',
+                    color: '#fef08a',
+                    padding: '3px 10px',
+                    borderRadius: '99px',
+                    fontSize: '0.78rem',
+                    fontWeight: 800
+                  }}>
+                    Faltam ~{pauseStatus.remainingMinutes} min
+                  </span>
+                )}
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                {pauseStatus.isPaused ? (
+                  <>
+                    A cozinha está em pausa temporária para dar vazão aos pedidos. O cardápio online exibe o tempo restante para os clientes.
+                    {pauseStatus.pauseReason && <><br /><strong style={{ color: '#fff' }}>Motivo:</strong> {pauseStatus.pauseReason}</>}
+                  </>
+                ) : isStoreOpen ? (
+                  'A loja está operando normalmente. Novos pedidos feitos pelos clientes chegam direto ao KDS e à impressora térmica.'
+                ) : (
+                  'A loja está fechada. Os clientes visualizam o aviso de loja fechada no cardápio online e não conseguem concluir pedidos.'
+                )}
+              </p>
+
+              {/* Botão de Retomada Imediata quando Pausada */}
+              {pauseStatus.isPaused && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resumeStore();
+                    setIsStoreControlModalOpen(false);
+                  }}
+                  className="btn-primary"
+                  style={{
+                    marginTop: '4px',
+                    padding: '11px',
+                    borderRadius: '10px',
+                    backgroundColor: '#16a34a',
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 16px rgba(22, 163, 74, 0.4)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Play size={18} />
+                  <span>Retomar e Reabrir Loja Agora</span>
+                </button>
+              )}
+            </div>
+
+            {/* SEÇÃO 1: PAUSA RÁPIDA NA COZINHA (15, 30, 45, 60 MIN) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Clock size={16} color="var(--color-brand-yellow)" />
+                  Suspender Pedidos Temporariamente:
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Reabre automaticamente
+                </span>
+              </div>
+
+              {/* Seletor de Motivo Rápido */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  Motivo da Pausa (exibido aos clientes):
+                </label>
+                <select
+                  value={selectedPauseReason}
+                  onChange={(e) => setSelectedPauseReason(e.target.value)}
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Muitos pedidos sendo preparados no momento">Muitos pedidos sendo preparados no momento</option>
+                  <option value="Alta demanda na chapa e cozinha cheia">Alta demanda na chapa e cozinha cheia</option>
+                  <option value="Reposição de insumos e ingredientes">Reposição de insumos e ingredientes</option>
+                  <option value="Aguardando retorno dos motoboys">Aguardando retorno dos motoboys</option>
+                  <option value="Breve intervalo da equipe">Breve intervalo da equipe</option>
+                </select>
+              </div>
+
+              {/* Botões Rápidos de Pausa */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                {[15, 30, 45, 60].map(mins => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => {
+                      pauseStore(mins, selectedPauseReason);
+                      setIsStoreControlModalOpen(false);
+                    }}
+                    style={{
+                      padding: '12px 6px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(234, 179, 8, 0.45)',
+                      backgroundColor: 'rgba(234, 179, 8, 0.12)',
+                      color: '#fef08a',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.18s ease'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = 'rgba(234, 179, 8, 0.28)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = 'rgba(234, 179, 8, 0.12)';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>{mins}</span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', opacity: 0.9 }}>Minutos</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Pausa com Minutos Personalizados */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
+                <input
+                  type="number"
+                  min="1"
+                  max="240"
+                  placeholder="Min"
+                  value={customPauseMinutes}
+                  onChange={(e) => setCustomPauseMinutes(e.target.value)}
+                  style={{
+                    width: '90px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                    color: '#fff',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    textAlign: 'center'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const mins = parseInt(customPauseMinutes, 10);
+                    if (!mins || mins < 1) return alert('Informe uma quantidade válida de minutos');
+                    pauseStore(mins, selectedPauseReason);
+                    setIsStoreControlModalOpen(false);
+                  }}
+                  className="btn-secondary"
+                  style={{
+                    flex: 1,
+                    padding: '8px 14px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Pause size={14} />
+                  <span>Pausar por {customPauseMinutes || 'X'} minutos</span>
+                </button>
+              </div>
+            </div>
+
+            {/* SEÇÃO 2: ABERTURA / FECHAMENTO DEFINITIVO */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                Abertura / Fechamento Definitivo da Loja:
+              </span>
+
+              {isStoreOpen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Deseja realmente fechar a loja online para novos pedidos?')) {
+                      closeStore('Expediente encerrado');
+                      setIsStoreControlModalOpen(false);
+                    }
+                  }}
+                  style={{
+                    padding: '11px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    color: '#f87171',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Power size={16} />
+                  <span>Fechar Loja Online (Encerrar Expediente)</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    openStore();
+                    setIsStoreControlModalOpen(false);
+                  }}
+                  style={{
+                    padding: '11px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(34, 197, 94, 0.4)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                    color: '#4ade80',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Store size={16} />
+                  <span>Abrir Loja Online Agora</span>
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
       )}
 
     </div>

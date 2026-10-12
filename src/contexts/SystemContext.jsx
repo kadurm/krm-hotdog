@@ -761,6 +761,18 @@ export const SystemProvider = ({ children }) => {
       if (e.data?.type === 'SETTINGS_SYNC' && e.data.settings) {
         setStoreSettings(e.data.settings);
       }
+      if (e.data?.type === 'PRODUCT_STATUS_SYNC' && e.data.productId !== undefined) {
+        setProducts(prev => prev.map(p => p.id === e.data.productId ? { ...p, active: e.data.active } : p));
+      }
+      if (e.data?.type === 'PRODUCTS_SYNC' && Array.isArray(e.data.products)) {
+        setProducts(e.data.products);
+      }
+      if (e.data?.type === 'COMPLEMENT_STATUS_SYNC' && e.data.complementId) {
+        setComplements(prev => prev.map(c => c.id === e.data.complementId ? { ...c, active: e.data.active } : c));
+      }
+      if (e.data?.type === 'COMPLEMENTS_SYNC' && Array.isArray(e.data.complements)) {
+        setComplements(e.data.complements);
+      }
     };
 
     if (channel) {
@@ -769,10 +781,14 @@ export const SystemProvider = ({ children }) => {
 
     // Se o Supabase estiver configurado, escuta mudanças no banco na nuvem!
     const supabase = getSupabaseClient();
-    let supabaseSub = null;
+    let supabaseOrdersSub = null;
+    let supabaseProductsSub = null;
+    let supabaseComplementsSub = null;
+    let supabaseSettingsSub = null;
+
     if (supabase) {
       try {
-        supabaseSub = supabase
+        supabaseOrdersSub = supabase
           .channel('public:orders')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
             if (payload.eventType === 'INSERT') {
@@ -797,6 +813,54 @@ export const SystemProvider = ({ children }) => {
             }
           })
           .subscribe();
+
+        // Escuta produtos no Supabase em tempo real
+        supabaseProductsSub = supabase
+          .channel('public:products')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+            if (payload.new && payload.new.id !== undefined) {
+              setProducts(prev => prev.map(p => {
+                if (p.id === Number(payload.new.id)) {
+                  return {
+                    ...p,
+                    active: payload.new.active !== undefined ? Boolean(payload.new.active) : p.active,
+                    price: payload.new.price !== undefined ? Number(payload.new.price) : p.price
+                  };
+                }
+                return p;
+              }));
+            }
+          })
+          .subscribe();
+
+        // Escuta complementos no Supabase em tempo real
+        supabaseComplementsSub = supabase
+          .channel('public:complements')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'complements' }, (payload) => {
+            if (payload.new && payload.new.id) {
+              setComplements(prev => prev.map(c => {
+                if (String(c.id) === String(payload.new.id)) {
+                  return {
+                    ...c,
+                    active: payload.new.active !== undefined ? Boolean(payload.new.active) : c.active,
+                    price: payload.new.price !== undefined ? Number(payload.new.price) : c.price
+                  };
+                }
+                return c;
+              }));
+            }
+          })
+          .subscribe();
+
+        // Escuta configurações da loja no Supabase em tempo real
+        supabaseSettingsSub = supabase
+          .channel('public:store_settings')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'store_settings' }, (payload) => {
+            if (payload.new) {
+              setStoreSettings(prev => ({ ...prev, ...payload.new }));
+            }
+          })
+          .subscribe();
       } catch (err) {
         console.warn('Supabase Realtime subscription error:', err);
       }
@@ -807,8 +871,11 @@ export const SystemProvider = ({ children }) => {
         channel.removeEventListener('message', handleBroadcast);
         channel.close();
       }
-      if (supabase && supabaseSub) {
-        supabase.removeChannel(supabaseSub);
+      if (supabase) {
+        if (supabaseOrdersSub) supabase.removeChannel(supabaseOrdersSub);
+        if (supabaseProductsSub) supabase.removeChannel(supabaseProductsSub);
+        if (supabaseComplementsSub) supabase.removeChannel(supabaseComplementsSub);
+        if (supabaseSettingsSub) supabase.removeChannel(supabaseSettingsSub);
       }
     };
   }, [supabaseActive]);
@@ -854,7 +921,112 @@ export const SystemProvider = ({ children }) => {
     };
   }, [supabaseActive]);
 
-  // Sincronização em tempo real com Cloud Firestore (Firebase)
+  // --- Sincronização em Nuvem (Firebase e Supabase) para Produtos, Complementos e Loja ---
+  const syncProductToRemote = async (prod) => {
+    if (!prod || prod.id === undefined) return;
+    const db = getFirestoreDb();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'products', String(prod.id)), {
+          id: Number(prod.id),
+          name: prod.name || '',
+          description: prod.description || '',
+          price: Number(prod.price) || 0,
+          image: prod.image || '',
+          active: prod.active !== undefined ? Boolean(prod.active) : true,
+          category: prod.category || 'prensados',
+          hasCustomOptions: Boolean(prod.hasCustomOptions),
+          recipe: prod.recipe || [],
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Erro ao sincronizar produto no Firestore:', err);
+      }
+    }
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('products').upsert({
+          id: Number(prod.id),
+          name: prod.name,
+          description: prod.description || '',
+          price: Number(prod.price) || 0,
+          image: prod.image || '',
+          active: prod.active !== undefined ? Boolean(prod.active) : true,
+          category: prod.category || 'prensados',
+          has_custom_options: Boolean(prod.hasCustomOptions),
+          recipe: prod.recipe || []
+        });
+      } catch (err) {
+        console.warn('Erro ao sincronizar produto no Supabase:', err);
+      }
+    }
+  };
+
+  const syncComplementToRemote = async (comp) => {
+    if (!comp || !comp.id) return;
+    const db = getFirestoreDb();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'complements', String(comp.id)), {
+          id: String(comp.id),
+          name: comp.name || '',
+          category: comp.category || 'extra',
+          group: comp.group || 'extras',
+          group_name: comp.group_name || '',
+          price: Number(comp.price) || 0,
+          active: comp.active !== undefined ? Boolean(comp.active) : true,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Erro ao sincronizar complemento no Firestore:', err);
+      }
+    }
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('complements').upsert({
+          id: String(comp.id),
+          name: comp.name,
+          category: comp.category || 'extra',
+          group: comp.group || 'extras',
+          group_name: comp.group_name || '',
+          price: Number(comp.price) || 0,
+          active: comp.active !== undefined ? Boolean(comp.active) : true
+        });
+      } catch (err) {}
+    }
+  };
+
+  const syncStoreSettingsToRemote = async (settings) => {
+    if (!settings) return;
+    const db = getFirestoreDb();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_settings', 'main'), {
+          ...settings,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Erro ao sincronizar store_settings no Firestore:', err);
+      }
+    }
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('store_settings').upsert({
+          id: 'main',
+          ...settings,
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {}
+    }
+  };
+
+  // Sincronização em tempo real de PEDIDOS com Cloud Firestore (Firebase)
   useEffect(() => {
     const db = getFirestoreDb();
     if (!db) return;
@@ -910,6 +1082,158 @@ export const SystemProvider = ({ children }) => {
     };
   }, [firebaseActive]);
 
+  // Sincronização em tempo real de PRODUTOS com Cloud Firestore (Firebase)
+  useEffect(() => {
+    const db = getFirestoreDb();
+    if (!db) return;
+
+    let unsubscribe = null;
+    try {
+      const colRef = collection(db, 'products');
+      unsubscribe = onSnapshot(colRef, (snapshot) => {
+        if (snapshot.empty) {
+          // Se o Firestore não tiver produtos ainda, sobe os produtos locais como carga inicial
+          products.forEach(p => syncProductToRemote(p));
+          return;
+        }
+
+        const remoteMap = new Map();
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d && d.id !== undefined) {
+            remoteMap.set(Number(d.id), d);
+          }
+        });
+
+        if (remoteMap.size > 0) {
+          setProducts(prev => {
+            let changed = false;
+            const updated = prev.map(p => {
+              const rem = remoteMap.get(Number(p.id));
+              if (!rem) return p;
+              const newActive = rem.active !== undefined ? Boolean(rem.active) : p.active;
+              const newPrice = rem.price !== undefined ? Number(rem.price) : p.price;
+              if (p.active !== newActive || p.price !== newPrice) {
+                changed = true;
+              }
+              return {
+                ...p,
+                active: newActive,
+                price: newPrice,
+                name: rem.name || p.name,
+                description: rem.description !== undefined ? rem.description : p.description,
+                image: rem.image || p.image,
+                category: rem.category || p.category
+              };
+            });
+            return changed ? updated : prev;
+          });
+        }
+      }, (err) => {
+        console.warn('Erro no listener de produtos Firestore:', err);
+      });
+    } catch (err) {
+      console.warn('Exceção ao conectar produtos Firestore:', err);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [firebaseActive]);
+
+  // Sincronização em tempo real de COMPLEMENTOS com Cloud Firestore (Firebase)
+  useEffect(() => {
+    const db = getFirestoreDb();
+    if (!db) return;
+
+    let unsubscribe = null;
+    try {
+      const colRef = collection(db, 'complements');
+      unsubscribe = onSnapshot(colRef, (snapshot) => {
+        if (snapshot.empty) {
+          complements.forEach(c => syncComplementToRemote(c));
+          return;
+        }
+
+        const remoteMap = new Map();
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d && d.id) {
+            remoteMap.set(String(d.id), d);
+          }
+        });
+
+        if (remoteMap.size > 0) {
+          setComplements(prev => {
+            let changed = false;
+            const updated = prev.map(c => {
+              const rem = remoteMap.get(String(c.id));
+              if (!rem) return c;
+              const newActive = rem.active !== undefined ? Boolean(rem.active) : c.active;
+              const newPrice = rem.price !== undefined ? Number(rem.price) : c.price;
+              if (c.active !== newActive || c.price !== newPrice) {
+                changed = true;
+              }
+              return {
+                ...c,
+                active: newActive,
+                price: newPrice,
+                name: rem.name || c.name
+              };
+            });
+            return changed ? updated : prev;
+          });
+        }
+      }, (err) => {
+        console.warn('Erro no listener de complementos Firestore:', err);
+      });
+    } catch (err) {
+      console.warn('Exceção ao conectar complementos Firestore:', err);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [firebaseActive]);
+
+  // Sincronização em tempo real de STORE SETTINGS com Cloud Firestore (Firebase)
+  useEffect(() => {
+    const db = getFirestoreDb();
+    if (!db) return;
+
+    let unsubscribe = null;
+    try {
+      const docRef = doc(db, 'store_settings', 'main');
+      unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const d = docSnap.data();
+          if (d) {
+            setStoreSettings(prev => ({
+              ...prev,
+              isOpen: d.isOpen !== undefined ? Boolean(d.isOpen) : prev.isOpen,
+              autoSchedule: d.autoSchedule !== undefined ? Boolean(d.autoSchedule) : prev.autoSchedule,
+              openDays: d.openDays || prev.openDays,
+              openTime: d.openTime || prev.openTime,
+              closeTime: d.closeTime || prev.closeTime,
+              deliveryFeeMode: d.deliveryFeeMode || prev.deliveryFeeMode,
+              fixedDeliveryFee: d.fixedDeliveryFee !== undefined ? Number(d.fixedDeliveryFee) : prev.fixedDeliveryFee,
+              perKmDeliveryFee: d.perKmDeliveryFee !== undefined ? Number(d.perKmDeliveryFee) : prev.perKmDeliveryFee,
+              freeShippingMinOrder: d.freeShippingMinOrder !== undefined ? Number(d.freeShippingMinOrder) : prev.freeShippingMinOrder
+            }));
+          }
+        }
+      }, (err) => {
+        console.warn('Erro no listener de store_settings Firestore:', err);
+      });
+    } catch (err) {
+      console.warn('Exceção ao conectar store_settings Firestore:', err);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [firebaseActive]);
+
   // --- Função para Salvar/Conectar Supabase ---
   const saveSupabaseConfig = (url, key) => {
     saveSupabaseCredentials(url, key);
@@ -930,6 +1254,7 @@ export const SystemProvider = ({ children }) => {
   const updateStoreSettings = (newSettings) => {
     const updated = { ...storeSettings, ...newSettings };
     setStoreSettings(updated);
+    syncStoreSettingsToRemote(updated);
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const ch = new BroadcastChannel('nuu_system_channel');
@@ -1731,38 +2056,147 @@ export const SystemProvider = ({ children }) => {
   // --- Produtos e Complementos ---
   const upsertProduct = (productData) => {
     let next;
+    let savedItem;
     if (productData.id) {
+      savedItem = productData;
       next = products.map(p => p.id === productData.id ? { ...p, ...productData } : p);
     } else {
       const newId = Math.max(...products.map(p => p.id), 0) + 1;
-      next = [...products, { ...productData, id: newId }];
+      savedItem = { ...productData, id: newId };
+      next = [...products, savedItem];
     }
     setProducts(next);
+    syncProductToRemote(savedItem);
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'PRODUCTS_SYNC', products: next });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   const toggleProductStatus = (productId) => {
-    setProducts(prev => prev.map(p => p.id === productId ? { ...p, active: !p.active } : p));
+    let targetProduct = null;
+    let nextProducts = [];
+    setProducts(prev => {
+      nextProducts = prev.map(p => {
+        if (p.id === productId) {
+          targetProduct = { ...p, active: !p.active };
+          return targetProduct;
+        }
+        return p;
+      });
+      return nextProducts;
+    });
+
+    if (targetProduct) {
+      syncProductToRemote(targetProduct);
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('nuu_system_channel');
+          ch.postMessage({ type: 'PRODUCT_STATUS_SYNC', productId, active: targetProduct.active });
+          ch.close();
+        }
+      } catch (e) {}
+    }
   };
 
   const deleteProduct = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+    let nextProducts = [];
+    setProducts(prev => {
+      nextProducts = prev.filter(p => p.id !== id);
+      return nextProducts;
+    });
+    const db = getFirestoreDb();
+    if (db) {
+      deleteDoc(doc(db, 'products', String(id))).catch(() => {});
+    }
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      supabase.from('products').delete().eq('id', id).then();
+    }
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'PRODUCTS_SYNC', products: nextProducts });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   const toggleComplementStatus = (id) => {
-    setComplements(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c));
+    let targetComp = null;
+    let nextComplements = [];
+    setComplements(prev => {
+      nextComplements = prev.map(c => {
+        if (c.id === id) {
+          targetComp = { ...c, active: !c.active };
+          return targetComp;
+        }
+        return c;
+      });
+      return nextComplements;
+    });
+
+    if (targetComp) {
+      syncComplementToRemote(targetComp);
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('nuu_system_channel');
+          ch.postMessage({ type: 'COMPLEMENT_STATUS_SYNC', complementId: id, active: targetComp.active });
+          ch.close();
+        }
+      } catch (e) {}
+    }
   };
 
   const upsertComplement = (compData) => {
+    let savedItem;
+    let nextComplements = [];
     setComplements(prev => {
       if (compData.id) {
-        return prev.map(c => c.id === compData.id ? { ...c, ...compData } : c);
+        savedItem = compData;
+        nextComplements = prev.map(c => c.id === compData.id ? { ...c, ...compData } : c);
+      } else {
+        savedItem = { ...compData, id: 'comp-' + Date.now() };
+        nextComplements = [...prev, savedItem];
       }
-      return [...prev, { ...compData, id: 'comp-' + Date.now() }];
+      return nextComplements;
     });
+    if (savedItem) {
+      syncComplementToRemote(savedItem);
+    }
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: nextComplements });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   const deleteComplement = (id) => {
-    setComplements(prev => prev.filter(c => c.id !== id));
+    let nextComplements = [];
+    setComplements(prev => {
+      nextComplements = prev.filter(c => c.id !== id);
+      return nextComplements;
+    });
+    const db = getFirestoreDb();
+    if (db) {
+      deleteDoc(doc(db, 'complements', String(id))).catch(() => {});
+    }
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      supabase.from('complements').delete().eq('id', id).then();
+    }
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: nextComplements });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   // --- Transações do Fluxo de Caixa ---
@@ -1804,6 +2238,16 @@ export const SystemProvider = ({ children }) => {
     localStorage.setItem('nuu_products_v14', JSON.stringify(INITIAL_PRODUCTS));
     localStorage.setItem('hd_inventory_v5', JSON.stringify(INITIAL_INVENTORY));
     localStorage.setItem('nuu_complements_v6', JSON.stringify(INITIAL_COMPLEMENTS));
+    INITIAL_PRODUCTS.forEach(p => syncProductToRemote(p));
+    INITIAL_COMPLEMENTS.forEach(c => syncComplementToRemote(c));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ type: 'PRODUCTS_SYNC', products: INITIAL_PRODUCTS });
+        ch.postMessage({ type: 'COMPLEMENTS_SYNC', complements: INITIAL_COMPLEMENTS });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   return (

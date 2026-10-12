@@ -1693,17 +1693,6 @@ export const SystemProvider = ({ children }) => {
       return nextOrders;
     });
 
-    // Supabase update se configurado
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const updatePayload = { status: newStatus };
-        if (newStatus === 'shipping') updatePayload.shipped_at = new Date().toISOString();
-        if (newStatus === 'delivered') updatePayload.delivered_at = new Date().toISOString();
-        supabase.from('orders').update(updatePayload).eq('id', orderId).then();
-      } catch (err) {}
-    }
-
     // Firebase update se configurado
     const firestoreDb = getFirestoreDb();
     if (firestoreDb) {
@@ -1733,12 +1722,6 @@ export const SystemProvider = ({ children }) => {
       localStorage.setItem('hd_orders', JSON.stringify(next));
       return next;
     });
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        supabase.from('orders').delete().eq('id', orderId).then();
-      } catch (err) {}
-    }
     const firestoreDb = getFirestoreDb();
     if (firestoreDb) {
       try {
@@ -1892,10 +1875,6 @@ export const SystemProvider = ({ children }) => {
     if (db) {
       deleteDoc(doc(db, 'products', String(id))).catch(() => {});
     }
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      supabase.from('products').delete().eq('id', id).then();
-    }
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const ch = new BroadcastChannel('nuu_system_channel');
@@ -1965,10 +1944,6 @@ export const SystemProvider = ({ children }) => {
     const db = getFirestoreDb();
     if (db) {
       deleteDoc(doc(db, 'complements', String(id))).catch(() => {});
-    }
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      supabase.from('complements').delete().eq('id', id).then();
     }
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -2054,9 +2029,8 @@ export const SystemProvider = ({ children }) => {
       cashShifts,
       activeShift,
       currentShift: activeShift,
-      shiftHistory: cashShifts,
-      supabaseActive,
-      SUPABASE_SCHEMA_SQL,
+      supabaseActive: false,
+      SUPABASE_SCHEMA_SQL: '',
       saveSupabaseConfig,
       firebaseActive,
       FIRESTORE_RULES_GUIDE,

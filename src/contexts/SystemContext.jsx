@@ -441,10 +441,10 @@ const INITIAL_CUSTOMERS = [
 
 // 10. EQUIPE E OPERADORES DO TURNO (Atendentes, Chapa, Caixa, Dono)
 const INITIAL_OPERATORS = [
-  { id: 'op-1', name: 'Kadu', role: 'Proprietário / Gerente', active: true, pin: '1234' },
-  { id: 'op-2', name: 'Daniel', role: 'Atendente / Caixa', active: true, pin: '1234' },
-  { id: 'op-3', name: 'Fabiane', role: 'Atendente / Caixa', active: true, pin: '1234' },
-  { id: 'op-4', name: 'Julia', role: 'Atendente / Chapa', active: true, pin: '1234' }
+  { id: 'op-1', name: 'Kadu', role: 'Proprietário', active: true, pin: '1234' },
+  { id: 'op-2', name: 'Daniel', role: 'Proprietário', active: true, pin: '1234' },
+  { id: 'op-3', name: 'Fabiane', role: 'Atendente', active: true, pin: '1234' },
+  { id: 'op-4', name: 'Julia', role: 'Chapa / Cozinha', active: true, pin: '1234' }
 ];
 
 // Cotações de Fornecedores
@@ -629,18 +629,23 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [operators, setOperators] = useState(() => {
-    const savedV2 = localStorage.getItem('nuu_operators_v2');
-    if (savedV2) {
+    const savedV3 = localStorage.getItem('nuu_operators_v3');
+    if (savedV3) {
       try {
-        return JSON.parse(savedV2);
+        return JSON.parse(savedV3);
       } catch (e) {}
     }
-    const saved = localStorage.getItem('nuu_operators');
+    const saved = localStorage.getItem('nuu_operators_v2') || localStorage.getItem('nuu_operators');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const hasNewMembers = parsed.some(o => ['Daniel', 'Fabiane', 'Julia'].includes(o.name));
-        if (hasNewMembers) return parsed;
+        // Atualiza Kadu e Daniel para 'Proprietário' se ainda não estiverem
+        return parsed.map(o => {
+          if (o.name === 'Kadu' || o.name === 'Daniel') {
+            return { ...o, role: 'Proprietário' };
+          }
+          return o;
+        });
       } catch (e) {}
     }
     return INITIAL_OPERATORS;
@@ -652,6 +657,9 @@ export const SystemProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(saved);
         if (parsed && ['Kadu', 'Daniel', 'Fabiane', 'Julia'].includes(parsed.name)) {
+          if (parsed.name === 'Kadu' || parsed.name === 'Daniel') {
+            return { ...parsed, role: 'Proprietário' };
+          }
           return parsed;
         }
         return null;
@@ -727,6 +735,7 @@ export const SystemProvider = ({ children }) => {
   }, [customers]);
 
   useEffect(() => {
+    localStorage.setItem('nuu_operators_v3', JSON.stringify(operators));
     localStorage.setItem('nuu_operators_v2', JSON.stringify(operators));
     localStorage.setItem('nuu_operators', JSON.stringify(operators));
   }, [operators]);

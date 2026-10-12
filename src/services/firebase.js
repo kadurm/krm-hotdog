@@ -240,7 +240,12 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // 4. INVENTORY: Controle de Insumos, Carnes, Pães e Embalagens
+    // 4. COMPLEMENTS: Adicionais, Queijos e Complementos
+    match /complements/{complementId} {
+      allow read, write: if true;
+    }
+
+    // 5. INVENTORY: Controle de Insumos, Carnes, Pães e Embalagens
     match /inventory/{itemId} {
       allow read, write: if true;
     }

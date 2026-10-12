@@ -3140,60 +3140,89 @@ export default function DeliveryView({
               position: 'relative'
             }}
           >
-            {/* Ícone estilizado com glow */}
+            {/* Logo oficial no topo com máximo destaque e glow (substitui a estrela) */}
             <div style={{
-              width: '62px',
-              height: '62px',
+              width: '78px',
+              height: '78px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: '1rem',
-              backgroundColor: 
-                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.16)' :
-                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.16)' :
-                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.16)' :
-                'rgba(234, 179, 8, 0.16)',
-              border: `1px solid ${
-                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.35)' :
-                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.35)' :
-                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.35)' :
-                'rgba(234, 179, 8, 0.35)'
+              backgroundColor: 'rgba(234, 179, 8, 0.12)',
+              border: `2px solid ${
+                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.5)' :
+                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.5)' :
+                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.5)' :
+                'rgba(234, 179, 8, 0.5)'
               }`,
-              boxShadow: `0 0 20px ${
-                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.25)' :
-                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.25)' :
-                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.25)' :
-                'rgba(234, 179, 8, 0.25)'
-              }`
+              boxShadow: `0 0 25px ${
+                siteModal.type === 'success' ? 'rgba(34, 197, 94, 0.3)' :
+                siteModal.type === 'warning' ? 'rgba(245, 158, 11, 0.3)' :
+                siteModal.type === 'error' ? 'rgba(239, 68, 68, 0.3)' :
+                'rgba(234, 179, 8, 0.3)'
+              }`,
+              padding: '10px',
+              position: 'relative'
             }}>
-              {siteModal.type === 'success' ? <CheckCircle size={32} color="#22c55e" /> :
-               siteModal.type === 'warning' ? <AlertCircle size={32} color="#f59e0b" /> :
-               siteModal.type === 'error' ? <AlertCircle size={32} color="#ef4444" /> :
-               <Sparkles size={32} color="#eab308" />}
-            </div>
-
-            {/* Logo oficial e Tag de identificação */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <img 
                 src="/logoNuuPrensado-semfundo.png" 
                 alt="Nuu Prensado" 
-                style={{ height: '24px', objectFit: 'contain' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
-              {siteModal.badge && (
+              {/* Indicador de status no cantinho da logo */}
+              {siteModal.type === 'success' && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  backgroundColor: '#111827',
+                  borderRadius: '50%',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #22c55e'
+                }}>
+                  <CheckCircle size={15} color="#22c55e" />
+                </div>
+              )}
+              {(siteModal.type === 'warning' || siteModal.type === 'error') && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  backgroundColor: '#111827',
+                  borderRadius: '50%',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: siteModal.type === 'error' ? '2px solid #ef4444' : '2px solid #f59e0b'
+                }}>
+                  <AlertCircle size={15} color={siteModal.type === 'error' ? '#ef4444' : '#f59e0b'} />
+                </div>
+              )}
+            </div>
+
+            {/* Tag / Badge de identificação se houver */}
+            {siteModal.badge && (
+              <div style={{ marginBottom: '8px' }}>
                 <span style={{
-                  fontSize: '0.72rem',
+                  fontSize: '0.74rem',
                   fontWeight: 700,
                   color: 'var(--color-brand-yellow)',
                   backgroundColor: 'rgba(234, 179, 8, 0.15)',
-                  padding: '2px 8px',
+                  padding: '3px 10px',
                   borderRadius: '99px',
-                  border: '1px solid rgba(234, 179, 8, 0.3)'
+                  border: '1px solid rgba(234, 179, 8, 0.35)',
+                  letterSpacing: '0.3px',
+                  display: 'inline-block'
                 }}>
                   {siteModal.badge}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Título */}
             <h3 style={{

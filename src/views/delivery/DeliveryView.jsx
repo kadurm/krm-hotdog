@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSystem } from '../../contexts/SystemContext';
 import LoyaltyCard from '../../components/LoyaltyCard';
 import { 
@@ -69,6 +69,7 @@ export default function DeliveryView({
   const [siteModal, setSiteModal] = useState(null); // { title, message, type: 'info' | 'success' | 'warning', badge?: string }
   const [productQty, setProductQty] = useState(1);
   const [itemNotes, setItemNotes] = useState('');
+  const [closedNoticeDismissed, setClosedNoticeDismissed] = useState(false);
 
   const showSiteAlert = (title, message, type = 'info', badge = null) => {
     setSiteModal({ title, message, type, badge });
@@ -112,6 +113,47 @@ export default function DeliveryView({
   const [cepLoading, setCepLoading] = useState(false);
   const [cepFeedback, setCepFeedback] = useState(null);
   const [address, setAddress] = useState('');
+  // Campos estruturados de endereço (uma caixa para cada informação)
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressNumber, setAddressNumber] = useState('');
+  const [addressComplement, setAddressComplement] = useState('');
+  const [addressNeighborhood, setAddressNeighborhood] = useState('');
+
+  // Validação com destaque em vermelho e scroll automático intuitivo
+  const [formErrors, setFormErrors] = useState({});
+  const nameInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
+  const streetInputRef = useRef(null);
+  const numberInputRef = useRef(null);
+  const neighborhoodInputRef = useRef(null);
+
+  // Auxiliar para extrair campos de endereços legados salvos
+  const parseAddressString = (addrStr) => {
+    if (!addrStr || typeof addrStr !== 'string') return {};
+    let street = '';
+    let number = '';
+    let complement = '';
+    let neighborhood = '';
+
+    const clean = addrStr.replace(/\s*-\s*Montes Claros(\/MG)?/i, '').trim();
+    const parts = clean.split(',').map(p => p.trim());
+
+    if (parts.length >= 1) {
+      street = parts[0];
+    }
+    for (let i = 1; i < parts.length; i++) {
+      const part = parts[i];
+      if (/^(n[ºo°]?\s*|\d+)/i.test(part) && !number) {
+        number = part.replace(/^n[ºo°]?\s*/i, '').trim();
+      } else if (/^bairro\s+/i.test(part) && !neighborhood) {
+        neighborhood = part.replace(/^bairro\s+/i, '').trim();
+      } else if (!complement) {
+        complement = part;
+      }
+    }
+    return { street, number, complement, neighborhood };
+  };
+
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('');
   const [deliverySelectionMode, setDeliverySelectionMode] = useState('neighborhood'); // 'neighborhood' | 'radius'
   const [selectedDistanceKm, setSelectedDistanceKm] = useState(null);
@@ -250,26 +292,15 @@ export default function DeliveryView({
 
       const rua = data.logradouro || '';
       const b = data.bairro || '';
-      const cidade = data.localidade || 'Montes Claros';
-      const uf = data.uf || 'MG';
 
-      // Monta sugestão no campo de endereço permitindo edição a qualquer momento
-      let enderecoFormatado = '';
-      if (rua && b) {
-        enderecoFormatado = `${rua}, nº , Bairro ${b} - ${cidade}/${uf}`;
-      } else if (rua) {
-        enderecoFormatado = `${rua}, nº  - ${cidade}/${uf}`;
-      } else if (b) {
-        enderecoFormatado = `Bairro ${b} - ${cidade}/${uf}`;
-      } else {
-        enderecoFormatado = `${cidade}/${uf}`;
+      if (rua) {
+        setAddressStreet(rua);
+        setFormErrors(prev => ({ ...prev, street: false }));
       }
-
-      setAddress(enderecoFormatado);
-
-      // Associa bairro para cálculo automático de taxa
       if (b) {
+        setAddressNeighborhood(b);
         setSelectedNeighborhood(b);
+        setFormErrors(prev => ({ ...prev, neighborhood: false }));
         const match = availableNeighborhoods.find(n => n.name.toLowerCase() === b.toLowerCase());
         if (match && match.distanceKm) {
           setSelectedDistanceKm(match.distanceKm);
@@ -277,7 +308,13 @@ export default function DeliveryView({
           setSelectedDistanceKm(null);
         }
       }
-      setCepFeedback({ success: true, message: `Endereço localizado: ${rua ? rua + ', ' : ''}${b || cidade}!` });
+
+      setCepFeedback({ success: true, message: `Endereço localizado: ${rua ? rua + ', ' : ''}${b || 'Montes Claros'}!` });
+
+      // Foco suave no campo de número para o cliente completar de forma intuitiva
+      setTimeout(() => {
+        numberInputRef.current?.focus();
+      }, 200);
     } catch (e) {
       setCepFeedback({ success: false, message: 'Não foi possível consultar o CEP. Preencha o endereço normalmente abaixo.' });
     } finally {
@@ -641,14 +678,18 @@ export default function DeliveryView({
   // Cálculos de Totais
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   
-  // Taxa de entrega dinâmica por bairro, raio/distância ou retirada (sempre numérica e segura)
+  // O preço da taxa de delivery só é calculado e exibido após o preenchimento do bairro/endereço
+  const isDeliveryAddressProvided = Boolean(addressNeighborhood.trim());
+
   const deliveryFeeResult = deliveryType === 'delivery' 
-    ? calculateDeliveryFee({ 
-        neighborhoodName: selectedNeighborhood, 
-        distanceKm: selectedDistanceKm,
-        subtotal: cartTotal 
-      })
-    : { fee: 0, isFree: true, reason: 'Retirada no Balcão' };
+    ? (isDeliveryAddressProvided
+        ? calculateDeliveryFee({ 
+            neighborhoodName: selectedNeighborhood || addressNeighborhood, 
+            distanceKm: selectedDistanceKm,
+            subtotal: cartTotal 
+          })
+        : { fee: 0, isFree: false, pending: true, reason: 'Aguardando preenchimento do endereço' })
+    : { fee: 0, isFree: true, pending: false, reason: 'Retirada no Balcão' };
 
   const deliveryFee = typeof deliveryFeeResult === 'number'
     ? deliveryFeeResult
@@ -698,8 +739,52 @@ export default function DeliveryView({
       setIdentifiedCustomer(found);
       setCustomerName(found.name || '');
       setPhone(found.phone || clean);
-      if (found.address) setAddress(found.address);
-      if (found.neighborhood) setSelectedNeighborhood(found.neighborhood);
+      if (formErrors.name) setFormErrors(prev => ({ ...prev, name: false }));
+      if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
+
+      // Popula campos estruturados se existirem
+      if (found.addressStreet) {
+        setAddressStreet(found.addressStreet);
+        setFormErrors(prev => ({ ...prev, street: false }));
+      }
+      if (found.addressNumber) {
+        setAddressNumber(found.addressNumber);
+        setFormErrors(prev => ({ ...prev, number: false }));
+      }
+      if (found.addressComplement) {
+        setAddressComplement(found.addressComplement);
+      }
+      if (found.addressNeighborhood) {
+        setAddressNeighborhood(found.addressNeighborhood);
+        setSelectedNeighborhood(found.addressNeighborhood);
+        setFormErrors(prev => ({ ...prev, neighborhood: false }));
+      } else if (found.neighborhood) {
+        setAddressNeighborhood(found.neighborhood);
+        setSelectedNeighborhood(found.neighborhood);
+        setFormErrors(prev => ({ ...prev, neighborhood: false }));
+      }
+
+      // Se tiver endereço em string única antiga, faz parse inteligente
+      if (!found.addressStreet && found.address) {
+        const parsed = parseAddressString(found.address);
+        if (parsed.street) {
+          setAddressStreet(parsed.street);
+          setFormErrors(prev => ({ ...prev, street: false }));
+        }
+        if (parsed.number) {
+          setAddressNumber(parsed.number);
+          setFormErrors(prev => ({ ...prev, number: false }));
+        }
+        if (parsed.complement) {
+          setAddressComplement(parsed.complement);
+        }
+        if (parsed.neighborhood) {
+          setAddressNeighborhood(parsed.neighborhood);
+          setSelectedNeighborhood(parsed.neighborhood);
+          setFormErrors(prev => ({ ...prev, neighborhood: false }));
+        }
+      }
+
       showSiteAlert(
         'Cliente Encontrado! 🎉',
         `Bem-vindo de volta, ${found.name || 'Cliente'}! Seus dados foram preenchidos automaticamente.`,
@@ -708,6 +793,7 @@ export default function DeliveryView({
       );
     } else {
       setPhone(clean);
+      if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
       showSiteAlert(
         'Novo Cadastro! 🌭',
         'Telefone registrado com sucesso! Finalize seu primeiro pedido para acumular selos no Cartão Fidelidade Nuu Prensado.',
@@ -759,35 +845,73 @@ export default function DeliveryView({
       return;
     }
 
+    // Validação com destaque em vermelho e scroll automático até a informação faltante
+    const errors = {};
+    let firstErrorRef = null;
+    let firstErrorMessage = '';
+
     if (!customerName.trim()) {
-      showSiteAlert(
-        'Identificação Obrigatória',
-        'Por favor, informe seu nome para identificação do pedido.',
-        'warning'
-      );
-      return;
+      errors.name = true;
+      if (!firstErrorRef) {
+        firstErrorRef = nameInputRef;
+        firstErrorMessage = 'Por favor, informe seu nome completo para identificação do pedido.';
+      }
     }
 
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
+      errors.phone = true;
+      if (!firstErrorRef) {
+        firstErrorRef = phoneInputRef;
+        firstErrorMessage = 'Por favor, informe seu número de WhatsApp com DDD (mínimo 10 dígitos, ex: 38 99999-8888).';
+      }
+    }
+
+    if (deliveryType === 'delivery') {
+      if (!addressStreet.trim()) {
+        errors.street = true;
+        if (!firstErrorRef) {
+          firstErrorRef = streetInputRef;
+          firstErrorMessage = 'Por favor, preencha o nome da sua Rua ou Avenida para entrega.';
+        }
+      }
+
+      if (!addressNumber.trim()) {
+        errors.number = true;
+        if (!firstErrorRef) {
+          firstErrorRef = numberInputRef;
+          firstErrorMessage = 'Por favor, preencha o número do local da entrega.';
+        }
+      }
+
+      if (!addressNeighborhood.trim()) {
+        errors.neighborhood = true;
+        if (!firstErrorRef) {
+          firstErrorRef = neighborhoodInputRef;
+          firstErrorMessage = 'Por favor, informe o bairro para entrega em Montes Claros.';
+        }
+      }
+    }
+
+    // Se houver algum campo obrigatório faltando, rola suavemente até ele e foca intuitivamente
+    if (firstErrorRef) {
+      setFormErrors(errors);
+      firstErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        firstErrorRef.current?.focus();
+      }, 250);
       showSiteAlert(
-        'WhatsApp Obrigatório',
-        'Por favor, informe seu número de WhatsApp com DDD (mínimo 10 dígitos, ex: 38 99999-8888).',
+        'Informação Faltando',
+        firstErrorMessage,
         'warning'
       );
       return;
     }
 
-    if (deliveryType === 'delivery') {
-      if (!address.trim()) {
-        showSiteAlert(
-          'Endereço Obrigatório',
-          'Por favor, digite seu endereço completo para entrega.',
-          'warning'
-        );
-        return;
-      }
-    }
+    // Monta o endereço formatado oficial de Montes Claros/MG
+    const formattedAddress = deliveryType === 'delivery'
+      ? `${addressStreet.trim()}, nº ${addressNumber.trim()}${addressComplement.trim() ? `, ${addressComplement.trim()}` : ''}, Bairro ${addressNeighborhood.trim()} - Montes Claros/MG`
+      : 'Retirada no Balcão';
 
     const finalPayment = paymentMethod === 'Dinheiro' && changeFor 
       ? `Dinheiro (Troco p/ R$ ${changeFor})` 
@@ -797,8 +921,8 @@ export default function DeliveryView({
       customerName: customerName.trim(), 
       phone: cleanPhone, 
       type: deliveryType, 
-      address: deliveryType === 'delivery' ? address.trim() : 'Retirada no Balcão',
-      neighborhood: deliveryType === 'delivery' ? (selectedNeighborhood || (selectedDistanceKm ? `Raio até ${selectedDistanceKm} km` : 'Montes Claros')) : null,
+      address: formattedAddress,
+      neighborhood: deliveryType === 'delivery' ? addressNeighborhood.trim() : null,
       distanceKm: deliveryType === 'delivery' ? selectedDistanceKm : null,
       paymentMethod: finalPayment,
       changeFor: paymentMethod === 'Dinheiro' && changeFor ? changeFor : null,
@@ -813,8 +937,12 @@ export default function DeliveryView({
     saveCustomer({
       phone: cleanPhone,
       name: customerName.trim(),
-      address: deliveryType === 'delivery' ? address.trim() : (identifiedCustomer?.address || ''),
-      neighborhood: deliveryType === 'delivery' ? selectedNeighborhood : (identifiedCustomer?.neighborhood || '')
+      address: formattedAddress,
+      addressStreet: addressStreet.trim(),
+      addressNumber: addressNumber.trim(),
+      addressComplement: addressComplement.trim(),
+      addressNeighborhood: addressNeighborhood.trim(),
+      neighborhood: deliveryType === 'delivery' ? addressNeighborhood.trim() : (identifiedCustomer?.neighborhood || '')
     });
 
     setCart([]);
@@ -900,23 +1028,26 @@ export default function DeliveryView({
         </div>
       ) : !isStoreOpen && checkoutStep === 'menu' ? (
         <div style={{
-          backgroundColor: '#991b1b',
-          color: '#fff',
+          background: 'linear-gradient(90deg, rgba(220, 38, 38, 0.22) 0%, rgba(180, 83, 9, 0.26) 100%)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
+          color: '#fef08a',
           padding: '8px 16px',
-          fontSize: '0.82rem',
-          fontWeight: 700,
+          fontSize: '0.80rem',
+          fontWeight: 600,
           textAlign: 'center',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
           zIndex: 100,
-          boxShadow: '0 2px 10px rgba(0,0,0,0.4)'
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)'
         }}>
-          <AlertCircle size={16} />
+          <Clock size={15} color="#fbbf24" />
           <span>
-            {storeSettings?.closedNotice || 'No momento a loja está fechada para novos pedidos.'} 
-            {` (Atendimento: todos os dias das ${storeSettings?.openTime || '19:00'} às ${storeSettings?.closeTime || '00:00'})`}
+            {storeSettings?.closedNotice || 'Loja fechada no momento para novos pedidos.'} 
+            {` • Atendimento: todos os dias das ${storeSettings?.openTime || '19:00'} às ${storeSettings?.closeTime || '00:00'}`}
           </span>
         </div>
       ) : null}
@@ -949,18 +1080,28 @@ export default function DeliveryView({
                 }} 
               />
               {/* Badge de Horário / Status */}
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: '99px',
-                backgroundColor: pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.18)' : isStoreOpen ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                border: `1px solid ${pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.5)' : isStoreOpen ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
-                color: pauseStatus.isPaused ? '#fef08a' : isStoreOpen ? '#4ade80' : '#f87171',
-                fontSize: '0.72rem',
-                fontWeight: 700
-              }}>
+              <div 
+                onClick={() => {
+                  if (!isStoreOpen && !pauseStatus.isPaused) {
+                    setClosedNoticeDismissed(false);
+                  }
+                }}
+                title={!isStoreOpen && !pauseStatus.isPaused ? "Clique para ver detalhes do horário" : undefined}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '99px',
+                  backgroundColor: pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.18)' : isStoreOpen ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                  border: `1px solid ${pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.5)' : isStoreOpen ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
+                  color: pauseStatus.isPaused ? '#fef08a' : isStoreOpen ? '#4ade80' : '#f87171',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: (!isStoreOpen && !pauseStatus.isPaused) ? 'pointer' : 'default',
+                  transition: 'all 0.2s ease'
+                }}
+              >
                 <span style={{
                   width: '7px',
                   height: '7px',
@@ -1249,20 +1390,22 @@ export default function DeliveryView({
                 
                 <button 
                   onClick={() => handleOpenProduct(activeProduct)}
-                  disabled={!isStoreOpen}
                   className="btn-primary" 
                   style={{ 
                     padding: '12px 28px', 
                     fontSize: '1rem', 
-                    backgroundColor: '#fff', 
-                    color: '#000', 
+                    backgroundColor: isStoreOpen ? '#fff' : 'rgba(255, 255, 255, 0.16)', 
+                    color: isStoreOpen ? '#000' : '#fff', 
+                    border: isStoreOpen ? 'none' : '1px solid rgba(255, 255, 255, 0.35)',
+                    backdropFilter: isStoreOpen ? 'none' : 'blur(8px)',
+                    WebkitBackdropFilter: isStoreOpen ? 'none' : 'blur(8px)',
                     fontWeight: 800,
                     boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
-                    cursor: isStoreOpen ? 'pointer' : 'not-allowed',
-                    opacity: isStoreOpen ? 1 : 0.6
+                    cursor: 'pointer',
+                    opacity: 1
                   }}
                 >
-                  {isStoreOpen ? 'Pedir Agora' : pauseStatus.isPaused ? `Pausada (~${pauseStatus.remainingMinutes} min)` : 'Loja Fechada'}
+                  {isStoreOpen ? 'Pedir Agora' : pauseStatus.isPaused ? `Pausada (~${pauseStatus.remainingMinutes} min)` : 'Ver Ingredientes'}
                 </button>
               </div>
 
@@ -1584,7 +1727,7 @@ export default function DeliveryView({
                           
                           <button 
                             onClick={() => handleOpenProduct(product)}
-                            disabled={isPaused || !isStoreOpen}
+                            disabled={isPaused}
                             className="btn-primary"
                             style={{ 
                               width: '100%',
@@ -1596,11 +1739,16 @@ export default function DeliveryView({
                               fontSize: '0.95rem',
                               fontWeight: 700,
                               borderRadius: '8px',
-                              cursor: (isPaused || !isStoreOpen) ? 'not-allowed' : 'pointer',
-                              opacity: (isPaused || !isStoreOpen) ? 0.5 : 1
+                              cursor: isPaused ? 'not-allowed' : 'pointer',
+                              opacity: isPaused ? 0.5 : 1,
+                              backgroundColor: (!isStoreOpen && !isPaused) ? 'rgba(255, 255, 255, 0.12)' : undefined,
+                              border: (!isStoreOpen && !isPaused) ? '1px solid rgba(255, 255, 255, 0.25)' : undefined,
+                              color: (!isStoreOpen && !isPaused) ? '#f8fafc' : undefined,
+                              backdropFilter: (!isStoreOpen && !isPaused) ? 'blur(8px)' : undefined,
+                              WebkitBackdropFilter: (!isStoreOpen && !isPaused) ? 'blur(8px)' : undefined
                             }}
                           >
-                            {!isStoreOpen ? (pauseStatus.isPaused ? `Pausada (~${pauseStatus.remainingMinutes}m)` : 'Fechado') : isPaused ? 'Esgotado' : 'Pedir'}
+                            {isPaused ? 'Esgotado' : isStoreOpen ? 'Pedir' : pauseStatus.isPaused ? `Ver Detalhes (~${pauseStatus.remainingMinutes}m)` : 'Ver Detalhes'}
                           </button>
                         </div>
                       </div>
@@ -1707,29 +1855,66 @@ export default function DeliveryView({
               )}
             </div>
 
-            <form onSubmit={handleSubmitOrder} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <form onSubmit={handleSubmitOrder} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Nome Completo com validação visual */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Nome Completo</label>
+                <label style={{ fontSize: '0.9rem', color: formErrors.name ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                  Nome Completo <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input 
+                  ref={nameInputRef}
                   type="text" 
-                  required 
                   placeholder="Ex: Carlos Eduardo"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    if (formErrors.name) setFormErrors(prev => ({ ...prev, name: false }));
+                  }}
+                  style={{
+                    border: formErrors.name ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                    backgroundColor: formErrors.name ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                    boxShadow: formErrors.name ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
                 />
+                {formErrors.name && (
+                  <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertCircle size={12} /> Informe seu nome completo
+                  </span>
+                )}
               </div>
 
+              {/* Telefone / WhatsApp com validação visual */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Telefone / WhatsApp</label>
+                <label style={{ fontSize: '0.9rem', color: formErrors.phone ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                  Telefone / WhatsApp <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input 
+                  ref={phoneInputRef}
                   type="tel" 
-                  required 
-                  placeholder="Ex: (31) 98888-7777"
+                  placeholder="Ex: (38) 98888-7777"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
+                  }}
+                  style={{
+                    border: formErrors.phone ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                    backgroundColor: formErrors.phone ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                    boxShadow: formErrors.phone ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
                 />
+                {formErrors.phone && (
+                  <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertCircle size={12} /> Informe seu WhatsApp com DDD (mínimo 10 dígitos)
+                  </span>
+                )}
               </div>
 
+              {/* Tipo de Entrega com taxa condicional */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Tipo de Entrega</label>
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -1744,8 +1929,10 @@ export default function DeliveryView({
                     />
                     <div>
                       <div style={{ fontWeight: 600 }}>Delivery</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {deliveryFee === 0 ? '🎉 Frete Grátis!' : `+ R$ ${deliveryFee.toFixed(2)}`}
+                      <div style={{ fontSize: '0.75rem', color: isDeliveryAddressProvided ? 'var(--text-secondary)' : 'rgba(255, 255, 255, 0.65)' }}>
+                        {isDeliveryAddressProvided 
+                          ? (deliveryFee === 0 ? '🎉 Frete Grátis!' : `+ R$ ${deliveryFee.toFixed(2)}`)
+                          : 'Taxa calculada no endereço'}
                       </div>
                     </div>
                   </label>
@@ -1766,9 +1953,9 @@ export default function DeliveryView({
                 </div>
               </div>
 
-              {/* Se for delivery: endereço com busca opcional por CEP e taxa calculada automaticamente */}
+              {/* Se for delivery: campos individuais de endereço e taxa calculada */}
               {deliveryType === 'delivery' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }} className="animate-fade-in">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} className="animate-fade-in">
                   
                   {/* Campo de CEP Opcional para preenchimento rápido */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1841,62 +2028,186 @@ export default function DeliveryView({
                     )}
                   </div>
 
-                  {/* Campo de Endereço Completo (Sempre editável pelo cliente) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                        Endereço Completo
+                  {/* Campos Estruturados de Endereço: Rua/Av e Número */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Rua / Avenida */}
+                    <div style={{ flex: '1 1 62%', minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.85rem', color: formErrors.street ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                        Rua / Av. <span style={{ color: '#ef4444' }}>*</span>
                       </label>
-                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        Pode editar quando quiser
-                      </span>
+                      <input
+                        ref={streetInputRef}
+                        type="text"
+                        placeholder="Ex: Rua Agapanto"
+                        value={addressStreet}
+                        onChange={(e) => {
+                          setAddressStreet(e.target.value);
+                          if (formErrors.street) setFormErrors(prev => ({ ...prev, street: false }));
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: formErrors.street ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                          backgroundColor: formErrors.street ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                          color: '#fff',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          boxShadow: formErrors.street ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                      />
+                      {formErrors.street && (
+                        <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <AlertCircle size={11} /> Preencha a Rua/Av.
+                        </span>
+                      )}
                     </div>
-                    <textarea 
-                      required 
-                      rows="3"
-                      placeholder="Rua, número, bairro (ex: Sagrada Família), complemento e ponto de referência"
-                      value={address}
-                      onChange={(e) => handleAddressChange(e.target.value)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-glass)',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        color: '#fff',
-                        fontSize: '0.9rem',
-                        resize: 'vertical'
-                      }}
-                    />
+
+                    {/* Número */}
+                    <div style={{ flex: '1 1 30%', minWidth: '95px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.85rem', color: formErrors.number ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                        Número <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        ref={numberInputRef}
+                        type="text"
+                        placeholder="Ex: 264 ou S/N"
+                        value={addressNumber}
+                        onChange={(e) => {
+                          setAddressNumber(e.target.value);
+                          if (formErrors.number) setFormErrors(prev => ({ ...prev, number: false }));
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: formErrors.number ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                          backgroundColor: formErrors.number ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                          color: '#fff',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          boxShadow: formErrors.number ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                      />
+                      {formErrors.number && (
+                        <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <AlertCircle size={11} /> Preencha o número
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Card da Taxa de Entrega Calculada Automaticamente */}
+                  {/* Campos Estruturados de Endereço: Bairro e Complemento */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Bairro (Montes Claros) */}
+                    <div style={{ flex: '1 1 52%', minWidth: '170px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.85rem', color: formErrors.neighborhood ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                          Bairro <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Montes Claros</span>
+                      </div>
+                      <input
+                        ref={neighborhoodInputRef}
+                        type="text"
+                        list="delivery-neighborhoods-list"
+                        placeholder="Ex: Sagrada Família, Centro..."
+                        value={addressNeighborhood}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAddressNeighborhood(val);
+                          setSelectedNeighborhood(val);
+                          if (formErrors.neighborhood) setFormErrors(prev => ({ ...prev, neighborhood: false }));
+                          const match = availableNeighborhoods.find(n => n.name.toLowerCase() === val.trim().toLowerCase());
+                          if (match && match.distanceKm) {
+                            setSelectedDistanceKm(match.distanceKm);
+                          }
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: formErrors.neighborhood ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                          backgroundColor: formErrors.neighborhood ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                          color: '#fff',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          boxShadow: formErrors.neighborhood ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                      />
+                      <datalist id="delivery-neighborhoods-list">
+                        {availableNeighborhoods.map((n, i) => (
+                          <option key={i} value={n.name}>
+                            {n.fee === 0 ? 'Frete Grátis' : `Taxa: R$ ${Number(n.fee).toFixed(2)}`}
+                          </option>
+                        ))}
+                      </datalist>
+                      {formErrors.neighborhood && (
+                        <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <AlertCircle size={11} /> Preencha o bairro
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Complemento (Opcional) */}
+                    <div style={{ flex: '1 1 42%', minWidth: '150px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        Complemento <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Apto 102, Casa 2, Fundos..."
+                        value={addressComplement}
+                        onChange={(e) => setAddressComplement(e.target.value)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-glass)',
+                          backgroundColor: 'var(--bg-tertiary)',
+                          color: '#fff',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Card da Taxa de Entrega Calculada (Aparece após o preenchimento do endereço) */}
                   <div style={{
-                    padding: '10px 14px',
+                    padding: '12px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(34, 197, 94, 0.08)',
-                    border: '1px solid rgba(34, 197, 94, 0.25)',
+                    backgroundColor: isDeliveryAddressProvided ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                    border: isDeliveryAddressProvided ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-glass)',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    fontSize: '0.85rem'
+                    fontSize: '0.85rem',
+                    transition: 'all 0.3s ease'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Bike size={18} color="#4ade80" />
+                      <Bike size={18} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
                       <div>
                         <span style={{ color: '#fff', fontWeight: 600 }}>
                           Taxa de Entrega:
                         </span>
                         <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)' }}>
-                          {deliveryFeeResult?.isFree 
-                            ? '🎉 Frete Grátis no seu pedido!'
-                            : selectedNeighborhood 
-                              ? `Calculada para o bairro ${selectedNeighborhood}` 
-                              : 'Calculada automaticamente para o seu endereço'}
+                          {isDeliveryAddressProvided 
+                            ? (deliveryFeeResult?.isFree 
+                                ? '🎉 Frete Grátis no seu pedido!'
+                                : `Calculada para o bairro ${addressNeighborhood.trim()}`)
+                            : 'Informe seu bairro acima para calcular a taxa de entrega'}
                         </div>
                       </div>
                     </div>
-                    <strong style={{ color: deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)', fontSize: '1.05rem', fontWeight: 800 }}>
-                      {deliveryFee === 0 ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`}
+                    <strong style={{ 
+                      color: !isDeliveryAddressProvided ? 'var(--text-muted)' : (deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)'), 
+                      fontSize: isDeliveryAddressProvided ? '1.05rem' : '0.85rem', 
+                      fontWeight: 800 
+                    }}>
+                      {isDeliveryAddressProvided 
+                        ? (deliveryFee === 0 ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`)
+                        : 'A calcular'}
                     </strong>
                   </div>
                 </div>
@@ -2026,7 +2337,11 @@ export default function DeliveryView({
                 {deliveryType === 'delivery' && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega:</span>
-                    <span>R$ {deliveryFee.toFixed(2)}</span>
+                    <span>
+                      {isDeliveryAddressProvided 
+                        ? (deliveryFee === 0 ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Grátis</span> : `R$ ${deliveryFee.toFixed(2)}`)
+                        : <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Calculada após endereço</span>}
+                    </span>
                   </div>
                 )}
                 {totalDiscount > 0 && (
@@ -2585,8 +2900,43 @@ export default function DeliveryView({
               <button onClick={() => setSelectedProduct(null)} className="btn-secondary" style={{ flex: '0 0 auto', padding: '10px 16px' }}>
                 Cancelar
               </button>
-              <button onClick={handleAddToCart} className="btn-primary" style={{ flex: '1 1 auto', justifyContent: 'center', padding: '10px 18px' }}>
-                Adicionar • R$ {currentTotalPrice.toFixed(2)}
+              <button 
+                onClick={() => {
+                  if (!isStoreOpen) {
+                    if (pauseStatus.isPaused) {
+                      showSiteAlert(
+                        'Cozinha em Pausa',
+                        `A cozinha está em pausa temporária para preparar os pedidos em andamento. Retomamos os novos pedidos em aproximadamente ${pauseStatus.remainingMinutes} min!`,
+                        'warning',
+                        'Pausa'
+                      );
+                      return;
+                    }
+                    showSiteAlert(
+                      'Loja Fechada',
+                      `Nosso horário de atendimento é todos os dias das ${storeSettings?.openTime || '19:00'} às ${storeSettings?.closeTime || '00:00'}. Fique à vontade para conferir todos os ingredientes e escolher seus itens favoritos!`,
+                      'warning',
+                      'Horário'
+                    );
+                    return;
+                  }
+                  handleAddToCart();
+                }} 
+                className="btn-primary" 
+                style={{ 
+                  flex: '1 1 auto', 
+                  justifyContent: 'center', 
+                  padding: '10px 18px',
+                  backgroundColor: !isStoreOpen ? 'rgba(245, 158, 11, 0.22)' : undefined,
+                  border: !isStoreOpen ? '1px solid rgba(245, 158, 11, 0.45)' : undefined,
+                  color: !isStoreOpen ? '#fef08a' : undefined
+                }}
+              >
+                {isStoreOpen 
+                  ? `Adicionar • R$ ${currentTotalPrice.toFixed(2)}` 
+                  : pauseStatus.isPaused 
+                    ? `Cozinha Pausada (~${pauseStatus.remainingMinutes}m)` 
+                    : `Fechado • Abre às ${storeSettings?.openTime || '19:00'}`}
               </button>
             </div>
           </div>

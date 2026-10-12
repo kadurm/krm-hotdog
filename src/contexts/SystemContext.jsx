@@ -1,14 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  getSupabaseClient, 
-  getSupabaseCredentials, 
-  saveSupabaseCredentials, 
-  isSupabaseConfigured,
-  mapSupabaseOrderToApp,
-  mapAppOrderToSupabase,
-  SUPABASE_SCHEMA_SQL 
-} from '../services/supabase';
-import { 
   getFirestoreDb, 
   isFirebaseConfigured, 
   saveFirebaseConfig,
@@ -674,7 +665,6 @@ export const SystemProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [supabaseActive, setSupabaseActive] = useState(isSupabaseConfigured);
   const [firebaseActive, setFirebaseActive] = useState(isFirebaseConfigured);
 
   // Turno de caixa aberto ativo (se houver)
@@ -744,7 +734,7 @@ export const SystemProvider = ({ children }) => {
     localStorage.setItem('nuu_cash_shifts', JSON.stringify(cashShifts));
   }, [cashShifts]);
 
-  // Sincronização em tempo real entre abas (BroadcastChannel) e Supabase
+  // Sincronização entre abas do mesmo navegador (BroadcastChannel)
   useEffect(() => {
     let channel = null;
     try {
@@ -762,13 +752,13 @@ export const SystemProvider = ({ children }) => {
         setStoreSettings(e.data.settings);
       }
       if (e.data?.type === 'PRODUCT_STATUS_SYNC' && e.data.productId !== undefined) {
-        setProducts(prev => prev.map(p => p.id === e.data.productId ? { ...p, active: e.data.active } : p));
+        setProducts(prev => prev.map(p => String(p.id) === String(e.data.productId) ? { ...p, active: e.data.active } : p));
       }
       if (e.data?.type === 'PRODUCTS_SYNC' && Array.isArray(e.data.products)) {
         setProducts(e.data.products);
       }
       if (e.data?.type === 'COMPLEMENT_STATUS_SYNC' && e.data.complementId) {
-        setComplements(prev => prev.map(c => c.id === e.data.complementId ? { ...c, active: e.data.active } : c));
+        setComplements(prev => prev.map(c => String(c.id) === String(e.data.complementId) ? { ...c, active: e.data.active } : c));
       }
       if (e.data?.type === 'COMPLEMENTS_SYNC' && Array.isArray(e.data.complements)) {
         setComplements(e.data.complements);
@@ -779,156 +769,22 @@ export const SystemProvider = ({ children }) => {
       channel.addEventListener('message', handleBroadcast);
     }
 
-    // Se o Supabase estiver configurado, escuta mudanças no banco na nuvem!
-    const supabase = getSupabaseClient();
-    let supabaseOrdersSub = null;
-    let supabaseProductsSub = null;
-    let supabaseComplementsSub = null;
-    let supabaseSettingsSub = null;
-
-    if (supabase) {
-      try {
-        supabaseOrdersSub = supabase
-          .channel('public:orders')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-            if (payload.eventType === 'INSERT') {
-              const mapped = mapSupabaseOrderToApp(payload.new);
-              if (!mapped) return;
-              setOrders(prev => {
-                if (prev.some(o => String(o.id) === String(mapped.id))) {
-                  return prev.map(o => String(o.id) === String(mapped.id) ? { ...o, ...mapped } : o);
-                }
-                playNotificationChime();
-                return [mapped, ...prev];
-              });
-            } else if (payload.eventType === 'UPDATE') {
-              const mapped = mapSupabaseOrderToApp(payload.new);
-              if (!mapped) return;
-              setOrders(prev => prev.map(o => String(o.id) === String(mapped.id) ? { ...o, ...mapped } : o));
-            } else if (payload.eventType === 'DELETE') {
-              const deletedId = String(payload.old?.id || '');
-              if (deletedId) {
-                setOrders(prev => prev.filter(o => String(o.id) !== deletedId));
-              }
-            }
-          })
-          .subscribe();
-
-        // Escuta produtos no Supabase em tempo real
-        supabaseProductsSub = supabase
-          .channel('public:products')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-            if (payload.new && payload.new.id !== undefined) {
-              setProducts(prev => prev.map(p => {
-                if (p.id === Number(payload.new.id)) {
-                  return {
-                    ...p,
-                    active: payload.new.active !== undefined ? Boolean(payload.new.active) : p.active,
-                    price: payload.new.price !== undefined ? Number(payload.new.price) : p.price
-                  };
-                }
-                return p;
-              }));
-            }
-          })
-          .subscribe();
-
-        // Escuta complementos no Supabase em tempo real
-        supabaseComplementsSub = supabase
-          .channel('public:complements')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'complements' }, (payload) => {
-            if (payload.new && payload.new.id) {
-              setComplements(prev => prev.map(c => {
-                if (String(c.id) === String(payload.new.id)) {
-                  return {
-                    ...c,
-                    active: payload.new.active !== undefined ? Boolean(payload.new.active) : c.active,
-                    price: payload.new.price !== undefined ? Number(payload.new.price) : c.price
-                  };
-                }
-                return c;
-              }));
-            }
-          })
-          .subscribe();
-
-        // Escuta configurações da loja no Supabase em tempo real
-        supabaseSettingsSub = supabase
-          .channel('public:store_settings')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'store_settings' }, (payload) => {
-            if (payload.new) {
-              setStoreSettings(prev => ({ ...prev, ...payload.new }));
-            }
-          })
-          .subscribe();
-      } catch (err) {
-        console.warn('Supabase Realtime subscription error:', err);
-      }
-    }
-
     return () => {
       if (channel) {
         channel.removeEventListener('message', handleBroadcast);
         channel.close();
       }
-      if (supabase) {
-        if (supabaseOrdersSub) supabase.removeChannel(supabaseOrdersSub);
-        if (supabaseProductsSub) supabase.removeChannel(supabaseProductsSub);
-        if (supabaseComplementsSub) supabase.removeChannel(supabaseComplementsSub);
-        if (supabaseSettingsSub) supabase.removeChannel(supabaseSettingsSub);
-      }
     };
-  }, [supabaseActive]);
+  }, []);
 
-  // Busca inicial dos pedidos no Supabase quando conectado
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    let isMounted = true;
-    const fetchRemoteOrders = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(100);
-
-        if (!error && Array.isArray(data) && isMounted) {
-          const remoteOrders = data.map(mapSupabaseOrderToApp).filter(Boolean);
-          setOrders(prev => {
-            const map = new Map(prev.map(o => [String(o.id), o]));
-            remoteOrders.forEach(rem => {
-              if (!map.has(String(rem.id))) {
-                map.set(String(rem.id), rem);
-              } else {
-                map.set(String(rem.id), { ...map.get(String(rem.id)), ...rem });
-              }
-            });
-            const merged = Array.from(map.values());
-            merged.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-            return merged;
-          });
-        }
-      } catch (err) {
-        console.warn('Erro ao carregar pedidos remotos do Supabase:', err);
-      }
-    };
-
-    fetchRemoteOrders();
-    return () => {
-      isMounted = false;
-    };
-  }, [supabaseActive]);
-
-  // --- Sincronização em Nuvem (Firebase e Supabase) para Produtos, Complementos e Loja ---
+  // --- Sincronização em Nuvem 100% via Firebase Firestore ---
   const syncProductToRemote = async (prod) => {
     if (!prod || prod.id === undefined) return;
     const db = getFirestoreDb();
     if (db) {
       try {
         await setDoc(doc(db, 'products', String(prod.id)), {
-          id: Number(prod.id),
+          id: Number(prod.id) || prod.id,
           name: prod.name || '',
           description: prod.description || '',
           price: Number(prod.price) || 0,
@@ -941,25 +797,6 @@ export const SystemProvider = ({ children }) => {
         }, { merge: true });
       } catch (err) {
         console.warn('Erro ao sincronizar produto no Firestore:', err);
-      }
-    }
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('products').upsert({
-          id: Number(prod.id),
-          name: prod.name,
-          description: prod.description || '',
-          price: Number(prod.price) || 0,
-          image: prod.image || '',
-          active: prod.active !== undefined ? Boolean(prod.active) : true,
-          category: prod.category || 'prensados',
-          has_custom_options: Boolean(prod.hasCustomOptions),
-          recipe: prod.recipe || []
-        });
-      } catch (err) {
-        console.warn('Erro ao sincronizar produto no Supabase:', err);
       }
     }
   };
@@ -983,21 +820,6 @@ export const SystemProvider = ({ children }) => {
         console.warn('Erro ao sincronizar complemento no Firestore:', err);
       }
     }
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('complements').upsert({
-          id: String(comp.id),
-          name: comp.name,
-          category: comp.category || 'extra',
-          group: comp.group || 'extras',
-          group_name: comp.group_name || '',
-          price: Number(comp.price) || 0,
-          active: comp.active !== undefined ? Boolean(comp.active) : true
-        });
-      } catch (err) {}
-    }
   };
 
   const syncStoreSettingsToRemote = async (settings) => {
@@ -1012,17 +834,6 @@ export const SystemProvider = ({ children }) => {
       } catch (err) {
         console.warn('Erro ao sincronizar store_settings no Firestore:', err);
       }
-    }
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('store_settings').upsert({
-          id: 'main',
-          ...settings,
-          updated_at: new Date().toISOString()
-        });
-      } catch (err) {}
     }
   };
 
@@ -1234,13 +1045,8 @@ export const SystemProvider = ({ children }) => {
     };
   }, [firebaseActive]);
 
-  // --- Função para Salvar/Conectar Supabase ---
-  const saveSupabaseConfig = (url, key) => {
-    saveSupabaseCredentials(url, key);
-    const configured = Boolean(url && key);
-    setSupabaseActive(configured);
-    return configured;
-  };
+  // --- Função para Salvar/Conectar Supabase (legado/desativado) ---
+  const saveSupabaseConfig = () => false;
 
   // --- Função para Salvar/Conectar Firebase ---
   const handleSaveFirebaseConfig = (config) => {
@@ -1502,12 +1308,6 @@ export const SystemProvider = ({ children }) => {
 
   const assignOrderMotoboy = (orderId, motoboyId) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, motoboyId } : o));
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        supabase.from('orders').update({ motoboy_id: motoboyId }).eq('id', orderId).then();
-      } catch (err) {}
-    }
     const db = getFirestoreDb();
     if (db) {
       try {
@@ -1797,26 +1597,6 @@ export const SystemProvider = ({ children }) => {
       });
     }
 
-    // Salva no Supabase se configurado
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const dbPayload = mapAppOrderToSupabase(newOrder);
-        supabase.from('orders').insert(dbPayload).then(({ error }) => {
-          if (error) {
-            console.warn('Supabase order insert error:', error);
-            // Se ocorreu colisão de ID chave primária (23505), retenta com ID único
-            if (error.code === '23505') {
-              const uniqueId = `${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
-              newOrder.id = uniqueId;
-              supabase.from('orders').insert({ ...dbPayload, id: uniqueId }).then();
-            }
-          }
-        });
-      } catch (err) {
-        console.warn('Supabase sync catch:', err);
-      }
-    }
 
     // Salva no Firebase Firestore se configurado
     const firestoreDb = getFirestoreDb();

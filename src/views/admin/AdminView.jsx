@@ -17,7 +17,8 @@ import {
   Search, CheckCircle2, Building2, Bike, Store, Clock, Phone,
   Volume2, VolumeX, Upload, Image, Pause, Play,
   MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag,
-  User, LayoutGrid, MonitorPlay, Flame, Navigation
+  User, LayoutGrid, MonitorPlay, Flame, Navigation,
+  Calendar
 } from 'lucide-react';
 
 export default function AdminView({ onLogout, onGoOperation }) {
@@ -119,6 +120,64 @@ export default function AdminView({ onLogout, onGoOperation }) {
   const [newRadiusKm, setNewRadiusKm] = useState('5');
   const [newRadiusFee, setNewRadiusFee] = useState('7.50');
   const [newRadiusDesc, setNewRadiusDesc] = useState('');
+
+  // Helper para formatar data local no padrão YYYY-MM-DD para inputs de calendário
+  const formatDateToInput = (date) => {
+    if (!date || isNaN(date.getTime())) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // Estados do Filtro de Data do Dashboard
+  const [dashDatePreset, setDashDatePreset] = useState('7days');
+  const [dashStartDate, setDashStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return formatDateToInput(d);
+  });
+  const [dashEndDate, setDashEndDate] = useState(() => {
+    return formatDateToInput(new Date());
+  });
+  const [dashChartType, setDashChartType] = useState('line'); // 'line' | 'bar'
+  const [hoveredChartPoint, setHoveredChartPoint] = useState(null);
+
+  const handleSelectDatePreset = (preset) => {
+    setDashDatePreset(preset);
+    const today = new Date();
+
+    if (preset === 'today') {
+      const todayStr = formatDateToInput(today);
+      setDashStartDate(todayStr);
+      setDashEndDate(todayStr);
+    } else if (preset === 'yesterday') {
+      const y = new Date();
+      y.setDate(today.getDate() - 1);
+      const yStr = formatDateToInput(y);
+      setDashStartDate(yStr);
+      setDashEndDate(yStr);
+    } else if (preset === '7days') {
+      const past = new Date();
+      past.setDate(today.getDate() - 6);
+      setDashStartDate(formatDateToInput(past));
+      setDashEndDate(formatDateToInput(today));
+    } else if (preset === '30days') {
+      const past = new Date();
+      past.setDate(today.getDate() - 29);
+      setDashStartDate(formatDateToInput(past));
+      setDashEndDate(formatDateToInput(today));
+    } else if (preset === 'thisMonth') {
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      setDashStartDate(formatDateToInput(firstDay));
+      setDashEndDate(formatDateToInput(today));
+    } else if (preset === 'lastMonth') {
+      const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      setDashStartDate(formatDateToInput(firstDayLastMonth));
+      setDashEndDate(formatDateToInput(lastDayLastMonth));
+    }
+  };
 
   const getTabFromHash = () => {
     const hash = window.location.hash;
@@ -292,10 +351,143 @@ export default function AdminView({ onLogout, onGoOperation }) {
 
   const criticalStockCount = inventory.filter(item => item.quantity <= item.minQuantity).length;
 
-  // Chart data simulation (last 7 days sales)
-  const chartDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  const chartSales = [420, 310, 580, 490, 710, 890, 1120];
-  const maxSale = Math.max(...chartSales);
+  // Helper para conversão de limites de data (00:00:00 até 23:59:59.999)
+  const parseDateBoundary = (dateStr, isEnd = false) => {
+    if (!dateStr) return isEnd ? new Date(8640000000000000) : new Date(0);
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length !== 3 || isNaN(parts[0])) return isEnd ? new Date(8640000000000000) : new Date(0);
+    const [y, m, d] = parts;
+    return isEnd 
+      ? new Date(y, m - 1, d, 23, 59, 59, 999) 
+      : new Date(y, m - 1, d, 0, 0, 0, 0);
+  };
+
+  const getItemDate = (item) => {
+    const raw = item?.date || item?.created_at || item?.createdAt;
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const dashStartBoundary = parseDateBoundary(dashStartDate, false);
+  const dashEndBoundary = parseDateBoundary(dashEndDate, true);
+
+  // Pedidos válidos dentro do período selecionado (exclui cancelados)
+  const dashFilteredOrders = orders.filter(o => {
+    if (o.status === 'canceled') return false;
+    const d = getItemDate(o);
+    if (!d) return false;
+    return d >= dashStartBoundary && d <= dashEndBoundary;
+  });
+
+  // Transações dentro do período selecionado
+  const dashFilteredTransactions = transactions.filter(t => {
+    const d = getItemDate(t);
+    if (!d) return false;
+    return d >= dashStartBoundary && d <= dashEndBoundary;
+  });
+
+  // Faturamento apurado dos pedidos válidos no período
+  const dashSalesFromOrders = dashFilteredOrders.reduce((acc, o) => acc + (parseFloat(o.total) || 0), 0);
+
+  // Receitas extras avulsas no período (que não venham do registro automático de pedidos)
+  const dashExtraIncome = dashFilteredTransactions
+    .filter(t => t.type === 'income' && !/pedido\s*#/i.test(t.description || ''))
+    .reduce((acc, t) => acc + (parseFloat(t.value) || 0), 0);
+
+  // Histórico legado se não houver pedidos no período
+  const dashLegacyIncome = dashFilteredTransactions
+    .filter(t => t.type === 'income')
+    .reduce((acc, t) => acc + (parseFloat(t.value) || 0), 0);
+
+  const dashFaturamento = dashFilteredOrders.length > 0 
+    ? (dashSalesFromOrders + dashExtraIncome) 
+    : dashLegacyIncome;
+
+  const dashDespesas = dashFilteredTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, t) => acc + (parseFloat(t.value) || 0), 0);
+
+  const dashSaldoLiquido = dashFaturamento - dashDespesas;
+  const dashTotalPedidos = dashFilteredOrders.length;
+  const dashTicketMedio = dashTotalPedidos > 0 ? (dashSalesFromOrders / dashTotalPedidos) : 0;
+
+  // Cálculo dos pontos reais do gráfico conforme o período
+  const dashDiffDays = Math.max(1, Math.round((dashEndBoundary - dashStartBoundary) / (1000 * 60 * 60 * 24)));
+
+  let dashChartPoints = [];
+
+  if (dashDiffDays <= 1) {
+    // Visão Horária para 1 único dia (Hoje, Ontem ou 1 data específica)
+    let minHour = 11;
+    let maxHour = 23;
+    dashFilteredOrders.forEach(o => {
+      const d = getItemDate(o);
+      if (d) {
+        const h = d.getHours();
+        if (h < minHour) minHour = Math.max(0, h);
+        if (h > maxHour) maxHour = Math.min(23, h);
+      }
+    });
+
+    for (let h = minHour; h <= maxHour; h++) {
+      const matchedOrders = dashFilteredOrders.filter(o => {
+        const d = getItemDate(o);
+        return d && d.getHours() === h;
+      });
+      const hSales = matchedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+      dashChartPoints.push({
+        key: `h-${h}`,
+        label: `${h}h`,
+        fullLabel: `${String(h).padStart(2, '0')}:00 às ${String(h).padStart(2, '0')}:59`,
+        value: parseFloat(hSales.toFixed(2)),
+        ordersCount: matchedOrders.length
+      });
+    }
+  } else {
+    // Visão Diária para múltiplos dias (7 dias, 30 dias, este mês ou intervalo)
+    const weekDaysMap = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const curDate = new Date(dashStartBoundary);
+    curDate.setHours(0, 0, 0, 0);
+    const lastDate = new Date(dashEndBoundary);
+    lastDate.setHours(0, 0, 0, 0);
+
+    while (curDate <= lastDate) {
+      const dateStr = formatDateToInput(curDate);
+      const dw = weekDaysMap[curDate.getDay()];
+      const dd = String(curDate.getDate()).padStart(2, '0');
+      const mm = String(curDate.getMonth() + 1).padStart(2, '0');
+      const shortDate = `${dd}/${mm}`;
+
+      const dayOrders = dashFilteredOrders.filter(o => {
+        const d = getItemDate(o);
+        return d && formatDateToInput(d) === dateStr;
+      });
+
+      const daySales = dayOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+
+      const dayExtra = dashFilteredTransactions
+        .filter(t => {
+          if (t.type !== 'income' || /pedido\s*#/i.test(t.description || '')) return false;
+          const d = getItemDate(t);
+          return d && formatDateToInput(d) === dateStr;
+        })
+        .reduce((sum, t) => sum + (parseFloat(t.value) || 0), 0);
+
+      dashChartPoints.push({
+        key: dateStr,
+        label: dashDiffDays <= 7 ? `${dw} ${shortDate}` : shortDate,
+        fullLabel: `${dw}, ${shortDate}/${curDate.getFullYear()}`,
+        value: parseFloat((daySales + dayExtra).toFixed(2)),
+        ordersCount: dayOrders.length
+      });
+
+      curDate.setDate(curDate.getDate() + 1);
+    }
+  }
+
+  const chartMaxSale = Math.max(...dashChartPoints.map(p => p.value), 0);
+  const chartNiceMax = chartMaxSale > 0 ? (Math.ceil(chartMaxSale / 50) * 50 || 100) : 100;
 
   // KDS Orders filter
   const pendingOrders = orders.filter(o => o.status === 'pending');
@@ -1032,17 +1224,138 @@ export default function AdminView({ onLogout, onGoOperation }) {
           {/* TAB: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div className="animate-fade-in">
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginBottom: '1.5rem' }}>Visão Geral do Negócio</h2>
-              
-              {/* KPIs */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0 }}>Visão Geral do Negócio</h2>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Acompanhamento em tempo real das vendas, pedidos e indicadores da operação.
+                  </p>
+                </div>
+              </div>
+
+              {/* BARRA DO FILTRO DE DATA */}
+              <div className="glass-panel" style={{ padding: '1.1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Calendar size={18} color="var(--color-brand-yellow)" />
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>Filtrar Período de Vendas</span>
+                  </div>
+
+                  {/* Resumo do período ativo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem' }}>
+                    <span style={{ 
+                      backgroundColor: 'rgba(237, 177, 67, 0.15)', 
+                      color: 'var(--color-brand-yellow)', 
+                      padding: '4px 10px', 
+                      borderRadius: '6px', 
+                      fontWeight: 700,
+                      border: '1px solid rgba(237, 177, 67, 0.3)'
+                    }}>
+                      {dashStartDate === dashEndDate 
+                        ? `Data: ${dashStartDate.split('-').reverse().join('/')}` 
+                        : `${dashStartDate.split('-').reverse().join('/')} até ${dashEndDate.split('-').reverse().join('/')}`}
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      • <strong>{dashTotalPedidos}</strong> {dashTotalPedidos === 1 ? 'pedido' : 'pedidos'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  {/* Presets de Data */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {[
+                      { id: 'today', label: 'Hoje' },
+                      { id: 'yesterday', label: 'Ontem' },
+                      { id: '7days', label: 'Últimos 7 dias' },
+                      { id: '30days', label: 'Últimos 30 dias' },
+                      { id: 'thisMonth', label: 'Este Mês' },
+                      { id: 'lastMonth', label: 'Mês Anterior' }
+                    ].map(preset => {
+                      const isSelected = dashDatePreset === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleSelectDatePreset(preset.id)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '0.8rem',
+                            fontWeight: isSelected ? 700 : 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            border: isSelected ? '1px solid var(--color-brand-yellow)' : '1px solid rgba(255,255,255,0.1)',
+                            backgroundColor: isSelected ? 'rgba(237, 177, 67, 0.22)' : 'rgba(255,255,255,0.03)',
+                            color: isSelected ? '#fff' : 'var(--text-secondary)'
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Inputs de Data Personalizada */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>De:</span>
+                      <input
+                        type="date"
+                        value={dashStartDate}
+                        onChange={(e) => {
+                          setDashStartDate(e.target.value);
+                          setDashDatePreset('custom');
+                        }}
+                        style={{
+                          backgroundColor: 'rgba(0,0,0,0.35)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          padding: '5px 8px',
+                          fontSize: '0.82rem',
+                          fontFamily: 'inherit',
+                          colorScheme: 'dark'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Até:</span>
+                      <input
+                        type="date"
+                        value={dashEndDate}
+                        onChange={(e) => {
+                          setDashEndDate(e.target.value);
+                          setDashDatePreset('custom');
+                        }}
+                        style={{
+                          backgroundColor: 'rgba(0,0,0,0.35)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          padding: '5px 8px',
+                          fontSize: '0.82rem',
+                          fontFamily: 'inherit',
+                          colorScheme: 'dark'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPIs (Atualizados conforme o período selecionado) */}
               <div className="kpi-grid">
                 <div className="kpi-card glass-panel">
                   <div className="kpi-icon" style={{ backgroundColor: 'var(--color-success-glow)', color: 'var(--color-success)' }}>
                     <TrendingUp size={24} />
                   </div>
                   <div className="kpi-info">
-                    <h4>Faturamento Total</h4>
-                    <p>R$ {totalFaturamento.toFixed(2)}</p>
+                    <h4>Vendas no Período</h4>
+                    <p>R$ {dashFaturamento.toFixed(2)}</p>
+                    <small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      {dashTotalPedidos} {dashTotalPedidos === 1 ? 'pedido apurado' : 'pedidos apurados'}
+                    </small>
                   </div>
                 </div>
 
@@ -1051,18 +1364,24 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <BadgeDollarSign size={24} />
                   </div>
                   <div className="kpi-info">
-                    <h4>Despesas Gerais</h4>
-                    <p>R$ {totalDespesas.toFixed(2)}</p>
+                    <h4>Despesas no Período</h4>
+                    <p>R$ {dashDespesas.toFixed(2)}</p>
+                    <small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Gastos lançados
+                    </small>
                   </div>
                 </div>
 
                 <div className="kpi-card glass-panel">
-                  <div className="kpi-icon" style={{ backgroundColor: saldoLiquido >= 0 ? 'rgba(16,185,129,0.15)' : 'var(--color-danger-glow)', color: saldoLiquido >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                    <TrendingUp size={24} style={{ transform: saldoLiquido < 0 ? 'rotate(180deg)' : 'none' }} />
+                  <div className="kpi-icon" style={{ backgroundColor: dashSaldoLiquido >= 0 ? 'rgba(16,185,129,0.15)' : 'var(--color-danger-glow)', color: dashSaldoLiquido >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                    <TrendingUp size={24} style={{ transform: dashSaldoLiquido < 0 ? 'rotate(180deg)' : 'none' }} />
                   </div>
                   <div className="kpi-info">
-                    <h4>Lucro Líquido</h4>
-                    <p>R$ {saldoLiquido.toFixed(2)}</p>
+                    <h4>Resultado Líquido</h4>
+                    <p>R$ {dashSaldoLiquido.toFixed(2)}</p>
+                    <small style={{ fontSize: '0.72rem', color: dashSaldoLiquido >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                      {dashFaturamento > 0 ? `Margem: ${((dashSaldoLiquido / dashFaturamento) * 100).toFixed(1)}%` : 'Sem faturamento'}
+                    </small>
                   </div>
                 </div>
 
@@ -1071,8 +1390,11 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <ChefHat size={24} />
                   </div>
                   <div className="kpi-info">
-                    <h4>Pedidos Hoje</h4>
-                    <p>{pedidosHoje} / {totalPedidos}</p>
+                    <h4>Pedidos & Ticket Médio</h4>
+                    <p>{dashTotalPedidos} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 400 }}>pedidos</span></p>
+                    <small style={{ fontSize: '0.72rem', color: 'var(--color-brand-yellow)' }}>
+                      Ticket médio: R$ {dashTicketMedio.toFixed(2)}
+                    </small>
                   </div>
                 </div>
               </div>
@@ -1090,68 +1412,310 @@ export default function AdminView({ onLogout, onGoOperation }) {
                 </div>
               )}
 
-              {/* Chart SVG */}
+              {/* GRÁFICO DINÂMICO DE VENDAS */}
               <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '1.25rem' }}>Desempenho de Vendas Semanais (Simulado)</h3>
-                
-                {/* SVG Line Chart Representation */}
-                <div style={{ position: 'relative', height: '220px', width: '100%', marginTop: '1rem' }}>
-                  <svg viewBox="0 0 700 200" width="100%" height="100%" style={{ overflow: 'visible' }}>
-                    {/* Grid lines */}
-                    <line x1="0" y1="50" x2="700" y2="50" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-                    <line x1="0" y1="100" x2="700" y2="100" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-                    <line x1="0" y1="150" x2="700" y2="150" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-                    <line x1="0" y1="190" x2="700" y2="190" stroke="rgba(255,255,255,0.1)" />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <TrendingUp size={20} color="var(--color-brand-yellow)" />
+                      Desempenho de Vendas ({dashDiffDays <= 1 ? 'Horário' : (dashDatePreset === '7days' ? 'Últimos 7 dias' : `${dashDiffDays} dias`)})
+                    </h3>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      Total contabilizado no gráfico: <strong style={{ color: 'var(--color-brand-yellow)' }}>R$ {dashFaturamento.toFixed(2)}</strong> em <strong style={{ color: '#fff' }}>{dashTotalPedidos}</strong> pedido(s)
+                    </p>
+                  </div>
 
-                    {/* Chart Gradient fill */}
-                    <path
-                      d="M 50 190 L 50 110 L 150 140 L 250 80 L 350 100 L 450 60 L 550 40 L 650 20 L 650 190 Z"
-                      fill="url(#gradientSales)"
-                      opacity="0.2"
-                    />
-
-                    {/* Chart Line */}
-                    <path
-                      d="M 50 110 L 150 140 L 250 80 L 350 100 L 450 60 L 550 40 L 650 20"
-                      fill="none"
-                      stroke="var(--color-brand)"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                    />
-
-                    {/* Dots */}
-                    {[
-                      {x: 50, y: 110, val: 420},
-                      {x: 150, y: 140, val: 310},
-                      {x: 250, y: 80, val: 580},
-                      {x: 350, y: 100, val: 490},
-                      {x: 450, y: 60, val: 710},
-                      {x: 550, y: 40, val: 890},
-                      {x: 650, y: 20, val: 1120}
-                    ].map((dot, i) => (
-                      <g key={i}>
-                        <circle cx={dot.x} cy={dot.y} r="6" fill="var(--color-brand)" stroke="#090d16" strokeWidth="2" />
-                        <text x={dot.x} y={dot.y - 12} textAnchor="middle" fill="var(--text-secondary)" fontSize="10px" fontWeight="bold">
-                          R$ {dot.val}
-                        </text>
-                      </g>
-                    ))}
-
-                    {/* Axis Labels */}
-                    {chartDays.map((day, idx) => (
-                      <text key={idx} x={50 + idx * 100} y="215" textAnchor="middle" fill="var(--text-muted)" fontSize="12px">
-                        {day}
-                      </text>
-                    ))}
-
-                    <defs>
-                      <linearGradient id="gradientSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--color-brand)" />
-                        <stop offset="100%" stopColor="transparent" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {chartMaxSale > 0 && (
+                      <span style={{ fontSize: '0.78rem', color: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                        Pico: R$ {chartMaxSale.toFixed(2)}
+                      </span>
+                    )}
+                    {/* Alternador Linha / Barras */}
+                    <div style={{ display: 'flex', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '2px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <button
+                        type="button"
+                        onClick={() => setDashChartType('line')}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: 'none',
+                          backgroundColor: dashChartType === 'line' ? 'var(--color-brand)' : 'transparent',
+                          color: dashChartType === 'line' ? '#fff' : 'var(--text-secondary)'
+                        }}
+                      >
+                        Linha
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDashChartType('bar')}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: 'none',
+                          backgroundColor: dashChartType === 'bar' ? 'var(--color-brand)' : 'transparent',
+                          color: dashChartType === 'bar' ? '#fff' : 'var(--text-secondary)'
+                        }}
+                      >
+                        Barras
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                {/* SVG Chart Representation */}
+                {(() => {
+                  const svgWidth = 720;
+                  const svgHeight = 220;
+                  const pLeft = 55;
+                  const pRight = 25;
+                  const pTop = 25;
+                  const pBottom = 45;
+                  const plotW = svgWidth - pLeft - pRight;
+                  const plotH = svgHeight - pTop - pBottom;
+                  const bottomY = pTop + plotH;
+
+                  const pointsWithCoords = dashChartPoints.map((pt, idx) => {
+                    const x = pLeft + (dashChartPoints.length > 1 ? (idx / (dashChartPoints.length - 1)) * plotW : plotW / 2);
+                    const y = pTop + plotH - (chartNiceMax > 0 ? (pt.value / chartNiceMax) * plotH : 0);
+                    return { ...pt, x, y };
+                  });
+
+                  const linePathD = pointsWithCoords.length > 0
+                    ? pointsWithCoords.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ')
+                    : '';
+
+                  const areaPathD = pointsWithCoords.length > 1
+                    ? `M ${pointsWithCoords[0].x.toFixed(1)} ${bottomY} L ${pointsWithCoords.map(pt => `${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' L ')} L ${pointsWithCoords[pointsWithCoords.length - 1].x.toFixed(1)} ${bottomY} Z`
+                    : '';
+
+                  const labelStep = dashChartPoints.length > 20 ? 3 : (dashChartPoints.length > 12 ? 2 : 1);
+                  const barWidth = Math.max(8, Math.min(32, (plotW / (dashChartPoints.length || 1)) * 0.65));
+
+                  return (
+                    <div style={{ position: 'relative', height: '230px', width: '100%', marginTop: '0.5rem' }}>
+                      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="100%" style={{ overflow: 'visible' }}>
+                        <defs>
+                          <linearGradient id="gradientSalesArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#edb143" stopOpacity="0.3" />
+                            <stop offset="60%" stopColor="#a82319" stopOpacity="0.1" />
+                            <stop offset="100%" stopColor="#a82319" stopOpacity="0" />
+                          </linearGradient>
+                          <linearGradient id="gradientSalesBar" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#edb143" />
+                            <stop offset="100%" stopColor="#a82319" />
+                          </linearGradient>
+                          <linearGradient id="gradientSalesStroke" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#a82319" />
+                            <stop offset="50%" stopColor="#edb143" />
+                            <stop offset="100%" stopColor="#f59e0b" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Linhas de Grade e Eixo Y */}
+                        {[1, 0.66, 0.33, 0].map((ratio, i) => {
+                          const yVal = pTop + plotH * (1 - ratio);
+                          const currencyVal = chartNiceMax * ratio;
+                          return (
+                            <g key={i}>
+                              <line 
+                                x1={pLeft} 
+                                y1={yVal} 
+                                x2={svgWidth - pRight} 
+                                y2={yVal} 
+                                stroke={ratio === 0 ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"} 
+                                strokeDasharray={ratio === 0 ? "none" : "4 4"} 
+                              />
+                              <text 
+                                x={pLeft - 8} 
+                                y={yVal + 3} 
+                                textAnchor="end" 
+                                fill="var(--text-muted)" 
+                                fontSize="10px" 
+                                fontFamily="inherit"
+                              >
+                                R$ {currencyVal >= 1000 ? `${(currencyVal / 1000).toFixed(1)}k` : currencyVal.toFixed(0)}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* MODO BARRAS */}
+                        {dashChartType === 'bar' && pointsWithCoords.map((pt) => {
+                          const h = Math.max(2, bottomY - pt.y);
+                          const isHovered = hoveredChartPoint?.key === pt.key;
+                          return (
+                            <g key={pt.key}>
+                              <rect
+                                x={pt.x - barWidth / 2}
+                                y={pt.value > 0 ? pt.y : bottomY - 2}
+                                width={barWidth}
+                                height={pt.value > 0 ? h : 2}
+                                rx="4"
+                                fill={isHovered ? "#f59e0b" : "url(#gradientSalesBar)"}
+                                opacity={isHovered ? 1 : 0.85}
+                                style={{ transition: 'all 0.2s' }}
+                              />
+                              {pt.value > 0 && dashChartPoints.length <= 15 && (
+                                <text
+                                  x={pt.x}
+                                  y={pt.y - 6}
+                                  textAnchor="middle"
+                                  fill="#edb143"
+                                  fontSize="9.5px"
+                                  fontWeight="700"
+                                >
+                                  {pt.value >= 1000 ? `${(pt.value / 1000).toFixed(1)}k` : pt.value.toFixed(0)}
+                                </text>
+                              )}
+                            </g>
+                          );
+                        })}
+
+                        {/* MODO LINHA */}
+                        {dashChartType === 'line' && (
+                          <>
+                            {/* Preenchimento de Área */}
+                            {areaPathD && (
+                              <path
+                                d={areaPathD}
+                                fill="url(#gradientSalesArea)"
+                              />
+                            )}
+
+                            {/* Linha da Curva */}
+                            {linePathD && (
+                              <path
+                                d={linePathD}
+                                fill="none"
+                                stroke="url(#gradientSalesStroke)"
+                                strokeWidth="3.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            )}
+
+                            {/* Pontos da Linha */}
+                            {pointsWithCoords.map((pt) => {
+                              const isHovered = hoveredChartPoint?.key === pt.key;
+                              return (
+                                <g key={pt.key}>
+                                  <circle
+                                    cx={pt.x}
+                                    cy={pt.y}
+                                    r={isHovered ? 7 : (pt.value > 0 ? 5 : 3)}
+                                    fill={pt.value > 0 ? "#edb143" : "rgba(255,255,255,0.3)"}
+                                    stroke="#090d16"
+                                    strokeWidth="2"
+                                    style={{ transition: 'r 0.15s ease' }}
+                                  />
+                                  {pt.value > 0 && dashChartPoints.length <= 14 && (
+                                    <text
+                                      x={pt.x}
+                                      y={pt.y - 9}
+                                      textAnchor="middle"
+                                      fill="var(--color-brand-yellow)"
+                                      fontSize="9.5px"
+                                      fontWeight="bold"
+                                    >
+                                      R$ {pt.value >= 1000 ? `${(pt.value / 1000).toFixed(1)}k` : pt.value.toFixed(0)}
+                                    </text>
+                                  )}
+                                </g>
+                              );
+                            })}
+                          </>
+                        )}
+
+                        {/* Áreas de captura para Hover Interativo */}
+                        {pointsWithCoords.map((pt) => {
+                          const colW = plotW / (dashChartPoints.length || 1);
+                          return (
+                            <rect
+                              key={`capture-${pt.key}`}
+                              x={pt.x - colW / 2}
+                              y={pTop}
+                              width={colW}
+                              height={plotH + 20}
+                              fill="transparent"
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setHoveredChartPoint(pt)}
+                              onMouseLeave={() => setHoveredChartPoint(null)}
+                            />
+                          );
+                        })}
+
+                        {/* Rótulos do Eixo X */}
+                        {pointsWithCoords.map((pt, idx) => {
+                          if (idx % labelStep !== 0 && idx !== pointsWithCoords.length - 1) return null;
+                          return (
+                            <text
+                              key={`label-${pt.key}`}
+                              x={pt.x}
+                              y={bottomY + 22}
+                              textAnchor="middle"
+                              fill={hoveredChartPoint?.key === pt.key ? "#fff" : "var(--text-muted)"}
+                              fontSize="11px"
+                              fontWeight={hoveredChartPoint?.key === pt.key ? 700 : 500}
+                              fontFamily="inherit"
+                            >
+                              {pt.label}
+                            </text>
+                          );
+                        })}
+
+                        {/* Floating Tooltip no Hover */}
+                        {hoveredChartPoint && (
+                          <g 
+                            transform={`translate(${Math.min(svgWidth - 165, Math.max(pLeft, hoveredChartPoint.x - 75))}, ${Math.max(5, hoveredChartPoint.y - 58)})`}
+                            style={{ pointerEvents: 'none' }}
+                          >
+                            <rect
+                              width="150"
+                              height="48"
+                              rx="8"
+                              fill="#0f172a"
+                              stroke="var(--color-brand-yellow)"
+                              strokeWidth="1.5"
+                              filter="drop-shadow(0 6px 12px rgba(0,0,0,0.6))"
+                            />
+                            <text x="75" y="18" textAnchor="middle" fill="#9ca3af" fontSize="10.5px" fontWeight="600">
+                              {hoveredChartPoint.fullLabel || hoveredChartPoint.label}
+                            </text>
+                            <text x="75" y="37" textAnchor="middle" fill="#edb143" fontSize="13px" fontWeight="800">
+                              R$ {hoveredChartPoint.value.toFixed(2)} • {hoveredChartPoint.ordersCount} ped
+                            </text>
+                          </g>
+                        )}
+                      </svg>
+                    </div>
+                  );
+                })()}
+
+                {/* Mensagem informativa quando o período estiver sem vendas */}
+                {chartMaxSale === 0 && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '1.25rem', 
+                    marginTop: '0.75rem', 
+                    backgroundColor: 'rgba(255,255,255,0.02)', 
+                    borderRadius: '8px', 
+                    border: '1px dashed rgba(255,255,255,0.1)',
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.88rem'
+                  }}>
+                    ℹ️ Nenhuma venda registrada no período selecionado ({dashStartDate.split('-').reverse().join('/')} até {dashEndDate.split('-').reverse().join('/')}).
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      Selecione outro período nos filtros acima ou realize novos pedidos para acompanhar o gráfico.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -6048,136 +6048,189 @@ export default function AdminView({ onLogout, onGoOperation }) {
                 </div>
               )}
 
-              {/* CARTÃO FIDELIDADE NUU PRENSADO */}
-              <div style={{
-                padding: '16px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.25) 0%, rgba(237, 177, 67, 0.15) 100%)',
-                border: '1px solid rgba(237, 177, 67, 0.4)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Award size={20} color="var(--color-brand-yellow)" />
-                    <span style={{ fontWeight: 800, color: '#fff', fontSize: '0.95rem', letterSpacing: '0.5px' }}>
-                      CARTÃO FIDELIDADE • NUU PRENSADO
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--color-brand-yellow)' }}>
-                    {selectedCustomer.stampsCount % 10} de 10 Selos
-                  </span>
-                </div>
+              {/* STATUS DO CARTÃO FIDELIDADE NUU PRENSADO (100% AUTOMÁTICO) */}
+              {(() => {
+                const currentCycleStamps = selectedCustomer.stampsCount % 10;
+                const stampsNeeded = 10 - currentCycleStamps;
+                
+                // Encontra vouchers de fidelidade gerados para este cliente
+                const customerFidelityCoupons = (coupons || []).filter(cp => 
+                  cp.isFidelityVoucher && 
+                  cp.customerPhone && 
+                  cp.customerPhone.replace(/\D/g, '') === selectedCustomer.phone
+                );
 
-                {/* Grid dos 10 Selos */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(5, 1fr)',
-                  gap: '10px',
-                  padding: '10px 0'
-                }}>
-                  {Array.from({ length: 10 }).map((_, sIdx) => {
-                    const isFilled = sIdx < (selectedCustomer.stampsCount % 10);
-                    return (
-                      <div
-                        key={sIdx}
-                        style={{
-                          aspectRatio: '1',
-                          borderRadius: '50%',
-                          backgroundColor: isFilled ? 'var(--color-brand-yellow)' : 'rgba(255, 255, 255, 0.05)',
-                          border: isFilled ? '2px solid #fff' : '2px dashed rgba(255, 255, 255, 0.2)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexDirection: 'column',
-                          color: isFilled ? '#a82319' : 'var(--text-muted)',
-                          fontWeight: 800,
-                          fontSize: '0.9rem',
-                          boxShadow: isFilled ? '0 0 10px rgba(237, 177, 67, 0.5)' : 'none',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        {isFilled ? '🌭' : `${sIdx + 1}`}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Alerta de Prêmio Pronto */}
-                {selectedCustomer.stampsCount >= 10 && (
+                return (
                   <div style={{
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                    border: '1px solid #10b981',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.25) 0%, rgba(237, 177, 67, 0.15) 100%)',
+                    border: '1px solid rgba(237, 177, 67, 0.4)',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    flexWrap: 'wrap'
+                    flexDirection: 'column',
+                    gap: '12px',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: 800, fontSize: '0.88rem' }}>
-                      <Gift size={20} />
-                      <span>🎉 PRÊMIO PRONTO: 1 Hot Dog Nuu Prensado Cortesia!</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Award size={20} color="var(--color-brand-yellow)" />
+                        <span style={{ fontWeight: 800, color: '#fff', fontSize: '0.95rem', letterSpacing: '0.5px' }}>
+                          CARTÃO FIDELIDADE • NUU PRENSADO
+                        </span>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '99px',
+                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                          color: '#10b981',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          border: '1px solid rgba(16, 185, 129, 0.4)'
+                        }}>
+                          ⚡ 100% Automático
+                        </span>
+                      </div>
+                      
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-brand-yellow)' }}>
+                        {currentCycleStamps} de 10 pedidos concluídos
+                      </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        redeemCustomerReward(selectedCustomer.phone);
-                        setTimeout(() => {
-                          const refreshed = consolidatedCustomers.find(c => c.phone === selectedCustomer.phone);
-                          if (refreshed) setSelectedCustomer(refreshed);
-                        }, 100);
-                      }}
-                      className="btn-primary"
-                      style={{ backgroundColor: '#10b981', border: 'none', padding: '6px 12px', fontSize: '0.8rem', fontWeight: 800 }}
-                    >
-                      Resgatar Prêmio (10 Selos)
-                    </button>
-                  </div>
-                )}
 
-                {/* Ajustes Manuais de Selos */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '10px' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Total histórico de selos: {selectedCustomer.stampsCount}
-                  </span>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateCustomerStamps(selectedCustomer.phone, -1);
-                        setTimeout(() => {
-                          const refreshed = consolidatedCustomers.find(c => c.phone === selectedCustomer.phone);
-                          if (refreshed) setSelectedCustomer(refreshed);
-                        }, 100);
-                      }}
-                      className="btn-secondary"
-                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                      title="Diminuir 1 selo"
-                    >
-                      -1 Selo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateCustomerStamps(selectedCustomer.phone, 1);
-                        setTimeout(() => {
-                          const refreshed = consolidatedCustomers.find(c => c.phone === selectedCustomer.phone);
-                          if (refreshed) setSelectedCustomer(refreshed);
-                        }, 100);
-                      }}
-                      className="btn-primary"
-                      style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700 }}
-                      title="Adicionar 1 selo"
-                    >
-                      +1 Selo
-                    </button>
+                    {/* Barra de Progresso Visual dos 10 Pedidos (Informativo, não interativo) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(10, 1fr)',
+                        gap: '6px',
+                        padding: '6px 0'
+                      }}>
+                        {Array.from({ length: 10 }).map((_, sIdx) => {
+                          const isFilled = sIdx < currentCycleStamps;
+                          return (
+                            <div
+                              key={sIdx}
+                              style={{
+                                aspectRatio: '1',
+                                borderRadius: '50%',
+                                backgroundColor: isFilled ? 'var(--color-brand-yellow)' : 'rgba(255, 255, 255, 0.05)',
+                                border: isFilled ? '2px solid #fff' : '2px dashed rgba(255, 255, 255, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: isFilled ? '#a82319' : 'var(--text-muted)',
+                                fontWeight: 800,
+                                fontSize: '0.85rem',
+                                boxShadow: isFilled ? '0 0 10px rgba(237, 177, 67, 0.5)' : 'none'
+                              }}
+                              title={isFilled ? `Pedido ${sIdx + 1} concluído` : `Falta ${sIdx + 1} pedidos`}
+                            >
+                              {isFilled ? '🌭' : `${sIdx + 1}`}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                        <span>
+                          {stampsNeeded === 1 
+                            ? 'Falta apenas 1 pedido para o cliente ganhar 1 Lanche Grátis!' 
+                            : `Faltam ${stampsNeeded} pedidos para o próximo voucher de Lanche Grátis.`}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          Total histórico: {selectedCustomer.totalOrders} pedido{selectedCustomer.totalOrders === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Vouchers de Fidelidade Gerados para o Cliente */}
+                    {customerFidelityCoupons.length > 0 ? (
+                      <div style={{
+                        marginTop: '4px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                        border: '1px solid rgba(237, 177, 67, 0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Gift size={15} color="#10b981" />
+                          <span>Vouchers de Lanche Grátis Emitidos ({customerFidelityCoupons.length})</span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {customerFidelityCoupons.map((voucher) => {
+                            const isAvailable = (voucher.usesCount || 0) === 0 && voucher.active;
+                            const whatsappResendMsg = `🎉 *PARABÉNS, ${selectedCustomer.name.toUpperCase()}!* 🌭🎉\n\n` +
+                              `Seu voucher de *1 LANCHE GRÁTIS* do seu *Cartão Fidelidade* continua disponível: *${voucher.code}*! 🎁\n\n` +
+                              `👉 Basta inserir este cupom no carrinho do nosso cardápio digital ou enviar aqui no WhatsApp no seu próximo pedido!\n\n` +
+                              `Muito obrigado pela sua preferência! ❤️🌭`;
+
+                            return (
+                              <div
+                                key={voucher.code}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '8px 10px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                  borderRadius: '6px',
+                                  gap: '8px',
+                                  flexWrap: 'wrap'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontWeight: 900, color: 'var(--color-brand-yellow)', fontSize: '0.92rem', letterSpacing: '1px' }}>
+                                    {voucher.code}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '0.68rem',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontWeight: 700,
+                                    backgroundColor: isAvailable ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                                    color: isAvailable ? '#10b981' : 'var(--text-muted)'
+                                  }}>
+                                    {isAvailable ? 'Disponível (1 Lanche Grátis)' : 'Já Utilizado'}
+                                  </span>
+                                </div>
+
+                                {isAvailable && (
+                                  <a
+                                    href={`https://wa.me/55${selectedCustomer.phone}?text=${encodeURIComponent(whatsappResendMsg)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn-secondary"
+                                    style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    title="Reenviar Voucher no WhatsApp"
+                                  >
+                                    <MessageCircle size={13} /> Reenviar WhatsApp
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        fontSize: '0.74rem',
+                        color: 'var(--text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <Sparkles size={14} color="var(--color-brand-yellow)" />
+                        <span>O cliente acumula 1 selo por pedido automaticamente. No 10º pedido concluído, o voucher de lanche gratuito é gerado e enviado no WhatsApp.</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* ITENS MAIS PEDIDOS (FAVORITOS) */}
               {selectedCustomer.favoriteItems && selectedCustomer.favoriteItems.length > 0 && (
@@ -6568,17 +6621,20 @@ export default function AdminView({ onLogout, onGoOperation }) {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Selos de Fidelidade Acumulados</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={custFormStamps}
-                    onChange={e => setCustFormStamps(e.target.value)}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    A cada 10 selos, o cliente tem direito a 1 Hot Dog Nuu Prensado cortesia.
+                <div style={{
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(237, 177, 67, 0.08)',
+                  border: '1px solid rgba(237, 177, 67, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <Award size={18} color="var(--color-brand-yellow)" />
+                  <span>
+                    <strong>Fidelidade 100% Automática:</strong> Os selos e pedidos são acumulados e monitorados pelo sistema a cada entrega concluída.
                   </span>
                 </div>
 

@@ -3264,6 +3264,159 @@ export default function DeliveryView({
         </button>
       )}
 
+      {/* AVISO SUTIL VITRIFICADO DE LOJA FECHADA / PAUSADA (NÃO IMPEDE NAVEGAÇÃO NO CARDÁPIO) */}
+      {!isStoreOpen && !closedNoticeDismissed && checkoutStep === 'menu' && (
+        <div 
+          className="animate-fade-in-up"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 32px)',
+            maxWidth: '480px',
+            zIndex: 90,
+            pointerEvents: 'auto',
+            background: 'linear-gradient(135deg, rgba(20, 20, 28, 0.88) 0%, rgba(15, 23, 42, 0.92) 100%)',
+            backdropFilter: 'blur(16px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+            border: `1px solid ${pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.4)' : 'rgba(245, 158, 11, 0.35)'}`,
+            borderRadius: '18px',
+            boxShadow: '0 20px 45px rgba(0, 0, 0, 0.65), 0 0 25px rgba(245, 158, 11, 0.12)',
+            padding: '16px 18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+        >
+          {/* Cabeçalho do Card */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                backgroundColor: pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.18)' : 'rgba(245, 158, 11, 0.18)',
+                border: `1px solid ${pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.4)' : 'rgba(245, 158, 11, 0.35)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fbbf24',
+                flexShrink: 0
+              }}>
+                <Clock size={18} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {pauseStatus.isPaused ? 'Cozinha em Pausa Temporária' : 'Loja Fechada no Momento'}
+                </h4>
+                <span style={{ fontSize: '0.74rem', color: '#fbbf24', fontWeight: 700 }}>
+                  {pauseStatus.isPaused 
+                    ? `Retomamos em aproximadamente ~${pauseStatus.remainingMinutes} min` 
+                    : `Abrimos às ${storeSettings?.openTime || '19:00'} (todos os dias)`}
+                </span>
+              </div>
+            </div>
+            
+            {/* Botão de Fechar [X] */}
+            <button 
+              type="button"
+              onClick={() => setClosedNoticeDismissed(true)}
+              aria-label="Dispensar aviso de loja fechada"
+              title="Fechar aviso e explorar cardápio"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '50%',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          {/* Mensagem Acolhedora */}
+          <div style={{
+            margin: 0,
+            fontSize: '0.84rem',
+            color: 'rgba(255, 255, 255, 0.85)',
+            lineHeight: 1.45
+          }}>
+            {pauseStatus.isPaused ? (
+              <>
+                {pauseStatus.pauseReason || 'Estamos com muitos pedidos sendo preparados no momento'}.
+                <br />
+                Você pode <strong>navegar pelo cardápio e conferir os lanches</strong> enquanto preparamos os pedidos da fila!
+              </>
+            ) : (
+              <>
+                {storeSettings?.closedNotice ? (
+                  storeSettings.closedNotice
+                ) : (
+                  <>
+                    Nosso atendimento é diariamente das <strong>{storeSettings?.openTime || '19:00'} às {storeSettings?.closeTime || '00:00'}</strong>.
+                    <br />
+                    Sinta-se à vontade para <strong>olhar todo o cardápio</strong>, conferir os ingredientes e escolher seus prensados favoritos!
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Botões de Ação */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '2px' }}>
+            <button
+              type="button"
+              onClick={() => setClosedNoticeDismissed(true)}
+              className="btn-primary"
+              style={{
+                flex: 1,
+                padding: '8px 14px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                borderRadius: '10px',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(245, 158, 11, 0.22)',
+                border: '1px solid rgba(245, 158, 11, 0.45)',
+                color: '#fef08a'
+              }}
+            >
+              👀 Explorar Cardápio Livremente
+            </button>
+
+            <a
+              href={`https://wa.me/55${(storeSettings?.whatsapp || '38991611378').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Estava dando uma olhada no cardápio do Nuu Prensado.')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '8px 12px',
+                fontSize: '0.80rem',
+                fontWeight: 600,
+                borderRadius: '10px',
+                backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                border: '1px solid rgba(34, 197, 94, 0.35)',
+                color: '#86efac',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <MessageCircle size={14} />
+              <span>WhatsApp</span>
+            </a>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

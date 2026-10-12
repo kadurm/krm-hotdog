@@ -1007,15 +1007,16 @@ export default function DeliveryView({
         backgroundColor: backgroundColor,
         transition: 'background-color 0.8s ease-in-out',
         scrollBehavior: 'smooth',
-        height: '100dvh',
-        width: '100vw',
+        height: (checkoutStep === 'menu' && viewMode === 'slider') ? '100dvh' : 'auto',
+        minHeight: '100vh',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        position: 'fixed',
+        position: (checkoutStep === 'menu' && viewMode === 'slider') ? 'fixed' : 'relative',
         top: 0,
         left: 0,
         zIndex: (isCartOpen || selectedProduct || previewImageModal || siteModal) ? 99999 : 1,
-        overflowY: (viewMode === 'grid' || checkoutStep !== 'menu' || isCartOpen) ? 'auto' : 'hidden', 
+        overflowY: (checkoutStep === 'menu' && viewMode === 'slider') ? 'hidden' : 'visible', 
         overflowX: 'hidden'
       }}
     >
@@ -1789,13 +1790,16 @@ export default function DeliveryView({
 
       {/* FORMULÁRIO DE CHECKOUT */}
       {checkoutStep === 'form' && (
-        <div style={{ maxWidth: '600px', margin: 'clamp(2rem, 8vh, 5.5rem) auto 4rem auto', width: '100%', padding: '0 1.5rem' }} className="animate-fade-in">
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>Finalizar Pedido</h2>
+        <div style={{ maxWidth: '960px', margin: '1.25rem auto 4.5rem auto', width: '100%', padding: '0 1.25rem' }} className="animate-fade-in">
+          <div className="glass-panel" style={{ padding: '1.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: 0 }}>Finalizar Pedido</h2>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>• Nuu Prensado</span>
+              </div>
               <button 
                 onClick={() => setCheckoutStep('menu')} 
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.88rem', fontWeight: 600 }}
               >
                 Voltar ao Cardápio
               </button>
@@ -1806,12 +1810,12 @@ export default function DeliveryView({
               backgroundColor: 'rgba(234,179,8,0.08)',
               border: '1px solid rgba(234,179,8,0.25)',
               borderRadius: '12px',
-              padding: '12px 14px',
-              marginBottom: '1.5rem'
+              padding: '10px 14px',
+              marginBottom: '1.25rem'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <span style={{ fontSize: '0.82rem', color: '#fde047', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Award size={16} /> Já comprou com a gente? Busque seus dados
+                  <Award size={15} /> Já comprou com a gente? Busque seus dados
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
@@ -1829,7 +1833,7 @@ export default function DeliveryView({
                   style={{
                     flex: 1,
                     minWidth: 0,
-                    padding: '9px 12px',
+                    padding: '8px 12px',
                     borderRadius: '8px',
                     border: '1px solid rgba(255,255,255,0.15)',
                     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -1845,7 +1849,7 @@ export default function DeliveryView({
                     color: '#000',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '9px 14px',
+                    padding: '8px 14px',
                     fontWeight: 800,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -1863,558 +1867,603 @@ export default function DeliveryView({
 
               {/* Exibe o Cartão Fidelidade se o cliente for identificado */}
               {identifiedCustomer && (
-                <div style={{ marginTop: '12px' }}>
+                <div style={{ marginTop: '10px' }}>
                   <LoyaltyCard customer={identifiedCustomer} onApplyReward={handleApplyLoyaltyReward} />
                 </div>
               )}
             </div>
 
             <form onSubmit={handleSubmitOrder} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Nome Completo com validação visual */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.9rem', color: formErrors.name ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                  Nome Completo <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input 
-                  ref={nameInputRef}
-                  type="text" 
-                  placeholder="Ex: Carlos Eduardo"
-                  value={customerName}
-                  onChange={(e) => {
-                    setCustomerName(e.target.value);
-                    if (formErrors.name) setFormErrors(prev => ({ ...prev, name: false }));
-                  }}
-                  style={{
-                    border: formErrors.name ? '2px solid #ef4444' : '1px solid var(--border-glass)',
-                    backgroundColor: formErrors.name ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                    boxShadow: formErrors.name ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
-                    transition: 'all 0.2s ease',
-                    outline: 'none'
-                  }}
-                />
-                {formErrors.name && (
-                  <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <AlertCircle size={12} /> Informe seu nome completo
-                  </span>
-                )}
-              </div>
-
-              {/* Telefone / WhatsApp com validação visual */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.9rem', color: formErrors.phone ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                  Telefone / WhatsApp <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input 
-                  ref={phoneInputRef}
-                  type="tel" 
-                  placeholder="Ex: (38) 98888-7777"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
-                  }}
-                  style={{
-                    border: formErrors.phone ? '2px solid #ef4444' : '1px solid var(--border-glass)',
-                    backgroundColor: formErrors.phone ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                    boxShadow: formErrors.phone ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
-                    transition: 'all 0.2s ease',
-                    outline: 'none'
-                  }}
-                />
-                {formErrors.phone && (
-                  <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <AlertCircle size={12} /> Informe seu WhatsApp com DDD (mínimo 10 dígitos)
-                  </span>
-                )}
-              </div>
-
-              {/* Tipo de Entrega com taxa condicional */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Tipo de Entrega</label>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <label style={{ flex: 1, padding: '12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: deliveryType === 'delivery' ? 'var(--color-brand-glow)' : 'transparent', borderColor: deliveryType === 'delivery' ? 'var(--color-brand)' : 'var(--border-glass)' }}>
+              {/* Grid Responsivo de 2 Colunas para telas médias/grandes */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '1.5rem',
+                alignItems: 'start'
+              }}>
+                
+                {/* COLUNA 1: DADOS PESSOAIS & ENDEREÇO DE ENTREGA */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {/* Nome Completo com validação visual */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '0.88rem', color: formErrors.name ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                      Nome Completo <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
                     <input 
-                      type="radio" 
-                      name="deliveryType" 
-                      value="delivery"
-                      checked={deliveryType === 'delivery'}
-                      onChange={() => setDeliveryType('delivery')}
-                      style={{ accentColor: 'var(--color-brand)' }}
+                      ref={nameInputRef}
+                      type="text" 
+                      placeholder="Ex: Carlos Eduardo"
+                      value={customerName}
+                      onChange={(e) => {
+                        setCustomerName(e.target.value);
+                        if (formErrors.name) setFormErrors(prev => ({ ...prev, name: false }));
+                      }}
+                      style={{
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.name ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                        backgroundColor: formErrors.name ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                        boxShadow: formErrors.name ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                        color: '#fff',
+                        fontSize: '0.88rem'
+                      }}
                     />
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Delivery</div>
-                      <div style={{ fontSize: '0.75rem', color: isDeliveryAddressProvided ? 'var(--text-secondary)' : 'rgba(255, 255, 255, 0.65)' }}>
-                        {isDeliveryAddressProvided 
-                          ? (deliveryFee === 0 ? '🎉 Frete Grátis!' : `+ R$ ${deliveryFee.toFixed(2)}`)
-                          : 'Taxa calculada no endereço'}
-                      </div>
-                    </div>
-                  </label>
-                  <label style={{ flex: 1, padding: '12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: deliveryType === 'pickup' ? 'var(--color-brand-glow)' : 'transparent', borderColor: deliveryType === 'pickup' ? 'var(--color-brand)' : 'var(--border-glass)' }}>
-                    <input 
-                      type="radio" 
-                      name="deliveryType" 
-                      value="pickup"
-                      checked={deliveryType === 'pickup'}
-                      onChange={() => setDeliveryType('pickup')}
-                      style={{ accentColor: 'var(--color-brand)' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: 600 }}>Retirada</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sem taxa de entrega</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
+                    {formErrors.name && (
+                      <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <AlertCircle size={12} /> Informe seu nome completo
+                      </span>
+                    )}
+                  </div>
 
-              {/* Se for delivery: campos individuais de endereço e taxa calculada */}
-              {deliveryType === 'delivery' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} className="animate-fade-in">
-                  
-                  {/* Campo de CEP Opcional para preenchimento rápido */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                        CEP <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional - preenche o endereço)</span>
+                  {/* Telefone / WhatsApp com validação visual */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '0.88rem', color: formErrors.phone ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                      Telefone / WhatsApp <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input 
+                      ref={phoneInputRef}
+                      type="tel" 
+                      placeholder="Ex: (38) 98888-7777"
+                      value={phone}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
+                      }}
+                      style={{
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: formErrors.phone ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                        backgroundColor: formErrors.phone ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                        boxShadow: formErrors.phone ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                        color: '#fff',
+                        fontSize: '0.88rem'
+                      }}
+                    />
+                    {formErrors.phone && (
+                      <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <AlertCircle size={12} /> Informe seu WhatsApp com DDD (mínimo 10 dígitos)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Tipo de Entrega com taxa condicional */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Tipo de Entrega</label>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <label style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: deliveryType === 'delivery' ? 'var(--color-brand-glow)' : 'transparent', borderColor: deliveryType === 'delivery' ? 'var(--color-brand)' : 'var(--border-glass)' }}>
+                        <input 
+                          type="radio" 
+                          name="deliveryType" 
+                          value="delivery"
+                          checked={deliveryType === 'delivery'}
+                          onChange={() => setDeliveryType('delivery')}
+                          style={{ accentColor: 'var(--color-brand)' }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Delivery</div>
+                          <div style={{ fontSize: '0.74rem', color: isDeliveryAddressProvided ? 'var(--text-secondary)' : 'rgba(255, 255, 255, 0.65)' }}>
+                            {isDeliveryAddressProvided 
+                              ? (deliveryFee === 0 ? '🎉 Frete Grátis!' : `+ R$ ${deliveryFee.toFixed(2)}`)
+                              : 'Taxa calculada no endereço'}
+                          </div>
+                        </div>
+                      </label>
+                      <label style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: deliveryType === 'pickup' ? 'var(--color-brand-glow)' : 'transparent', borderColor: deliveryType === 'pickup' ? 'var(--color-brand)' : 'var(--border-glass)' }}>
+                        <input 
+                          type="radio" 
+                          name="deliveryType" 
+                          value="pickup"
+                          checked={deliveryType === 'pickup'}
+                          onChange={() => setDeliveryType('pickup')}
+                          style={{ accentColor: 'var(--color-brand)' }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Retirada</div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Sem taxa de entrega</div>
+                        </div>
                       </label>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        placeholder="Ex: 39401-022"
-                        value={cep}
-                        maxLength={9}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCep(val);
-                          const clean = val.replace(/\D/g, '');
-                          if (clean.length === 8) {
-                            handleLookupCep(clean);
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          padding: '9px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                          backgroundColor: 'rgba(0,0,0,0.4)',
-                          color: '#fff',
-                          fontSize: '0.85rem'
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleLookupCep(cep)}
-                        disabled={cepLoading}
-                        style={{
-                          backgroundColor: '#eab308',
-                          color: '#000',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '9px 16px',
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0
-                        }}
-                      >
-                        {cepLoading ? 'Buscando...' : <><Search size={14} /> Buscar CEP</>}
-                      </button>
-                    </div>
+                  </div>
 
-                    {cepFeedback && (
+                  {/* Se for delivery: campos individuais de endereço e taxa calculada */}
+                  {deliveryType === 'delivery' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }} className="animate-fade-in">
+                      
+                      {/* Campo de CEP Opcional para preenchimento rápido */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            CEP <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            placeholder="Ex: 39401-022"
+                            value={cep}
+                            maxLength={9}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCep(val);
+                              const clean = val.replace(/\D/g, '');
+                              if (clean.length === 8) {
+                                handleLookupCep(clean);
+                              }
+                            }}
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              backgroundColor: 'rgba(0,0,0,0.4)',
+                              color: '#fff',
+                              fontSize: '0.85rem'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleLookupCep(cep)}
+                            disabled={cepLoading}
+                            style={{
+                              backgroundColor: '#eab308',
+                              color: '#000',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px 14px',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0
+                            }}
+                          >
+                            {cepLoading ? 'Buscando...' : <><Search size={13} /> Buscar CEP</>}
+                          </button>
+                        </div>
+
+                        {cepFeedback && (
+                          <div style={{
+                            fontSize: '0.74rem',
+                            marginTop: '2px',
+                            color: cepFeedback.success ? '#4ade80' : '#f87171',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            {cepFeedback.success ? <Check size={12} /> : <AlertCircle size={12} />}
+                            <span>{cepFeedback.message}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Campos Estruturados de Endereço: Rua/Av e Número */}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {/* Rua / Avenida */}
+                        <div style={{ flex: '1 1 64%', minWidth: '170px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.82rem', color: formErrors.street ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                            Rua / Av. <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input
+                            ref={streetInputRef}
+                            type="text"
+                            placeholder="Ex: Rua Agapanto"
+                            value={addressStreet}
+                            onChange={(e) => {
+                              setAddressStreet(e.target.value);
+                              if (formErrors.street) setFormErrors(prev => ({ ...prev, street: false }));
+                            }}
+                            style={{
+                              padding: '9px 12px',
+                              borderRadius: '8px',
+                              border: formErrors.street ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                              backgroundColor: formErrors.street ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                              color: '#fff',
+                              fontSize: '0.88rem',
+                              outline: 'none',
+                              boxShadow: formErrors.street ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                          />
+                          {formErrors.street && (
+                            <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={11} /> Preencha a Rua/Av.
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Número */}
+                        <div style={{ flex: '1 1 28%', minWidth: '85px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.82rem', color: formErrors.number ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                            Número <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input
+                            ref={numberInputRef}
+                            type="text"
+                            placeholder="Ex: 264 ou S/N"
+                            value={addressNumber}
+                            onChange={(e) => {
+                              setAddressNumber(e.target.value);
+                              if (formErrors.number) setFormErrors(prev => ({ ...prev, number: false }));
+                            }}
+                            style={{
+                              padding: '9px 12px',
+                              borderRadius: '8px',
+                              border: formErrors.number ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                              backgroundColor: formErrors.number ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                              color: '#fff',
+                              fontSize: '0.88rem',
+                              outline: 'none',
+                              boxShadow: formErrors.number ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                          />
+                          {formErrors.number && (
+                            <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={11} /> Preencha o número
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Campos Estruturados de Endereço: Bairro e Complemento */}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {/* Bairro (Montes Claros) */}
+                        <div style={{ flex: '1 1 54%', minWidth: '160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ fontSize: '0.82rem', color: formErrors.neighborhood ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                              Bairro <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Montes Claros</span>
+                          </div>
+                          <input
+                            ref={neighborhoodInputRef}
+                            type="text"
+                            list="delivery-neighborhoods-list"
+                            placeholder="Ex: Sagrada Família, Centro..."
+                            value={addressNeighborhood}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAddressNeighborhood(val);
+                              setSelectedNeighborhood(val);
+                              if (formErrors.neighborhood) setFormErrors(prev => ({ ...prev, neighborhood: false }));
+                              const match = availableNeighborhoods.find(n => n.name.toLowerCase() === val.trim().toLowerCase());
+                              if (match && match.distanceKm) {
+                                setSelectedDistanceKm(match.distanceKm);
+                              }
+                            }}
+                            style={{
+                              padding: '9px 12px',
+                              borderRadius: '8px',
+                              border: formErrors.neighborhood ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                              backgroundColor: formErrors.neighborhood ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                              color: '#fff',
+                              fontSize: '0.88rem',
+                              outline: 'none',
+                              boxShadow: formErrors.neighborhood ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                          />
+                          <datalist id="delivery-neighborhoods-list">
+                            {availableNeighborhoods.map((n, i) => (
+                              <option key={i} value={n.name}>
+                                {n.fee === 0 ? 'Frete Grátis' : `Taxa: R$ ${Number(n.fee).toFixed(2)}`}
+                              </option>
+                            ))}
+                          </datalist>
+                          {formErrors.neighborhood && (
+                            <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={11} /> Preencha o bairro
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Complemento (Opcional) */}
+                        <div style={{ flex: '1 1 40%', minWidth: '140px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            Complemento <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Apto 102, Casa 2..."
+                            value={addressComplement}
+                            onChange={(e) => setAddressComplement(e.target.value)}
+                            style={{
+                              padding: '9px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-glass)',
+                              backgroundColor: 'var(--bg-tertiary)',
+                              color: '#fff',
+                              fontSize: '0.88rem',
+                              outline: 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Card da Taxa de Entrega Calculada */}
                       <div style={{
-                        fontSize: '0.75rem',
-                        marginTop: '2px',
-                        color: cepFeedback.success ? '#4ade80' : '#f87171',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: isDeliveryAddressProvided ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                        border: isDeliveryAddressProvided ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-glass)',
                         display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '4px'
+                        fontSize: '0.82rem',
+                        transition: 'all 0.3s ease'
                       }}>
-                        {cepFeedback.success ? <Check size={12} /> : <AlertCircle size={12} />}
-                        <span>{cepFeedback.message}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Bike size={16} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
+                          <div>
+                            <span style={{ color: '#fff', fontWeight: 600 }}>
+                              Taxa de Entrega:
+                            </span>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}>
+                              {isDeliveryAddressProvided 
+                                ? (deliveryFeeResult?.isFree 
+                                    ? '🎉 Frete Grátis no seu pedido!'
+                                    : `Calculada para o bairro ${addressNeighborhood.trim()}`)
+                                : 'Informe seu bairro acima para calcular a taxa'}
+                            </div>
+                          </div>
+                        </div>
+                        <strong style={{ 
+                          color: !isDeliveryAddressProvided ? 'var(--text-muted)' : (deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)'), 
+                          fontSize: isDeliveryAddressProvided ? '1rem' : '0.82rem', 
+                          fontWeight: 800 
+                        }}>
+                          {isDeliveryAddressProvided 
+                            ? (deliveryFee === 0 ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`)
+                            : 'A calcular'}
+                        </strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* COLUNA 2: FORMA DE PAGAMENTO, CUPOM E RESUMO FINANCEIRO */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid var(--border-glass)',
+                  borderRadius: '12px',
+                  padding: '1.25rem'
+                }}>
+                  {/* FORMA DE PAGAMENTO */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Forma de Pagamento</label>
+                    <select 
+                      value={paymentMethod} 
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      style={{ padding: '9px 12px', fontSize: '0.88rem' }}
+                    >
+                      <option value="Pix">⚡ Pix (Aprovação imediata)</option>
+                      <option value="Cartão de Crédito">💳 Cartão de Crédito (na maquininha)</option>
+                      <option value="Cartão de Débito">💳 Cartão de Débito (na maquininha)</option>
+                      <option value="Dinheiro">💵 Dinheiro</option>
+                    </select>
+
+                    {paymentMethod === 'Pix' && (
+                      <div style={{ 
+                        padding: '10px 12px', 
+                        background: 'rgba(234, 179, 8, 0.08)', 
+                        border: '1px solid rgba(234, 179, 8, 0.25)', 
+                        borderRadius: 'var(--radius-sm)', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '6px' 
+                      }} className="animate-fade-in">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.78rem', color: '#eab308', fontWeight: 600 }}>Chave Pix Oficial:</span>
+                          <button 
+                            type="button" 
+                            onClick={handleCopyPix}
+                            style={{ 
+                              background: pixCopied ? 'var(--color-success)' : 'rgba(234, 179, 8, 0.25)', 
+                              color: '#fff', 
+                              border: 'none', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              cursor: 'pointer', 
+                              fontSize: '0.74rem', 
+                              fontWeight: 600,
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px' 
+                            }}
+                          >
+                            {pixCopied ? <Check size={12} /> : <Copy size={12} />}
+                            {pixCopied ? 'Copiado!' : 'Copiar Chave'}
+                          </button>
+                        </div>
+                        <code style={{ fontSize: '0.82rem', color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '4px', letterSpacing: '0.5px' }}>
+                          {officialPixKey}
+                        </code>
+                      </div>
+                    )}
+
+                    {paymentMethod === 'Dinheiro' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }} className="animate-fade-in">
+                        <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                          Precisa de troco? Para quanto?
+                        </label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: R$ 50,00 ou Não preciso de troco"
+                          value={changeFor}
+                          onChange={(e) => setChangeFor(e.target.value)}
+                          style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+                        />
                       </div>
                     )}
                   </div>
 
-                  {/* Campos Estruturados de Endereço: Rua/Av e Número */}
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    {/* Rua / Avenida */}
-                    <div style={{ flex: '1 1 62%', minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '0.85rem', color: formErrors.street ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                        Rua / Av. <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <input
-                        ref={streetInputRef}
-                        type="text"
-                        placeholder="Ex: Rua Agapanto"
-                        value={addressStreet}
-                        onChange={(e) => {
-                          setAddressStreet(e.target.value);
-                          if (formErrors.street) setFormErrors(prev => ({ ...prev, street: false }));
-                        }}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: formErrors.street ? '2px solid #ef4444' : '1px solid var(--border-glass)',
-                          backgroundColor: formErrors.street ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                          color: '#fff',
-                          fontSize: '0.9rem',
-                          outline: 'none',
-                          boxShadow: formErrors.street ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                      />
-                      {formErrors.street && (
-                        <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <AlertCircle size={11} /> Preencha a Rua/Av.
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Número */}
-                    <div style={{ flex: '1 1 30%', minWidth: '95px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '0.85rem', color: formErrors.number ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                        Número <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <input
-                        ref={numberInputRef}
-                        type="text"
-                        placeholder="Ex: 264 ou S/N"
-                        value={addressNumber}
-                        onChange={(e) => {
-                          setAddressNumber(e.target.value);
-                          if (formErrors.number) setFormErrors(prev => ({ ...prev, number: false }));
-                        }}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: formErrors.number ? '2px solid #ef4444' : '1px solid var(--border-glass)',
-                          backgroundColor: formErrors.number ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                          color: '#fff',
-                          fontSize: '0.9rem',
-                          outline: 'none',
-                          boxShadow: formErrors.number ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                      />
-                      {formErrors.number && (
-                        <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <AlertCircle size={11} /> Preencha o número
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Campos Estruturados de Endereço: Bairro e Complemento */}
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    {/* Bairro (Montes Claros) */}
-                    <div style={{ flex: '1 1 52%', minWidth: '170px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <label style={{ fontSize: '0.85rem', color: formErrors.neighborhood ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                          Bairro <span style={{ color: '#ef4444' }}>*</span>
-                        </label>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Montes Claros</span>
-                      </div>
-                      <input
-                        ref={neighborhoodInputRef}
-                        type="text"
-                        list="delivery-neighborhoods-list"
-                        placeholder="Ex: Sagrada Família, Centro..."
-                        value={addressNeighborhood}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAddressNeighborhood(val);
-                          setSelectedNeighborhood(val);
-                          if (formErrors.neighborhood) setFormErrors(prev => ({ ...prev, neighborhood: false }));
-                          const match = availableNeighborhoods.find(n => n.name.toLowerCase() === val.trim().toLowerCase());
-                          if (match && match.distanceKm) {
-                            setSelectedDistanceKm(match.distanceKm);
-                          }
-                        }}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: formErrors.neighborhood ? '2px solid #ef4444' : '1px solid var(--border-glass)',
-                          backgroundColor: formErrors.neighborhood ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                          color: '#fff',
-                          fontSize: '0.9rem',
-                          outline: 'none',
-                          boxShadow: formErrors.neighborhood ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                      />
-                      <datalist id="delivery-neighborhoods-list">
-                        {availableNeighborhoods.map((n, i) => (
-                          <option key={i} value={n.name}>
-                            {n.fee === 0 ? 'Frete Grátis' : `Taxa: R$ ${Number(n.fee).toFixed(2)}`}
-                          </option>
-                        ))}
-                      </datalist>
-                      {formErrors.neighborhood && (
-                        <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <AlertCircle size={11} /> Preencha o bairro
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Complemento (Opcional) */}
-                    <div style={{ flex: '1 1 42%', minWidth: '150px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                        Complemento <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Apto 102, Casa 2, Fundos..."
-                        value={addressComplement}
-                        onChange={(e) => setAddressComplement(e.target.value)}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-glass)',
-                          backgroundColor: 'var(--bg-tertiary)',
-                          color: '#fff',
-                          fontSize: '0.9rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Card da Taxa de Entrega Calculada (Aparece após o preenchimento do endereço) */}
+                  {/* CAMPO DE CUPOM DE DESCONTO */}
                   <div style={{
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: isDeliveryAddressProvided ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                    border: isDeliveryAddressProvided ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-glass)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '0.85rem',
-                    transition: 'all 0.3s ease'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Bike size={18} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
-                      <div>
-                        <span style={{ color: '#fff', fontWeight: 600 }}>
-                          Taxa de Entrega:
-                        </span>
-                        <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)' }}>
-                          {isDeliveryAddressProvided 
-                            ? (deliveryFeeResult?.isFree 
-                                ? '🎉 Frete Grátis no seu pedido!'
-                                : `Calculada para o bairro ${addressNeighborhood.trim()}`)
-                            : 'Informe seu bairro acima para calcular a taxa de entrega'}
-                        </div>
-                      </div>
-                    </div>
-                    <strong style={{ 
-                      color: !isDeliveryAddressProvided ? 'var(--text-muted)' : (deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)'), 
-                      fontSize: isDeliveryAddressProvided ? '1.05rem' : '0.85rem', 
-                      fontWeight: 800 
-                    }}>
-                      {isDeliveryAddressProvided 
-                        ? (deliveryFee === 0 ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`)
-                        : 'A calcular'}
-                    </strong>
-                  </div>
-                </div>
-              )}
-
-              {/* CAMPO DE CUPOM DE DESCONTO */}
-              <div style={{
-                backgroundColor: 'rgba(255,255,255,0.03)',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-glass)'
-              }}>
-                {/* Banner de Voucher de Fidelidade Disponível */}
-                {activeFidelityVoucher && !appliedCoupon && (
-                  <div style={{
+                    backgroundColor: 'rgba(255,255,255,0.03)',
                     padding: '10px 12px',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.35) 0%, rgba(237, 177, 67, 0.2) 100%)',
-                    border: '1px solid rgba(237, 177, 67, 0.5)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    marginBottom: '10px'
+                    border: '1px solid var(--border-glass)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-brand-yellow)', fontWeight: 800, fontSize: '0.82rem' }}>
-                      <Gift size={16} />
-                      <span>🎉 VOCÊ TEM 1 LANCHE GRÁTIS DE FIDELIDADE!</span>
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: '#fff' }}>
-                      Voucher ativo do seu 10º pedido: <strong>{activeFidelityVoucher.code}</strong> (R$ 25,00 OFF)
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInputCoupon(activeFidelityVoucher.code);
-                        const res = validateCoupon(activeFidelityVoucher.code, cartTotal);
-                        if (res.valid) {
-                          setAppliedCoupon(res.coupon);
-                          setCouponFeedback({ success: true, message: `Voucher ${activeFidelityVoucher.code} aplicado! Seu lanche saiu grátis!` });
-                        }
-                      }}
-                      className="btn-primary"
-                      style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      <Check size={14} />
-                      <span>Aplicar Meu Lanche Grátis Agora</span>
-                    </button>
-                  </div>
-                )}
+                    {/* Banner de Voucher de Fidelidade Disponível */}
+                    {activeFidelityVoucher && !appliedCoupon && (
+                      <div style={{
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.35) 0%, rgba(237, 177, 67, 0.2) 100%)',
+                        border: '1px solid rgba(237, 177, 67, 0.5)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        marginBottom: '8px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-brand-yellow)', fontWeight: 800, fontSize: '0.78rem' }}>
+                          <Gift size={14} />
+                          <span>🎉 1 LANCHE GRÁTIS DE FIDELIDADE!</span>
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#fff' }}>
+                          Voucher do 10º pedido: <strong>{activeFidelityVoucher.code}</strong> (R$ 25 OFF)
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInputCoupon(activeFidelityVoucher.code);
+                            const res = validateCoupon(activeFidelityVoucher.code, cartTotal);
+                            if (res.valid) {
+                              setAppliedCoupon(res.coupon);
+                              setCouponFeedback({ success: true, message: `Voucher ${activeFidelityVoucher.code} aplicado! Seu lanche saiu grátis!` });
+                            }
+                          }}
+                          className="btn-primary"
+                          style={{ padding: '5px 10px', fontSize: '0.74rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '2px' }}
+                        >
+                          <Check size={12} />
+                          <span>Aplicar Meu Lanche Grátis</span>
+                        </button>
+                      </div>
+                    )}
 
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
-                  Cupom de Desconto
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    placeholder="Digite o cupom (ex: NUU10)"
-                    value={inputCoupon}
-                    onChange={(e) => setInputCoupon(e.target.value.toUpperCase())}
-                    style={{
-                      flex: 1,
-                      textTransform: 'uppercase',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      backgroundColor: 'rgba(0,0,0,0.4)',
-                      color: '#fff',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    className="btn-secondary"
-                    style={{ padding: '8px 16px', fontSize: '0.8rem', fontWeight: 700 }}
-                  >
-                    Aplicar
-                  </button>
-                </div>
-                {couponFeedback && (
-                  <div style={{
-                    fontSize: '0.75rem',
-                    marginTop: '6px',
-                    color: couponFeedback.success ? '#4ade80' : '#f87171',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    {couponFeedback.success ? <Check size={12} /> : <AlertCircle size={12} />}
-                    <span>{couponFeedback.message}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* FORMA DE PAGAMENTO */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Forma de Pagamento</label>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                  <option value="Pix">⚡ Pix (Aprovação imediata)</option>
-                  <option value="Cartão de Crédito">💳 Cartão de Crédito (na maquininha)</option>
-                  <option value="Cartão de Débito">💳 Cartão de Débito (na maquininha)</option>
-                  <option value="Dinheiro">💵 Dinheiro</option>
-                </select>
-
-                {paymentMethod === 'Pix' && (
-                  <div style={{ 
-                    padding: '12px 14px', 
-                    background: 'rgba(234, 179, 8, 0.08)', 
-                    border: '1px solid rgba(234, 179, 8, 0.25)', 
-                    borderRadius: 'var(--radius-sm)', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '6px' 
-                  }} className="animate-fade-in">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#eab308', fontWeight: 600 }}>Chave Pix Oficial:</span>
-                      <button 
-                        type="button" 
-                        onClick={handleCopyPix}
-                        style={{ 
-                          background: pixCopied ? 'var(--color-success)' : 'rgba(234, 179, 8, 0.25)', 
-                          color: '#fff', 
-                          border: 'none', 
-                          padding: '3px 8px', 
-                          borderRadius: '4px', 
-                          cursor: 'pointer', 
-                          fontSize: '0.75rem', 
-                          fontWeight: 600,
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '4px' 
+                    <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                      Cupom de Desconto
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input
+                        type="text"
+                        placeholder="Ex: NUU10"
+                        value={inputCoupon}
+                        onChange={(e) => setInputCoupon(e.target.value.toUpperCase())}
+                        style={{
+                          flex: 1,
+                          textTransform: 'uppercase',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          backgroundColor: 'rgba(0,0,0,0.4)',
+                          color: '#fff',
+                          fontSize: '0.82rem'
                         }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        className="btn-secondary"
+                        style={{ padding: '7px 12px', fontSize: '0.78rem', fontWeight: 700 }}
                       >
-                        {pixCopied ? <Check size={12} /> : <Copy size={12} />}
-                        {pixCopied ? 'Copiado!' : 'Copiar Chave'}
+                        Aplicar
                       </button>
                     </div>
-                    <code style={{ fontSize: '0.85rem', color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '5px 8px', borderRadius: '4px', letterSpacing: '0.5px' }}>
-                      {officialPixKey}
-                    </code>
+                    {couponFeedback && (
+                      <div style={{
+                        fontSize: '0.72rem',
+                        marginTop: '4px',
+                        color: couponFeedback.success ? '#4ade80' : '#f87171',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        {couponFeedback.success ? <Check size={11} /> : <AlertCircle size={11} />}
+                        <span>{couponFeedback.message}</span>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {paymentMethod === 'Dinheiro' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }} className="animate-fade-in">
-                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                      Precisa de troco? Para quanto?
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: R$ 50,00 ou Não preciso de troco"
-                      value={changeFor}
-                      onChange={(e) => setChangeFor(e.target.value)}
-                    />
+                  {/* Resumo de Valores */}
+                  <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.88rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Itens do Carrinho:</span>
+                      <span>R$ {cartTotal.toFixed(2)}</span>
+                    </div>
+                    {deliveryType === 'delivery' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.88rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega:</span>
+                        <span>
+                          {isDeliveryAddressProvided 
+                            ? (deliveryFee === 0 ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Grátis</span> : `R$ ${deliveryFee.toFixed(2)}`)
+                            : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Calculada após endereço</span>}
+                        </span>
+                      </div>
+                    )}
+                    {totalDiscount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', color: '#4ade80', fontSize: '0.88rem' }}>
+                        <span>Desconto Total:</span>
+                        <span>- R$ {totalDiscount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-brand)', marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed var(--border-glass)' }}>
+                      <span>Total Geral:</span>
+                      <span>R$ {grandTotal.toFixed(2)}</span>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Resumo de Valores */}
-              <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Itens do Carrinho:</span>
-                  <span>R$ {cartTotal.toFixed(2)}</span>
+                  {/* Botão de Envio de Pedido */}
+                  <button 
+                    type="submit" 
+                    className="btn-primary" 
+                    style={{ 
+                      width: '100%', 
+                      justifyContent: 'center', 
+                      padding: '13px', 
+                      fontSize: '1rem', 
+                      fontWeight: 800,
+                      borderRadius: '10px',
+                      boxShadow: '0 4px 15px rgba(168, 35, 25, 0.4)'
+                    }}
+                  >
+                    Confirmar e Enviar Pedido
+                  </button>
                 </div>
-                {deliveryType === 'delivery' && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega:</span>
-                    <span>
-                      {isDeliveryAddressProvided 
-                        ? (deliveryFee === 0 ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Grátis</span> : `R$ ${deliveryFee.toFixed(2)}`)
-                        : <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Calculada após endereço</span>}
-                    </span>
-                  </div>
-                )}
-                {totalDiscount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#4ade80' }}>
-                    <span>Desconto Total:</span>
-                    <span>- R$ {totalDiscount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-brand)', marginTop: '6px' }}>
-                  <span>Total Geral:</span>
-                  <span>R$ {grandTotal.toFixed(2)}</span>
-                </div>
               </div>
-
-              <button 
-                type="submit" 
-                className="btn-primary" 
-                style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '1rem', marginTop: '0.5rem' }}
-              >
-                Confirmar e Enviar Pedido
-              </button>
             </form>
           </div>
         </div>

@@ -13,7 +13,8 @@ export default function CashShiftModal({ onClose }) {
     closeCashShift, 
     addShiftBleed, 
     addShiftSupply,
-    orders 
+    orders,
+    showAlert 
   } = useSystem();
 
   const [mode, setMode] = useState('summary'); // 'summary' | 'open' | 'bleed' | 'supply' | 'close' | 'history'
@@ -63,7 +64,12 @@ export default function CashShiftModal({ onClose }) {
   const handleAddBleed = (e) => {
     e.preventDefault();
     const val = parseFloat(bleedAmount);
-    if (!val || val <= 0) return alert('Informe um valor válido de sangria');
+    if (!val || val <= 0) {
+      return showAlert('Informe um valor válido de sangria.', {
+        title: 'Sangria de Caixa',
+        type: 'warning'
+      });
+    }
     addShiftBleed(val, bleedReason || 'Sangria de caixa');
     setBleedAmount('');
     setBleedReason('');
@@ -73,7 +79,12 @@ export default function CashShiftModal({ onClose }) {
   const handleAddSupply = (e) => {
     e.preventDefault();
     const val = parseFloat(supplyAmount);
-    if (!val || val <= 0) return alert('Informe um valor válido de suprimento');
+    if (!val || val <= 0) {
+      return showAlert('Informe um valor válido de suprimento.', {
+        title: 'Suprimento de Caixa',
+        type: 'warning'
+      });
+    }
     addShiftSupply(val, supplyReason || 'Reforço de troco');
     setSupplyAmount('');
     setSupplyReason('');
@@ -92,7 +103,11 @@ export default function CashShiftModal({ onClose }) {
       pix: countedPixNum
     }, closeNotes);
 
-    alert(`Turno de caixa fechado com sucesso!\nDiferença apurada em dinheiro: R$ ${(countedCashNum - expectedCashInDrawer).toFixed(2)}`);
+    showAlert(`Turno de caixa fechado com sucesso!\n\nDiferença apurada em dinheiro: R$ ${(countedCashNum - expectedCashInDrawer).toFixed(2)}`, {
+      title: 'Fechamento de Turno',
+      badge: 'CAIXA CONCLUÍDO',
+      type: 'success'
+    });
     setMode('summary');
   };
 

@@ -13,7 +13,8 @@ export default function QuickOrderModal({ onClose, onOrderCreated }) {
     createOrder, 
     lookupCustomer, 
     saveCustomer,
-    currentOperator 
+    currentOperator,
+    showAlert 
   } = useSystem();
 
   // Dados do Cliente e Tipo
@@ -92,16 +93,22 @@ export default function QuickOrderModal({ onClose, onOrderCreated }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (selectedItems.length === 0) {
-      alert('Selecione ao menos um produto para lançar o pedido.');
-      return;
+      return showAlert('Selecione ao menos um produto para lançar o pedido.', {
+        title: 'Pedido Vazio',
+        type: 'warning'
+      });
     }
     if (!customerName.trim()) {
-      alert('Informe o nome do cliente.');
-      return;
+      return showAlert('Informe o nome do cliente para prosseguir.', {
+        title: 'Nome Obrigatório',
+        type: 'warning'
+      });
     }
     if (orderType === 'delivery' && (!address.trim() || !neighborhood)) {
-      alert('Para entrega, informe o endereço completo e o bairro.');
-      return;
+      return showAlert('Para pedidos de entrega, informe a rua, número e selecione o bairro.', {
+        title: 'Endereço Incompleto',
+        type: 'warning'
+      });
     }
 
     const orderData = {

@@ -59,7 +59,9 @@ export default function AdminView({ onLogout, onGoOperation }) {
     redeemCustomerReward,
     deleteCustomer,
     fidelityAlert,
-    setFidelityAlert
+    setFidelityAlert,
+    showAlert,
+    showConfirm
   } = useSystem();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1076,9 +1078,15 @@ export default function AdminView({ onLogout, onGoOperation }) {
   };
 
   const handleDeleteTransaction = (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este lançamento financeiro? Essa ação recalculará o faturamento e as despesas imediatamente.')) {
-      deleteTransaction(id);
-    }
+    showConfirm('Tem certeza que deseja excluir este lançamento financeiro? Essa ação recalculará o faturamento e as despesas imediatamente.', {
+      title: 'Excluir Lançamento',
+      badge: 'FINANCEIRO',
+      type: 'error',
+      confirmText: 'Sim, Excluir',
+      cancelText: 'Cancelar',
+      confirmColor: '#ef4444',
+      onConfirm: () => deleteTransaction(id)
+    });
   };
 
   // Inflow NF Handlers
@@ -2262,10 +2270,20 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('Deseja sincronizar o cardápio com os 4 lanches oficiais (Prensadinho, Frango, Pernil e Costela) e suas fichas técnicas?')) {
-                          resetToOfficialMenu();
-                          alert('Cardápio sincronizado com sucesso!');
-                        }
+                        showConfirm('Deseja sincronizar o cardápio com os 4 lanches oficiais (Prensadinho, Frango, Pernil e Costela) e suas fichas técnicas?', {
+                          title: 'Sincronizar Cardápio',
+                          badge: 'CARDÁPIO OFICIAL',
+                          type: 'warning',
+                          confirmText: 'Sim, Sincronizar',
+                          cancelText: 'Cancelar',
+                          onConfirm: () => {
+                            resetToOfficialMenu();
+                            showAlert('Cardápio sincronizado com sucesso com as fichas técnicas oficiais!', {
+                              title: 'Sucesso',
+                              type: 'success'
+                            });
+                          }
+                        });
                       }}
                       style={{
                         padding: '6px 12px',
@@ -2413,9 +2431,15 @@ export default function AdminView({ onLogout, onGoOperation }) {
                                 </button>
                                 <button 
                                   onClick={() => {
-                                    if (confirm(`Excluir produto ${prod.name}?`)) {
-                                      deleteProduct(prod.id);
-                                    }
+                                    showConfirm(`Deseja realmente excluir o produto "${prod.name}"?`, {
+                                      title: 'Excluir Produto',
+                                      badge: 'PRODUTO',
+                                      type: 'error',
+                                      confirmText: 'Sim, Excluir',
+                                      cancelText: 'Cancelar',
+                                      confirmColor: '#ef4444',
+                                      onConfirm: () => deleteProduct(prod.id)
+                                    });
                                   }}
                                   style={{ padding: '6px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-danger)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
                                   title="Excluir Produto"
@@ -2547,9 +2571,15 @@ export default function AdminView({ onLogout, onGoOperation }) {
                                 </button>
                                 <button 
                                   onClick={() => {
-                                    if (confirm(`Excluir complemento "${comp.name}"?`)) {
-                                      deleteComplement(comp.id);
-                                    }
+                                    showConfirm(`Deseja realmente excluir o complemento "${comp.name}"?`, {
+                                      title: 'Excluir Complemento',
+                                      badge: 'COMPLEMENTO',
+                                      type: 'error',
+                                      confirmText: 'Sim, Excluir',
+                                      cancelText: 'Cancelar',
+                                      confirmColor: '#ef4444',
+                                      onConfirm: () => deleteComplement(comp.id)
+                                    });
                                   }}
                                   style={{ padding: '6px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-danger)', border: '1px solid var(--border-glass)', cursor: 'pointer' }}
                                   title="Excluir Complemento"
@@ -2668,9 +2698,15 @@ export default function AdminView({ onLogout, onGoOperation }) {
                                 {mb.pendingBalance > 0 && (
                                   <button
                                     onClick={() => {
-                                      if (confirm(`Confirmar acerto de R$ ${Number(mb.pendingBalance).toFixed(2)} com ${mb.name}?`)) {
-                                        settleMotoboyPayments(mb.id);
-                                      }
+                                      showConfirm(`Confirmar acerto financeiro de R$ ${Number(mb.pendingBalance).toFixed(2)} com o entregador ${mb.name}?`, {
+                                        title: 'Acerto de Entregador',
+                                        badge: 'FINANCEIRO',
+                                        type: 'success',
+                                        confirmText: 'Confirmar Acerto',
+                                        cancelText: 'Cancelar',
+                                        confirmColor: '#22c55e',
+                                        onConfirm: () => settleMotoboyPayments(mb.id)
+                                      });
                                     }}
                                     className="btn-primary"
                                     style={{ padding: '4px 8px', fontSize: '0.72rem', backgroundColor: '#22c55e' }}
@@ -3396,7 +3432,17 @@ export default function AdminView({ onLogout, onGoOperation }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{cp.usesCount || 0} usos</span>
                             <button
-                              onClick={() => { if (confirm(`Excluir cupom ${cp.code}?`)) deleteCoupon(cp.code || cp.id); }}
+                              onClick={() => {
+                                showConfirm(`Deseja realmente excluir o cupom "${cp.code}"?`, {
+                                  title: 'Excluir Cupom',
+                                  badge: 'CUPOM',
+                                  type: 'error',
+                                  confirmText: 'Sim, Excluir',
+                                  cancelText: 'Cancelar',
+                                  confirmColor: '#ef4444',
+                                  onConfirm: () => deleteCoupon(cp.code || cp.id)
+                                });
+                              }}
                               style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}
                             >
                               <Trash2 size={14} />
@@ -4053,7 +4099,15 @@ export default function AdminView({ onLogout, onGoOperation }) {
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm(`Deseja remover o operador ${op.name}?`)) deleteOperator(op.id);
+                                showConfirm(`Deseja realmente remover o operador "${op.name}"?`, {
+                                  title: 'Remover Operador',
+                                  badge: 'EQUIPE',
+                                  type: 'error',
+                                  confirmText: 'Sim, Remover',
+                                  cancelText: 'Cancelar',
+                                  confirmColor: '#ef4444',
+                                  onConfirm: () => deleteOperator(op.id)
+                                });
                               }}
                               className="btn-secondary"
                               style={{ padding: '5px 8px', fontSize: '0.75rem', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}

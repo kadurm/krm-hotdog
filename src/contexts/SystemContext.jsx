@@ -17,6 +17,7 @@ import {
   limit,
   getDoc 
 } from 'firebase/firestore';
+import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
 // Campainha sonora para novos pedidos na cozinha
 export const playNotificationChime = () => {
@@ -451,6 +452,66 @@ const INITIAL_QUOTATIONS = [
 ];
 
 export const SystemProvider = ({ children }) => {
+  // --- Modal Oficial do Sistema (Substitui alerts e confirms nativos do navegador) ---
+  const [systemModal, setSystemModal] = useState(null);
+
+  const showAlert = (message, options = {}) => {
+    return new Promise((resolve) => {
+      setSystemModal({
+        open: true,
+        isConfirm: false,
+        title: options.title || 'Nuu Prensado!!',
+        message: typeof message === 'string' ? message : String(message || ''),
+        badge: options.badge || null,
+        type: options.type || 'info',
+        confirmText: options.confirmText || 'OK, Entendi',
+        confirmColor: options.confirmColor || 'var(--color-brand)',
+        onConfirm: () => {
+          setSystemModal(null);
+          if (options.onConfirm) options.onConfirm();
+          resolve(true);
+        }
+      });
+    });
+  };
+
+  const showConfirm = (message, options = {}) => {
+    return new Promise((resolve) => {
+      setSystemModal({
+        open: true,
+        isConfirm: true,
+        title: options.title || 'Confirmação',
+        message: typeof message === 'string' ? message : String(message || ''),
+        badge: options.badge || 'CONFIRMAÇÃO',
+        type: options.type || 'warning',
+        confirmText: options.confirmText || 'Confirmar',
+        cancelText: options.cancelText || 'Cancelar',
+        confirmColor: options.confirmColor || (options.type === 'error' ? '#ef4444' : 'var(--color-brand)'),
+        onConfirm: () => {
+          setSystemModal(null);
+          if (options.onConfirm) options.onConfirm();
+          resolve(true);
+        },
+        onCancel: () => {
+          setSystemModal(null);
+          if (options.onCancel) options.onCancel();
+          resolve(false);
+        }
+      });
+    });
+  };
+
+  // Intercepta window.alert para garantir que nenhuma mensagem nativa cinza do navegador apareça
+  useEffect(() => {
+    const originalAlert = window.alert;
+    window.alert = (msg) => {
+      showAlert(msg, { title: 'Aviso do Sistema', type: 'info' });
+    };
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem('nuu_products_v14');
@@ -2563,9 +2624,240 @@ export const SystemProvider = ({ children }) => {
       resetToOfficialMenu,
       playNotificationChime,
       fidelityAlert,
-      setFidelityAlert
+      setFidelityAlert,
+      showAlert,
+      showConfirm,
+      closeSystemModal: () => setSystemModal(null)
     }}>
       {children}
+
+      {/* MODAL OFICIAL DO SISTEMA NUU PRENSADO (Substitui alerts e confirms do navegador) */}
+      {systemModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999999,
+            backgroundColor: 'rgba(0, 0, 0, 0.78)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !systemModal.isConfirm) {
+              setSystemModal(null);
+            }
+          }}
+        >
+          <div 
+            className="glass-panel" 
+            style={{
+              width: '100%',
+              maxWidth: '430px',
+              padding: '1.75rem',
+              borderRadius: '18px',
+              backgroundColor: '#111827',
+              border: `1px solid ${
+                systemModal.type === 'success' ? 'rgba(34, 197, 94, 0.45)' :
+                systemModal.type === 'warning' ? 'rgba(245, 158, 11, 0.45)' :
+                systemModal.type === 'error' ? 'rgba(239, 68, 68, 0.45)' :
+                'rgba(234, 179, 8, 0.45)'
+              }`,
+              boxShadow: '0 20px 45px rgba(0, 0, 0, 0.75)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              position: 'relative'
+            }}
+          >
+            {/* Logo oficial no topo com glow e indicador de status */}
+            <div style={{
+              width: '78px',
+              height: '78px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              backgroundColor: 'rgba(234, 179, 8, 0.12)',
+              border: `2px solid ${
+                systemModal.type === 'success' ? 'rgba(34, 197, 94, 0.5)' :
+                systemModal.type === 'warning' ? 'rgba(245, 158, 11, 0.5)' :
+                systemModal.type === 'error' ? 'rgba(239, 68, 68, 0.5)' :
+                'rgba(234, 179, 8, 0.5)'
+              }`,
+              boxShadow: `0 0 25px ${
+                systemModal.type === 'success' ? 'rgba(34, 197, 94, 0.35)' :
+                systemModal.type === 'warning' ? 'rgba(245, 158, 11, 0.35)' :
+                systemModal.type === 'error' ? 'rgba(239, 68, 68, 0.35)' :
+                'rgba(234, 179, 8, 0.35)'
+              }`,
+              padding: '10px',
+              position: 'relative'
+            }}>
+              <img 
+                src="/logoNuuPrensado-semfundo.png" 
+                alt="Nuu Prensado" 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+              {/* Indicador de status no cantinho da logo */}
+              {systemModal.type === 'success' && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  backgroundColor: '#111827',
+                  borderRadius: '50%',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #22c55e'
+                }}>
+                  <CheckCircle size={15} color="#22c55e" />
+                </div>
+              )}
+              {(systemModal.type === 'warning' || systemModal.type === 'error') && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  backgroundColor: '#111827',
+                  borderRadius: '50%',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: systemModal.type === 'error' ? '2px solid #ef4444' : '2px solid #f59e0b'
+                }}>
+                  <AlertCircle size={15} color={systemModal.type === 'error' ? '#ef4444' : '#f59e0b'} />
+                </div>
+              )}
+              {systemModal.type === 'info' && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  backgroundColor: '#111827',
+                  borderRadius: '50%',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #eab308'
+                }}>
+                  <Info size={15} color="#eab308" />
+                </div>
+              )}
+            </div>
+
+            {/* Badge superior opcional */}
+            {systemModal.badge && (
+              <div style={{ marginBottom: '8px' }}>
+                <span style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  color: 'var(--color-brand-yellow)',
+                  backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                  padding: '3px 10px',
+                  borderRadius: '99px',
+                  border: '1px solid rgba(234, 179, 8, 0.35)',
+                  letterSpacing: '0.3px',
+                  display: 'inline-block'
+                }}>
+                  {systemModal.badge}
+                </span>
+              </div>
+            )}
+
+            {/* Título */}
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              color: '#fff',
+              margin: '0 0 0.5rem 0'
+            }}>
+              {systemModal.title}
+            </h3>
+
+            {/* Mensagem */}
+            <p style={{
+              fontSize: '0.92rem',
+              color: '#cbd5e1',
+              lineHeight: 1.5,
+              margin: '0 0 1.5rem 0',
+              whiteSpace: 'pre-line'
+            }}>
+              {systemModal.message}
+            </p>
+
+            {/* Ações: Confirmação dupla ou Alerta único */}
+            {systemModal.isConfirm ? (
+              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                <button
+                  type="button"
+                  onClick={systemModal.onCancel}
+                  style={{
+                    flex: 1,
+                    padding: '11px 16px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-glass)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    color: '#e2e8f0',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {systemModal.cancelText}
+                </button>
+                <button
+                  type="button"
+                  onClick={systemModal.onConfirm}
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    padding: '11px 16px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: systemModal.confirmColor || 'var(--color-brand)',
+                    color: '#fff',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {systemModal.confirmText}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={systemModal.onConfirm}
+                autoFocus
+                className="btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '11px 24px',
+                  fontSize: '0.92rem',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(184, 38, 27, 0.4)'
+                }}
+              >
+                {systemModal.confirmText}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </SystemContext.Provider>
   );
 };

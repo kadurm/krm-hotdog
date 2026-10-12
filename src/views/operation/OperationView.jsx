@@ -45,7 +45,9 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     closeStore,
     updateStoreSettings,
     fidelityAlert,
-    setFidelityAlert
+    setFidelityAlert,
+    showAlert,
+    showConfirm
   } = useSystem();
 
   // Abas da operação diária: 'kds' | 'cash' | 'delivery'
@@ -915,7 +917,17 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                           <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.1rem' }}>#{order.id}</span>
                           <OrderTimerBadge orderDate={order.date} />
                           <button 
-                            onClick={() => { if (confirm(`Deseja excluir o pedido #${order.id}?`)) deleteOrder(order.id); }}
+                            onClick={() => {
+                              showConfirm(`Deseja realmente excluir o pedido #${order.id}?`, {
+                                title: 'Excluir Pedido',
+                                badge: `PEDIDO #${order.id}`,
+                                type: 'error',
+                                confirmText: 'Sim, Excluir',
+                                cancelText: 'Cancelar',
+                                confirmColor: '#ef4444',
+                                onConfirm: () => deleteOrder(order.id)
+                              });
+                            }}
                             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
                             title="Excluir"
                           >
@@ -1860,7 +1872,12 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                   type="button"
                   onClick={() => {
                     const mins = parseInt(customPauseMinutes, 10);
-                    if (!mins || mins < 1) return alert('Informe uma quantidade válida de minutos');
+                    if (!mins || mins < 1) {
+                      return showAlert('Informe uma quantidade válida de minutos para pausar a loja.', {
+                        title: 'Atenção',
+                        type: 'warning'
+                      });
+                    }
                     pauseStore(mins, selectedPauseReason);
                     setIsStoreControlModalOpen(false);
                   }}
@@ -1892,10 +1909,18 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                 <button
                   type="button"
                   onClick={() => {
-                    if (confirm('Deseja realmente fechar a loja online para novos pedidos?')) {
-                      closeStore('Expediente encerrado');
-                      setIsStoreControlModalOpen(false);
-                    }
+                    showConfirm('Deseja realmente fechar a loja online para novos pedidos?', {
+                      title: 'Fechar Loja Online',
+                      badge: 'EXPEDIENTE',
+                      type: 'warning',
+                      confirmText: 'Sim, Fechar Loja',
+                      cancelText: 'Continuar Aberta',
+                      confirmColor: '#ef4444',
+                      onConfirm: () => {
+                        closeStore('Expediente encerrado');
+                        setIsStoreControlModalOpen(false);
+                      }
+                    });
                   }}
                   style={{
                     padding: '11px 16px',

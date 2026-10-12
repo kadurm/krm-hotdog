@@ -2218,8 +2218,8 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <CheckCircle2 size={18} color="var(--color-success)" />
                     Pedidos Concluídos Hoje ({finishedOrders.length})
                   </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-                    {finishedOrders.slice(0, 6).map(order => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {finishedOrders.map(order => (
                       <div key={order.id} className="glass-panel" style={{ padding: '10px 14px', backgroundColor: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

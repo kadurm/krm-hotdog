@@ -1114,7 +1114,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                 </h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '550px', overflowY: 'auto' }}>
-                  {deliveredOrders.slice(0, 15).map(order => (
+                  {deliveredOrders.map(order => (
                     <div key={order.id} style={{
                       backgroundColor: 'rgba(255,255,255,0.03)',
                       padding: '10px 12px',

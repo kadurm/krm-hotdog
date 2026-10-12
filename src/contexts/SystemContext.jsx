@@ -14,7 +14,8 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
-  limit 
+  limit,
+  getDoc 
 } from 'firebase/firestore';
 
 // Campainha sonora para novos pedidos na cozinha
@@ -1598,17 +1599,28 @@ export const SystemProvider = ({ children }) => {
     }
 
 
-    // Salva no Firebase Firestore se configurado
+    // Salva no Firebase Firestore com proteção absoluta contra sobrescrita
     const firestoreDb = getFirestoreDb();
     if (firestoreDb) {
-      try {
-        setDoc(doc(firestoreDb, 'orders', String(newOrder.id)), {
-          ...newOrder,
-          updatedAt: new Date().toISOString()
-        }).catch(err => console.warn('Firebase order insert error:', err));
-      } catch (err) {
-        console.warn('Firebase sync catch:', err);
-      }
+      (async () => {
+        try {
+          let targetId = String(newOrder.id);
+          const existingSnap = await getDoc(doc(firestoreDb, 'orders', targetId));
+          if (existingSnap.exists()) {
+            const collisionSafeId = `${targetId}-${Date.now().toString().slice(-4)}`;
+            targetId = collisionSafeId;
+            newOrder.id = targetId;
+            setOrders(prev => prev.map(o => o.id === newId ? { ...o, id: targetId } : o));
+          }
+          await setDoc(doc(firestoreDb, 'orders', targetId), {
+            ...newOrder,
+            id: targetId,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn('Firebase order insert error:', err);
+        }
+      })();
     }
 
     // Dispara alerta sonoro e broadcast

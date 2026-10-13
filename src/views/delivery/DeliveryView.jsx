@@ -2031,51 +2031,48 @@ export default function DeliveryView({
 
       {/* CHECKOUT EM FORMATO DE QUIZ INTERATIVO */}
       {checkoutStep === 'form' && (
-        <div style={{ maxWidth: '860px', margin: '1.25rem auto 4.5rem auto', width: '100%', padding: '0 1rem' }} className="animate-fade-in">
-          <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+        <div style={{ maxWidth: '540px', margin: '0.75rem auto 3.5rem auto', width: '100%', padding: '0 0.85rem' }} className="animate-fade-in">
+          <div className="glass-panel" style={{ padding: '1.15rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
             
             {/* CABEÇALHO DO QUIZ */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.85rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', margin: 0 }}>Finalizar Pedido</h2>
-                  <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fde047', fontWeight: 700, border: '1px solid rgba(234, 179, 8, 0.3)' }}>
-                    Etapa {quizStep} de 4
-                  </span>
-                </div>
-                <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nuu Prensado • Montagem rápida</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: 0 }}>Finalizar Pedido</h2>
+                <span style={{ fontSize: '0.72rem', padding: '2px 7px', borderRadius: '10px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fde047', fontWeight: 700, border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                  Etapa {quizStep}/4
+                </span>
               </div>
               <button 
                 type="button"
                 onClick={() => setCheckoutStep('menu')} 
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', transition: 'all 0.2s ease' }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, padding: '4px 8px', borderRadius: '6px', transition: 'all 0.2s ease' }}
               >
-                <ArrowLeft size={15} /> Voltar ao Cardápio
+                <ArrowLeft size={14} /> Voltar ao Cardápio
               </button>
             </div>
 
             {/* BARRA DE PROGRESSO & STEPPER GAMIFICADO */}
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ marginBottom: '0.9rem' }}>
               {/* Barra de progresso contínua */}
-              <div style={{ height: '6px', width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.85rem' }}>
+              <div style={{ height: '4px', width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.65rem' }}>
                 <div style={{
                   height: '100%',
                   width: `${(quizStep / 4) * 100}%`,
                   background: 'linear-gradient(90deg, #eab308 0%, var(--color-brand) 100%)',
                   borderRadius: '999px',
                   transition: 'width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 0 10px rgba(234, 179, 8, 0.5)'
+                  boxShadow: '0 0 8px rgba(234, 179, 8, 0.4)'
                 }} />
               </div>
 
               {/* Indicadores das 4 Etapas do Quiz */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
                 {[
                   { step: 1, label: 'Identificação', icon: User },
                   { step: 2, label: 'Entrega', icon: Bike },
                   { step: 3, label: 'Pagamento', icon: CreditCard },
                   { step: 4, label: 'Confirmação', icon: CheckCircle2 }
-                ].map(({ step, label, icon: IconComponent }) => {
+                ].map(({ step, label }) => {
                   const isCompleted = quizStep > step;
                   const isCurrent = quizStep === step;
                   return (
@@ -2083,7 +2080,6 @@ export default function DeliveryView({
                       key={step}
                       type="button"
                       onClick={() => {
-                        // Permite voltar livremente para etapas já alcançadas
                         if (step < quizStep) {
                           setQuizStep(step);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2101,19 +2097,19 @@ export default function DeliveryView({
                           : isCompleted 
                             ? '1px solid rgba(34, 197, 94, 0.3)' 
                             : '1px solid rgba(255, 255, 255, 0.06)',
-                        borderRadius: '10px',
-                        padding: '6px 4px',
+                        borderRadius: '8px',
+                        padding: '4px 2px',
                         cursor: step <= quizStep ? 'pointer' : 'default',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '3px',
-                        transition: 'all 0.25s ease'
+                        gap: '2px',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       <div style={{
-                        width: '24px',
-                        height: '24px',
+                        width: '20px',
+                        height: '20px',
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
@@ -2124,13 +2120,13 @@ export default function DeliveryView({
                             ? '#22c55e' 
                             : 'rgba(255, 255, 255, 0.1)',
                         color: isCurrent ? '#000' : '#fff',
-                        fontSize: '0.75rem',
+                        fontSize: '0.68rem',
                         fontWeight: 800
                       }}>
-                        {isCompleted ? <Check size={13} strokeWidth={3} /> : step}
+                        {isCompleted ? <Check size={11} strokeWidth={3} /> : step}
                       </div>
                       <span style={{
-                        fontSize: '0.72rem',
+                        fontSize: '0.66rem',
                         fontWeight: isCurrent ? 700 : 500,
                         color: isCurrent ? '#fde047' : isCompleted ? '#4ade80' : 'var(--text-muted)',
                         whiteSpace: 'nowrap',
@@ -2151,16 +2147,13 @@ export default function DeliveryView({
               
               {/* ETAPA 1: QUEM É VOCÊ? (IDENTIFICAÇÃO & CLUBE FIDELIDADE) */}
               {quizStep === 1 && (
-                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fde047', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
-                      <Sparkles size={16} /> Etapa 1 • Quem é você?
-                    </div>
-                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
-                      Vamos nos conhecer! 🌭
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.15rem 0 0.35rem 0' }}>
+                    <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#fff', margin: '0 0 2px 0' }}>
+                      Quem é você? 🌭
                     </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                      Informe seu nome e WhatsApp para identificarmos seu pedido e pontuar no Clube Fidelidade Nuu Prensado.
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Identifique seu pedido e pontue no Clube Fidelidade.
                     </p>
                   </div>
 
@@ -2168,18 +2161,18 @@ export default function DeliveryView({
                   <div style={{
                     backgroundColor: 'rgba(234,179,8,0.08)',
                     border: '1px solid rgba(234,179,8,0.25)',
-                    borderRadius: '12px',
-                    padding: '12px 14px'
+                    borderRadius: '10px',
+                    padding: '8px 10px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.82rem', color: '#fde047', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Award size={15} /> Já comprou com a gente? Busque seus dados
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.76rem', color: '#fde047', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Award size={13} /> Já comprou com a gente? Busque seus dados
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '6px', width: '100%', alignItems: 'center' }}>
                       <input
                         type="tel"
-                        placeholder="DDD + Seu WhatsApp (ex: 38999998888)"
+                        placeholder="DDD + Seu WhatsApp"
                         value={customerSearchPhone}
                         onChange={(e) => setCustomerSearchPhone(e.target.value)}
                         onKeyDown={(e) => {
@@ -2191,12 +2184,12 @@ export default function DeliveryView({
                         style={{
                           flex: 1,
                           minWidth: 0,
-                          padding: '10px 12px',
-                          borderRadius: '8px',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
                           border: '1px solid rgba(255,255,255,0.15)',
                           backgroundColor: 'rgba(0,0,0,0.4)',
                           color: '#fff',
-                          fontSize: '0.88rem',
+                          fontSize: '0.82rem',
                           outline: 'none'
                         }}
                       />
@@ -2207,26 +2200,26 @@ export default function DeliveryView({
                           backgroundColor: '#eab308',
                           color: '#000',
                           border: 'none',
-                          borderRadius: '8px',
-                          padding: '10px 16px',
+                          borderRadius: '6px',
+                          padding: '8px 12px',
                           fontWeight: 800,
-                          fontSize: '0.85rem',
+                          fontSize: '0.78rem',
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '6px',
+                          gap: '4px',
                           whiteSpace: 'nowrap',
                           flexShrink: 0
                         }}
                       >
-                        <Search size={15} /> Buscar
+                        <Search size={13} /> Buscar
                       </button>
                     </div>
 
                     {/* Exibe o Cartão Fidelidade se o cliente for identificado */}
                     {identifiedCustomer && (
-                      <div style={{ marginTop: '12px' }}>
+                      <div style={{ marginTop: '8px' }}>
                         <LoyaltyCard customer={identifiedCustomer} onApplyReward={handleApplyLoyaltyReward} />
                       </div>
                     )}
@@ -2236,16 +2229,16 @@ export default function DeliveryView({
                   <div style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.02)',
                     border: '1px solid var(--border-glass)',
-                    borderRadius: '12px',
-                    padding: '1.25rem',
+                    borderRadius: '10px',
+                    padding: '0.9rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1rem'
+                    gap: '0.75rem'
                   }}>
                     {/* Nome Completo */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '0.88rem', color: formErrors.name ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <User size={15} color={formErrors.name ? '#ef4444' : 'var(--color-brand-yellow)'} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.8rem', color: formErrors.name ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <User size={13} color={formErrors.name ? '#ef4444' : 'var(--color-brand-yellow)'} />
                         Seu Nome Completo <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input 
@@ -2258,28 +2251,28 @@ export default function DeliveryView({
                           if (formErrors.name) setFormErrors(prev => ({ ...prev, name: false }));
                         }}
                         style={{
-                          padding: '11px 14px',
-                          borderRadius: '10px',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
                           border: formErrors.name ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                           backgroundColor: formErrors.name ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                           boxShadow: formErrors.name ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                           transition: 'all 0.2s ease',
                           outline: 'none',
                           color: '#fff',
-                          fontSize: '0.95rem'
+                          fontSize: '0.88rem'
                         }}
                       />
                       {formErrors.name && (
-                        <span style={{ color: '#ef4444', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <AlertCircle size={13} /> Por favor, informe seu nome completo
+                        <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={12} /> Por favor, informe seu nome completo
                         </span>
                       )}
                     </div>
 
                     {/* Telefone / WhatsApp */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '0.88rem', color: formErrors.phone ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Phone size={15} color={formErrors.phone ? '#ef4444' : 'var(--color-brand-yellow)'} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.8rem', color: formErrors.phone ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Phone size={13} color={formErrors.phone ? '#ef4444' : 'var(--color-brand-yellow)'} />
                         WhatsApp com DDD <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input 
@@ -2292,42 +2285,42 @@ export default function DeliveryView({
                           if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
                         }}
                         style={{
-                          padding: '11px 14px',
-                          borderRadius: '10px',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
                           border: formErrors.phone ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                           backgroundColor: formErrors.phone ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                           boxShadow: formErrors.phone ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                           transition: 'all 0.2s ease',
                           outline: 'none',
                           color: '#fff',
-                          fontSize: '0.95rem'
+                          fontSize: '0.88rem'
                         }}
                       />
                       {formErrors.phone && (
-                        <span style={{ color: '#ef4444', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <AlertCircle size={13} /> Informe seu WhatsApp com DDD (mínimo 10 dígitos)
+                        <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={12} /> Informe seu WhatsApp com DDD (mínimo 10 dígitos)
                         </span>
                       )}
                     </div>
                   </div>
 
                   {/* Botões de Ação do Passo 1 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
                     <button
                       type="button"
                       onClick={() => setCheckoutStep('menu')}
                       className="btn-secondary"
-                      style={{ padding: '12px 18px', fontSize: '0.92rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      style={{ padding: '9px 14px', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
                     >
-                      <ArrowLeft size={16} /> Voltar ao Cardápio
+                      <ArrowLeft size={14} /> Voltar ao Cardápio
                     </button>
                     <button
                       type="button"
                       onClick={handleNextQuizStep}
                       className="btn-primary"
-                      style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 800, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234, 179, 8, 0.25)' }}
+                      style={{ padding: '10px 18px', fontSize: '0.9rem', fontWeight: 800, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 3px 12px rgba(234, 179, 8, 0.25)' }}
                     >
-                      Avançar para Entrega <ChevronRight size={18} />
+                      Avançar para Entrega <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
@@ -2335,41 +2328,37 @@ export default function DeliveryView({
 
               {/* ETAPA 2: COMO VOCÊ VAI RECEBER? (DELIVERY OU RETIRADA & ENDEREÇO) */}
               {quizStep === 2 && (
-                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fde047', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
-                      <Sparkles size={16} /> Etapa 2 • Recebimento
-                    </div>
-                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.15rem 0 0.35rem 0' }}>
+                    <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#fff', margin: '0 0 2px 0' }}>
                       Como prefere receber seu lanche? 🛵
                     </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                      Levamos até você em Montes Claros ou você pode retirar direto no nosso balcão.
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Entrega no seu endereço ou retirada quentinha no nosso balcão.
                     </p>
                   </div>
 
-                  {/* CARDS INTERATIVOS DE SELEÇÃO: DELIVERY VS RETIRADA */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+                  {/* CARDS INTERATIVOS DE SELEÇÃO: DELIVERY VS RETIRADA (LADO A LADO) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     {/* Card Delivery */}
                     <div
                       onClick={() => setDeliveryType('delivery')}
                       style={{
-                        padding: '16px',
-                        borderRadius: '12px',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
                         border: deliveryType === 'delivery' ? '2px solid #eab308' : '1px solid var(--border-glass)',
-                        backgroundColor: deliveryType === 'delivery' ? 'rgba(234, 179, 8, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                        backgroundColor: deliveryType === 'delivery' ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255, 255, 255, 0.02)',
                         cursor: 'pointer',
-                        transition: 'all 0.25s ease',
+                        transition: 'all 0.2s ease',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '14px',
-                        position: 'relative'
+                        gap: '10px'
                       }}
                     >
                       <div style={{
-                        width: '46px',
-                        height: '46px',
-                        borderRadius: '12px',
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '8px',
                         backgroundColor: deliveryType === 'delivery' ? '#eab308' : 'rgba(255, 255, 255, 0.08)',
                         color: deliveryType === 'delivery' ? '#000' : '#fff',
                         display: 'flex',
@@ -2377,21 +2366,19 @@ export default function DeliveryView({
                         justifyContent: 'center',
                         flexShrink: 0
                       }}>
-                        <Bike size={24} />
+                        <Bike size={18} />
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Quero Delivery</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Delivery</span>
                           {deliveryType === 'delivery' && (
-                            <span style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', fontWeight: 700 }}>
-                              <Check size={14} /> Selecionado
-                            </span>
+                            <Check size={13} color="#eab308" strokeWidth={3} />
                           )}
                         </div>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {isDeliveryAddressProvided 
-                            ? (deliveryFee === 0 ? '🎉 Frete Grátis no seu pedido!' : `Taxa: R$ ${deliveryFee.toFixed(2)}`)
-                            : 'Entregamos na sua casa em Montes Claros'}
+                            ? (deliveryFee === 0 ? '🎉 Grátis' : `R$ ${deliveryFee.toFixed(2)}`)
+                            : 'Receba em casa'}
                         </p>
                       </div>
                     </div>
@@ -2400,22 +2387,21 @@ export default function DeliveryView({
                     <div
                       onClick={() => setDeliveryType('pickup')}
                       style={{
-                        padding: '16px',
-                        borderRadius: '12px',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
                         border: deliveryType === 'pickup' ? '2px solid #eab308' : '1px solid var(--border-glass)',
-                        backgroundColor: deliveryType === 'pickup' ? 'rgba(234, 179, 8, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                        backgroundColor: deliveryType === 'pickup' ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255, 255, 255, 0.02)',
                         cursor: 'pointer',
-                        transition: 'all 0.25s ease',
+                        transition: 'all 0.2s ease',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '14px',
-                        position: 'relative'
+                        gap: '10px'
                       }}
                     >
                       <div style={{
-                        width: '46px',
-                        height: '46px',
-                        borderRadius: '12px',
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '8px',
                         backgroundColor: deliveryType === 'pickup' ? '#eab308' : 'rgba(255, 255, 255, 0.08)',
                         color: deliveryType === 'pickup' ? '#000' : '#fff',
                         display: 'flex',
@@ -2423,19 +2409,17 @@ export default function DeliveryView({
                         justifyContent: 'center',
                         flexShrink: 0
                       }}>
-                        <Store size={24} />
+                        <Store size={18} />
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Vou Retirar</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Retirada</span>
                           {deliveryType === 'pickup' && (
-                            <span style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', fontWeight: 700 }}>
-                              <Check size={14} /> Selecionado
-                            </span>
+                            <Check size={13} color="#eab308" strokeWidth={3} />
                           )}
                         </div>
-                        <p style={{ fontSize: '0.78rem', color: '#4ade80', fontWeight: 600, margin: 0 }}>
-                          Sem taxa de entrega • Retirada no balcão
+                        <p style={{ fontSize: '0.7rem', color: '#4ade80', fontWeight: 600, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          Sem taxa • Balcão
                         </p>
                       </div>
                     </div>
@@ -2446,22 +2430,22 @@ export default function DeliveryView({
                     <div style={{
                       backgroundColor: 'rgba(34, 197, 94, 0.08)',
                       border: '1px solid rgba(34, 197, 94, 0.25)',
-                      borderRadius: '12px',
-                      padding: '16px',
+                      borderRadius: '10px',
+                      padding: '12px 14px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px'
+                      gap: '10px'
                     }} className="animate-fade-in">
-                      <MapPin size={28} color="#4ade80" style={{ flexShrink: 0 }} />
+                      <MapPin size={22} color="#4ade80" style={{ flexShrink: 0 }} />
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#fff', marginBottom: '2px' }}>
-                          Endereço para Retirada no Balcão:
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#fff', marginBottom: '1px' }}>
+                          Retirada no Balcão Nuu Prensado:
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.85)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.85)' }}>
                           <strong>Rua Agapanto, 264</strong> - Bairro Sagrada Família, Montes Claros/MG
                         </div>
-                        <div style={{ fontSize: '0.76rem', color: '#4ade80', marginTop: '4px' }}>
-                          Assim que o pedido for concluído na chapa, avisaremos você para retirar quentinho!
+                        <div style={{ fontSize: '0.72rem', color: '#4ade80', marginTop: '2px' }}>
+                          Avisaremos você assim que o lanche estiver pronto na chapa!
                         </div>
                       </div>
                     </div>
@@ -2472,21 +2456,21 @@ export default function DeliveryView({
                     <div style={{
                       backgroundColor: 'rgba(255, 255, 255, 0.02)',
                       border: '1px solid var(--border-glass)',
-                      borderRadius: '12px',
-                      padding: '1.25rem',
+                      borderRadius: '10px',
+                      padding: '0.9rem',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '1rem'
+                      gap: '0.75rem'
                     }} className="animate-fade-in">
                       
                       {/* Campo de CEP Opcional para preenchimento rápido */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                            CEP <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional para autocompletar)</span>
+                          <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            CEP <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional para autocompletar)</span>
                           </label>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', width: '100%', alignItems: 'center' }}>
                           <input
                             type="text"
                             placeholder="Ex: 39401-022"
@@ -2503,12 +2487,12 @@ export default function DeliveryView({
                             style={{
                               flex: 1,
                               minWidth: 0,
-                              padding: '10px 12px',
-                              borderRadius: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
                               border: '1px solid rgba(255,255,255,0.15)',
                               backgroundColor: 'rgba(0,0,0,0.4)',
                               color: '#fff',
-                              fontSize: '0.88rem',
+                              fontSize: '0.84rem',
                               outline: 'none'
                             }}
                           />
@@ -2520,42 +2504,42 @@ export default function DeliveryView({
                               backgroundColor: '#eab308',
                               color: '#000',
                               border: 'none',
-                              borderRadius: '8px',
-                              padding: '10px 16px',
+                              borderRadius: '6px',
+                              padding: '8px 12px',
                               fontWeight: 700,
-                              fontSize: '0.82rem',
+                              fontSize: '0.78rem',
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '6px',
+                              gap: '4px',
                               whiteSpace: 'nowrap',
                               flexShrink: 0
                             }}
                           >
-                            {cepLoading ? 'Buscando...' : <><Search size={14} /> Buscar CEP</>}
+                            {cepLoading ? '...' : <><Search size={12} /> Buscar CEP</>}
                           </button>
                         </div>
 
                         {cepFeedback && (
                           <div style={{
-                            fontSize: '0.76rem',
+                            fontSize: '0.72rem',
                             marginTop: '2px',
                             color: cepFeedback.success ? '#4ade80' : '#f87171',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '4px'
                           }}>
-                            {cepFeedback.success ? <Check size={13} /> : <AlertCircle size={13} />}
+                            {cepFeedback.success ? <Check size={11} /> : <AlertCircle size={11} />}
                             <span>{cepFeedback.message}</span>
                           </div>
                         )}
                       </div>
 
                       {/* Rua / Avenida e Número */}
-                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {/* Rua */}
-                        <div style={{ flex: '1 1 62%', minWidth: '170px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '0.82rem', color: formErrors.street ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                        <div style={{ flex: '1 1 64%', minWidth: '150px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '0.78rem', color: formErrors.street ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
                             Rua / Avenida <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
@@ -2568,27 +2552,27 @@ export default function DeliveryView({
                               if (formErrors.street) setFormErrors(prev => ({ ...prev, street: false }));
                             }}
                             style={{
-                              padding: '10px 12px',
-                              borderRadius: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
                               border: formErrors.street ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                               backgroundColor: formErrors.street ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.9rem',
+                              fontSize: '0.86rem',
                               outline: 'none',
                               boxShadow: formErrors.street ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                               transition: 'all 0.2s ease'
                             }}
                           />
                           {formErrors.street && (
-                            <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <AlertCircle size={12} /> Preencha a Rua/Av.
+                            <span style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={11} /> Preencha a Rua/Av.
                             </span>
                           )}
                         </div>
 
                         {/* Número */}
-                        <div style={{ flex: '1 1 30%', minWidth: '90px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '0.82rem', color: formErrors.number ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                        <div style={{ flex: '1 1 28%', minWidth: '75px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '0.78rem', color: formErrors.number ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
                             Número <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
@@ -2601,31 +2585,31 @@ export default function DeliveryView({
                               if (formErrors.number) setFormErrors(prev => ({ ...prev, number: false }));
                             }}
                             style={{
-                              padding: '10px 12px',
-                              borderRadius: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
                               border: formErrors.number ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                               backgroundColor: formErrors.number ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.9rem',
+                              fontSize: '0.86rem',
                               outline: 'none',
                               boxShadow: formErrors.number ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                               transition: 'all 0.2s ease'
                             }}
                           />
                           {formErrors.number && (
-                            <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <AlertCircle size={12} /> Preencha o número
+                            <span style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={11} /> Preencha o número
                             </span>
                           )}
                         </div>
                       </div>
 
                       {/* Bairro e Complemento */}
-                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {/* Bairro */}
-                        <div style={{ flex: '1 1 54%', minWidth: '160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ flex: '1 1 54%', minWidth: '140px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label style={{ fontSize: '0.82rem', color: formErrors.neighborhood ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
+                            <label style={{ fontSize: '0.78rem', color: formErrors.neighborhood ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
                               Bairro (Montes Claros) <span style={{ color: '#ef4444' }}>*</span>
                             </label>
                           </div>
@@ -2646,12 +2630,12 @@ export default function DeliveryView({
                               }
                             }}
                             style={{
-                              padding: '10px 12px',
-                              borderRadius: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
                               border: formErrors.neighborhood ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                               backgroundColor: formErrors.neighborhood ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.9rem',
+                              fontSize: '0.86rem',
                               outline: 'none',
                               boxShadow: formErrors.neighborhood ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                               transition: 'all 0.2s ease'
@@ -2665,16 +2649,16 @@ export default function DeliveryView({
                             ))}
                           </datalist>
                           {formErrors.neighborhood && (
-                            <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <AlertCircle size={12} /> Preencha o bairro
+                            <span style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={11} /> Preencha o bairro
                             </span>
                           )}
                         </div>
 
                         {/* Complemento */}
-                        <div style={{ flex: '1 1 40%', minWidth: '140px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                            Complemento <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
+                        <div style={{ flex: '1 1 40%', minWidth: '120px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            Complemento <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
                           </label>
                           <input
                             type="text"
@@ -2682,12 +2666,12 @@ export default function DeliveryView({
                             value={addressComplement}
                             onChange={(e) => setAddressComplement(e.target.value)}
                             style={{
-                              padding: '10px 12px',
-                              borderRadius: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
                               border: '1px solid var(--border-glass)',
                               backgroundColor: 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.9rem',
+                              fontSize: '0.86rem',
                               outline: 'none',
                               transition: 'all 0.2s ease'
                             }}
@@ -2697,34 +2681,34 @@ export default function DeliveryView({
 
                       {/* Card da Taxa de Entrega Calculada */}
                       <div style={{
-                        padding: '12px 14px',
-                        borderRadius: '10px',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
                         backgroundColor: isDeliveryAddressProvided ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
                         border: isDeliveryAddressProvided ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-glass)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        fontSize: '0.85rem',
+                        fontSize: '0.82rem',
                         transition: 'all 0.3s ease'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <Bike size={20} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Bike size={16} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
                           <div>
-                            <span style={{ color: '#fff', fontWeight: 700 }}>
+                            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>
                               Taxa de Entrega:
                             </span>
-                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)' }}>
                               {isDeliveryAddressProvided 
                                 ? (deliveryFeeResult?.isFree 
                                     ? '🎉 Frete Grátis no seu pedido!'
-                                    : `Calculada para o bairro ${addressNeighborhood.trim()}`)
-                                : 'Informe seu bairro acima para calcular a taxa'}
+                                    : `Bairro ${addressNeighborhood.trim()}`)
+                                : 'Informe seu bairro para calcular'}
                             </div>
                           </div>
                         </div>
                         <strong style={{ 
                           color: !isDeliveryAddressProvided ? 'var(--text-muted)' : (deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)'), 
-                          fontSize: isDeliveryAddressProvided ? '1.1rem' : '0.88rem', 
+                          fontSize: isDeliveryAddressProvided ? '0.98rem' : '0.82rem', 
                           fontWeight: 800 
                         }}>
                           {isDeliveryAddressProvided 
@@ -2736,22 +2720,22 @@ export default function DeliveryView({
                   )}
 
                   {/* Botões de Ação do Passo 2 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
                     <button
                       type="button"
                       onClick={handlePrevQuizStep}
                       className="btn-secondary"
-                      style={{ padding: '12px 18px', fontSize: '0.92rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      style={{ padding: '9px 14px', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
                     >
-                      <ArrowLeft size={16} /> Voltar para Seus Dados
+                      <ArrowLeft size={14} /> Voltar
                     </button>
                     <button
                       type="button"
                       onClick={handleNextQuizStep}
                       className="btn-primary"
-                      style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 800, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234, 179, 8, 0.25)' }}
+                      style={{ padding: '10px 18px', fontSize: '0.9rem', fontWeight: 800, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 3px 12px rgba(234, 179, 8, 0.25)' }}
                     >
-                      Avançar para Pagamento <ChevronRight size={18} />
+                      Avançar para Pagamento <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
@@ -2759,26 +2743,23 @@ export default function DeliveryView({
 
               {/* ETAPA 3: COMO VAI PAGAR? (PAGAMENTO, TROCO & CUPOM) */}
               {quizStep === 3 && (
-                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fde047', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
-                      <Sparkles size={16} /> Etapa 3 • Pagamento
-                    </div>
-                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.15rem 0 0.35rem 0' }}>
+                    <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#fff', margin: '0 0 2px 0' }}>
                       Como prefere pagar? 💳
                     </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                      Selecione a forma de pagamento mais conveniente para você.
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Selecione a forma de pagamento desejada.
                     </p>
                   </div>
 
                   {/* CARDS INTERATIVOS DE FORMAS DE PAGAMENTO */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     {[
-                      { id: 'Pix', label: 'Pix', desc: 'Aprovação imediata', icon: '⚡' },
-                      { id: 'Cartão de Crédito', label: 'Cartão de Crédito', desc: 'Na maquininha', icon: '💳' },
-                      { id: 'Cartão de Débito', label: 'Cartão de Débito', desc: 'Na maquininha', icon: '💳' },
-                      { id: 'Dinheiro', label: 'Dinheiro', desc: 'Pagar em espécie', icon: '💵' }
+                      { id: 'Pix', label: 'Pix', desc: 'Aprovação na hora', icon: '⚡' },
+                      { id: 'Cartão de Crédito', label: 'Crédito', desc: 'Na maquininha', icon: '💳' },
+                      { id: 'Cartão de Débito', label: 'Débito', desc: 'Na maquininha', icon: '💳' },
+                      { id: 'Dinheiro', label: 'Dinheiro', desc: 'Em espécie', icon: '💵' }
                     ].map(pm => {
                       const isSelected = paymentMethod === pm.id;
                       return (
@@ -2786,25 +2767,25 @@ export default function DeliveryView({
                           key={pm.id}
                           onClick={() => setPaymentMethod(pm.id)}
                           style={{
-                            padding: '14px 12px',
-                            borderRadius: '12px',
+                            padding: '10px 10px',
+                            borderRadius: '10px',
                             border: isSelected ? '2px solid #eab308' : '1px solid var(--border-glass)',
                             backgroundColor: isSelected ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255, 255, 255, 0.02)',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '4px'
+                            gap: '2px'
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '1.3rem' }}>{pm.icon}</span>
-                            {isSelected && <Check size={16} color="#eab308" strokeWidth={3} />}
+                            <span style={{ fontSize: '1.15rem' }}>{pm.icon}</span>
+                            {isSelected && <Check size={14} color="#eab308" strokeWidth={3} />}
                           </div>
-                          <span style={{ fontWeight: 800, fontSize: '0.92rem', color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.86rem', color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)' }}>
                             {pm.label}
                           </span>
-                          <span style={{ fontSize: '0.74rem', color: isSelected ? '#fde047' : 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '0.68rem', color: isSelected ? '#fde047' : 'var(--text-muted)' }}>
                             {pm.desc}
                           </span>
                         </div>
@@ -2815,16 +2796,16 @@ export default function DeliveryView({
                   {/* DETALHES ESPECÍFICOS DO MÉTODO DE PAGAMENTO SELECIONADO */}
                   {paymentMethod === 'Pix' && (
                     <div style={{ 
-                      padding: '14px 16px', 
+                      padding: '10px 12px', 
                       background: 'rgba(234, 179, 8, 0.08)', 
                       border: '1px solid rgba(234, 179, 8, 0.25)', 
-                      borderRadius: '12px', 
+                      borderRadius: '10px', 
                       display: 'flex', 
                       flexDirection: 'column', 
-                      gap: '8px' 
+                      gap: '6px' 
                     }} className="animate-fade-in">
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.82rem', color: '#eab308', fontWeight: 700 }}>Chave Pix Oficial da Loja:</span>
+                        <span style={{ fontSize: '0.78rem', color: '#eab308', fontWeight: 700 }}>Chave Pix Oficial da Loja:</span>
                         <button 
                           type="button" 
                           onClick={handleCopyPix}
@@ -2832,40 +2813,37 @@ export default function DeliveryView({
                             background: pixCopied ? 'var(--color-success)' : 'rgba(234, 179, 8, 0.25)', 
                             color: '#fff', 
                             border: 'none', 
-                            padding: '4px 10px', 
-                            borderRadius: '6px', 
+                            padding: '3px 8px', 
+                            borderRadius: '5px', 
                             cursor: 'pointer', 
-                            fontSize: '0.78rem', 
+                            fontSize: '0.74rem', 
                             fontWeight: 700,
                             display: 'flex', 
                             alignItems: 'center', 
-                            gap: '5px' 
+                            gap: '4px' 
                           }}
                         >
-                          {pixCopied ? <Check size={13} /> : <Copy size={13} />}
+                          {pixCopied ? <Check size={12} /> : <Copy size={12} />}
                           {pixCopied ? 'Copiado!' : 'Copiar Chave'}
                         </button>
                       </div>
-                      <code style={{ fontSize: '0.85rem', color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '8px 12px', borderRadius: '6px', letterSpacing: '0.5px' }}>
+                      <code style={{ fontSize: '0.8rem', color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '6px 10px', borderRadius: '5px', letterSpacing: '0.5px' }}>
                         {officialPixKey}
                       </code>
-                      <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.65)' }}>
-                        💡 Você pode realizar o Pix agora ou logo após confirmar o envio do pedido.
-                      </span>
                     </div>
                   )}
 
                   {paymentMethod === 'Dinheiro' && (
                     <div style={{
-                      padding: '14px 16px',
+                      padding: '10px 12px',
                       background: 'rgba(255, 255, 255, 0.02)',
                       border: '1px solid var(--border-glass)',
-                      borderRadius: '12px',
+                      borderRadius: '10px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px'
+                      gap: '4px'
                     }} className="animate-fade-in">
-                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Precisa de troco? Para quanto?
                       </label>
                       <input 
@@ -2874,12 +2852,12 @@ export default function DeliveryView({
                         value={changeFor}
                         onChange={(e) => setChangeFor(e.target.value)}
                         style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
                           border: '1px solid var(--border-glass)',
                           backgroundColor: 'var(--bg-tertiary)',
                           color: '#fff',
-                          fontSize: '0.88rem',
+                          fontSize: '0.84rem',
                           outline: 'none'
                         }}
                       />
@@ -2889,28 +2867,28 @@ export default function DeliveryView({
                   {/* CAMPO DE CUPOM DE DESCONTO & VOUCHER DE FIDELIDADE */}
                   <div style={{
                     backgroundColor: 'rgba(255,255,255,0.02)',
-                    padding: '14px 16px',
-                    borderRadius: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
                     border: '1px solid var(--border-glass)'
                   }}>
                     {/* Banner de Voucher de Fidelidade Disponível */}
                     {activeFidelityVoucher && !appliedCoupon && (
                       <div style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
                         background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.35) 0%, rgba(237, 177, 67, 0.2) 100%)',
                         border: '1px solid rgba(237, 177, 67, 0.5)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '5px',
-                        marginBottom: '10px'
+                        gap: '4px',
+                        marginBottom: '8px'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-brand-yellow)', fontWeight: 800, fontSize: '0.82rem' }}>
-                          <Gift size={15} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--color-brand-yellow)', fontWeight: 800, fontSize: '0.76rem' }}>
+                          <Gift size={13} />
                           <span>🎉 1 LANCHE GRÁTIS DE FIDELIDADE!</span>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#fff' }}>
-                          Voucher especial do 10º pedido: <strong>{activeFidelityVoucher.code}</strong> (R$ 25 OFF)
+                        <div style={{ fontSize: '0.72rem', color: '#fff' }}>
+                          Voucher do 10º pedido: <strong>{activeFidelityVoucher.code}</strong> (R$ 25 OFF)
                         </div>
                         <button
                           type="button"
@@ -2919,22 +2897,22 @@ export default function DeliveryView({
                             const res = validateCoupon(activeFidelityVoucher.code, cartTotal);
                             if (res.valid) {
                               setAppliedCoupon(res.coupon);
-                              setCouponFeedback({ success: true, message: `Voucher ${activeFidelityVoucher.code} aplicado! Seu lanche saiu grátis!` });
+                              setCouponFeedback({ success: true, message: `Voucher ${activeFidelityVoucher.code} aplicado!` });
                             }
                           }}
                           className="btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '2px', borderRadius: '6px' }}
+                          style={{ padding: '5px 10px', fontSize: '0.74rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '2px', borderRadius: '5px' }}
                         >
-                          <Check size={13} />
+                          <Check size={12} />
                           <span>Aplicar Meu Lanche Grátis</span>
                         </button>
                       </div>
                     )}
 
-                    <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                       Tem um Cupom de Desconto?
                     </label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
                       <input
                         type="text"
                         placeholder="Ex: NUU10"
@@ -2943,12 +2921,12 @@ export default function DeliveryView({
                         style={{
                           flex: 1,
                           textTransform: 'uppercase',
-                          padding: '9px 12px',
-                          borderRadius: '8px',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
                           border: '1px solid rgba(255,255,255,0.15)',
                           backgroundColor: 'rgba(0,0,0,0.4)',
                           color: '#fff',
-                          fontSize: '0.88rem',
+                          fontSize: '0.82rem',
                           outline: 'none'
                         }}
                       />
@@ -2956,43 +2934,43 @@ export default function DeliveryView({
                         type="button"
                         onClick={handleApplyCoupon}
                         className="btn-secondary"
-                        style={{ padding: '9px 16px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px' }}
+                        style={{ padding: '7px 12px', fontSize: '0.78rem', fontWeight: 700, borderRadius: '6px' }}
                       >
                         Aplicar
                       </button>
                     </div>
                     {couponFeedback && (
                       <div style={{
-                        fontSize: '0.76rem',
-                        marginTop: '6px',
+                        fontSize: '0.72rem',
+                        marginTop: '4px',
                         color: couponFeedback.success ? '#4ade80' : '#f87171',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px'
                       }}>
-                        {couponFeedback.success ? <Check size={12} /> : <AlertCircle size={12} />}
+                        {couponFeedback.success ? <Check size={11} /> : <AlertCircle size={11} />}
                         <span>{couponFeedback.message}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Botões de Ação do Passo 3 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
                     <button
                       type="button"
                       onClick={handlePrevQuizStep}
                       className="btn-secondary"
-                      style={{ padding: '12px 18px', fontSize: '0.92rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      style={{ padding: '9px 14px', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
                     >
-                      <ArrowLeft size={16} /> Voltar para Entrega
+                      <ArrowLeft size={14} /> Voltar
                     </button>
                     <button
                       type="button"
                       onClick={handleNextQuizStep}
                       className="btn-primary"
-                      style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 800, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234, 179, 8, 0.25)' }}
+                      style={{ padding: '10px 18px', fontSize: '0.9rem', fontWeight: 800, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 3px 12px rgba(234, 179, 8, 0.25)' }}
                     >
-                      Revisar Pedido <ChevronRight size={18} />
+                      Revisar Pedido <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
@@ -3000,48 +2978,45 @@ export default function DeliveryView({
 
               {/* ETAPA 4: REVISÃO & CONFIRMAÇÃO DO PEDIDO */}
               {quizStep === 4 && (
-                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
-                      <CheckCircle2 size={16} /> Etapa 4 • Revisão Final
-                    </div>
-                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
-                      Tudo pronto! Vamos confirmar? 🔥
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.15rem 0 0.35rem 0' }}>
+                    <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#fff', margin: '0 0 2px 0' }}>
+                      Confirmar Pedido 🔥
                     </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                      Dê uma última conferida nos detalhes antes de enviarmos seu pedido para a chapa.
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Confira os dados antes de enviarmos para a chapa.
                     </p>
                   </div>
 
                   {/* CARDS RESUMO DO QUIZ */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
                     
                     {/* Resumo do Cliente */}
                     <div style={{
                       backgroundColor: 'rgba(255, 255, 255, 0.02)',
                       border: '1px solid var(--border-glass)',
-                      borderRadius: '12px',
-                      padding: '14px',
+                      borderRadius: '10px',
+                      padding: '10px 12px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px'
+                      gap: '4px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <User size={13} color="#eab308" /> Cliente
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <User size={12} color="#eab308" /> Cliente
                         </span>
                         <button
                           type="button"
                           onClick={() => setQuizStep(1)}
-                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}
+                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}
                         >
-                          <Edit2 size={11} /> Alterar
+                          <Edit2 size={10} /> Editar
                         </button>
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
                         {customerName || 'Não informado'}
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
                         📱 {phone || 'Sem telefone'}
                       </div>
                     </div>
@@ -3050,40 +3025,40 @@ export default function DeliveryView({
                     <div style={{
                       backgroundColor: 'rgba(255, 255, 255, 0.02)',
                       border: '1px solid var(--border-glass)',
-                      borderRadius: '12px',
-                      padding: '14px',
+                      borderRadius: '10px',
+                      padding: '10px 12px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px'
+                      gap: '4px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          {deliveryType === 'delivery' ? <Bike size={13} color="#eab308" /> : <Store size={13} color="#eab308" />}
-                          {deliveryType === 'delivery' ? 'Entrega em Casa' : 'Retirada no Balcão'}
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {deliveryType === 'delivery' ? <Bike size={12} color="#eab308" /> : <Store size={12} color="#eab308" />}
+                          {deliveryType === 'delivery' ? 'Delivery' : 'Balcão'}
                         </span>
                         <button
                           type="button"
                           onClick={() => setQuizStep(2)}
-                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}
+                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}
                         >
-                          <Edit2 size={11} /> Alterar
+                          <Edit2 size={10} /> Editar
                         </button>
                       </div>
                       {deliveryType === 'delivery' ? (
                         <>
-                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.84rem', color: '#fff' }}>
                             {addressStreet}, nº {addressNumber} {addressComplement ? `(${addressComplement})` : ''}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
                             Bairro {addressNeighborhood} - Montes Claros/MG
                           </div>
                         </>
                       ) : (
                         <>
-                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.84rem', color: '#fff' }}>
                             Balcão Nuu Prensado
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
                             Rua Agapanto, 264 - Sagrada Família
                           </div>
                         </>
@@ -3094,38 +3069,38 @@ export default function DeliveryView({
                     <div style={{
                       backgroundColor: 'rgba(255, 255, 255, 0.02)',
                       border: '1px solid var(--border-glass)',
-                      borderRadius: '12px',
-                      padding: '14px',
+                      borderRadius: '10px',
+                      padding: '10px 12px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px'
+                      gap: '4px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <CreditCard size={13} color="#eab308" /> Pagamento
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <CreditCard size={12} color="#eab308" /> Pagamento
                         </span>
                         <button
                           type="button"
                           onClick={() => setQuizStep(3)}
-                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}
+                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}
                         >
-                          <Edit2 size={11} /> Alterar
+                          <Edit2 size={10} /> Editar
                         </button>
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#fff' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#fff' }}>
                         {paymentMethod === 'Pix' && '⚡ Pix'}
-                        {paymentMethod === 'Cartão de Crédito' && '💳 Cartão de Crédito (na maquininha)'}
-                        {paymentMethod === 'Cartão de Débito' && '💳 Cartão de Débito (na maquininha)'}
+                        {paymentMethod === 'Cartão de Crédito' && '💳 Cartão de Crédito'}
+                        {paymentMethod === 'Cartão de Débito' && '💳 Cartão de Débito'}
                         {paymentMethod === 'Dinheiro' && '💵 Dinheiro'}
                       </div>
                       {paymentMethod === 'Dinheiro' && changeFor && (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                          Troco para: <strong>{changeFor}</strong>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                          Troco: <strong>{changeFor}</strong>
                         </div>
                       )}
                       {appliedCoupon && (
-                        <div style={{ fontSize: '0.78rem', color: '#4ade80', fontWeight: 600 }}>
-                          Cupom {appliedCoupon.code} aplicado
+                        <div style={{ fontSize: '0.74rem', color: '#4ade80', fontWeight: 600 }}>
+                          Cupom {appliedCoupon.code}
                         </div>
                       )}
                     </div>
@@ -3135,19 +3110,19 @@ export default function DeliveryView({
                   <div style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.02)',
                     border: '1px solid var(--border-glass)',
-                    borderRadius: '12px',
-                    padding: '14px 16px'
+                    borderRadius: '10px',
+                    padding: '10px 12px'
                   }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
                       Itens do Pedido ({cart.length})
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
                       {cart.map((item, index) => (
-                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', paddingBottom: '6px', borderBottom: index < cart.length - 1 ? '1px dashed rgba(255,255,255,0.06)' : 'none' }}>
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', paddingBottom: '4px', borderBottom: index < cart.length - 1 ? '1px dashed rgba(255,255,255,0.06)' : 'none' }}>
                           <div>
                             <span style={{ fontWeight: 700, color: '#fff' }}>{item.quantity}x {item.name}</span>
                             {item.selectedBread && (
-                              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block' }}>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>
                                 {item.selectedBread} • {item.selectedCreamy} • {item.selectedMelted}
                               </span>
                             )}
@@ -3164,15 +3139,15 @@ export default function DeliveryView({
                   <div style={{
                     backgroundColor: 'rgba(234, 179, 8, 0.05)',
                     border: '1px solid rgba(234, 179, 8, 0.2)',
-                    borderRadius: '12px',
-                    padding: '16px'
+                    borderRadius: '10px',
+                    padding: '12px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.82rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Subtotal dos Lanches:</span>
                       <span style={{ color: '#fff', fontWeight: 600 }}>R$ {cartTotal.toFixed(2)}</span>
                     </div>
                     {deliveryType === 'delivery' && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.82rem' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega:</span>
                         <span>
                           {deliveryFee === 0 
@@ -3182,32 +3157,32 @@ export default function DeliveryView({
                       </div>
                     )}
                     {deliveryType === 'pickup' && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.82rem' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega:</span>
                         <span style={{ color: '#4ade80', fontWeight: 700 }}>GRÁTIS (Balcão)</span>
                       </div>
                     )}
                     {totalDiscount > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#4ade80', fontSize: '0.88rem', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: '#4ade80', fontSize: '0.82rem', fontWeight: 600 }}>
                         <span>Desconto Aplicado:</span>
                         <span>- R$ {totalDiscount.toFixed(2)}</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.35rem', fontWeight: 900, color: '#fde047', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 900, color: '#fde047', marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
                       <span>Total do Pedido:</span>
                       <span>R$ {grandTotal.toFixed(2)}</span>
                     </div>
                   </div>
 
                   {/* BOTÕES DE AÇÃO DO PASSO 4 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
                     <button
                       type="button"
                       onClick={handlePrevQuizStep}
                       className="btn-secondary"
-                      style={{ padding: '14px 20px', fontSize: '0.95rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      style={{ padding: '10px 14px', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
                     >
-                      <ArrowLeft size={16} /> Voltar para Pagamento
+                      <ArrowLeft size={14} /> Voltar
                     </button>
                     <button 
                       type="submit" 
@@ -3215,17 +3190,17 @@ export default function DeliveryView({
                       style={{ 
                         flex: 1,
                         justifyContent: 'center', 
-                        padding: '14px 24px', 
-                        fontSize: '1.05rem', 
+                        padding: '11px 18px', 
+                        fontSize: '0.98rem', 
                         fontWeight: 900,
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 20px rgba(168, 35, 25, 0.5)',
+                        borderRadius: '8px',
+                        boxShadow: '0 3px 15px rgba(168, 35, 25, 0.4)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px'
+                        gap: '6px'
                       }}
                     >
-                      <Sparkles size={18} /> Confirmar e Enviar Pedido
+                      <Sparkles size={16} /> Confirmar e Enviar
                     </button>
                   </div>
                 </div>

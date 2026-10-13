@@ -21,7 +21,11 @@ export default function DeliveryView({
   isCartOpen: propIsCartOpen,
   setIsCartOpen: propSetIsCartOpen,
   checkoutStep: propCheckoutStep,
-  setCheckoutStep: propSetCheckoutStep
+  setCheckoutStep: propSetCheckoutStep,
+  isCustomerModalOpen: propIsCustomerModalOpen,
+  setIsCustomerModalOpen: propSetIsCustomerModalOpen,
+  loggedCustomer: propLoggedCustomer,
+  setLoggedCustomer: propSetLoggedCustomer
 }) {
   const { 
     products, 
@@ -275,19 +279,29 @@ export default function DeliveryView({
   const [changeFor, setChangeFor] = useState('');
   const [pixCopied, setPixCopied] = useState(false);
 
-  // Sessão persistente do cliente (Login por WhatsApp)
-  const [loggedCustomer, setLoggedCustomer] = useState(() => {
+  // Sessão persistente do cliente (Login por WhatsApp compartilhado com Header)
+  const [internalLoggedCustomer, setInternalLoggedCustomer] = useState(() => {
     try {
       const saved = localStorage.getItem('nuu_customer_session');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return null;
   });
+  const loggedCustomer = propLoggedCustomer !== undefined ? propLoggedCustomer : internalLoggedCustomer;
+  const setLoggedCustomer = (val) => {
+    if (typeof propSetLoggedCustomer === 'function') propSetLoggedCustomer(val);
+    setInternalLoggedCustomer(val);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('nuu_customer_session_changed'));
+    }
+  };
 
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [internalIsCustomerModalOpen, setInternalIsCustomerModalOpen] = useState(false);
+  const isCustomerModalOpen = propIsCustomerModalOpen !== undefined ? propIsCustomerModalOpen : internalIsCustomerModalOpen;
+  const setIsCustomerModalOpen = propSetIsCustomerModalOpen || setInternalIsCustomerModalOpen;
+
   const [customerModalTab, setCustomerModalTab] = useState('orders'); // 'orders' | 'login'
   const [loginPhoneInput, setLoginPhoneInput] = useState('');
-  const [loginNameInput, setLoginNameInput] = useState('');
   const [trackingBannerDismissed, setTrackingBannerDismissed] = useState(false);
 
   const [activeTrackingOrder, setActiveTrackingOrder] = useState(() => {
@@ -444,7 +458,7 @@ export default function DeliveryView({
       .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }, [orders, loggedCustomer?.phone, phone, customerSearchPhone]);
 
-  // Handlers de Login e Logout do Cliente
+  // Handlers de Login e Logout do Cliente (Exclusivo por Número de Telefone)
   const handleCustomerLogin = (e) => {
     e?.preventDefault();
     const clean = loginPhoneInput.replace(/\D/g, '');
@@ -453,7 +467,7 @@ export default function DeliveryView({
       return;
     }
     const found = typeof lookupCustomer === 'function' ? lookupCustomer(clean) : null;
-    const finalName = (found?.name || loginNameInput || '').trim();
+    const finalName = (found?.name || '').trim();
     const customerObj = {
       phone: clean,
       name: finalName || 'Cliente'
@@ -486,7 +500,7 @@ export default function DeliveryView({
       } catch (err) {}
     }
     setCustomerModalTab('orders');
-    showSiteAlert('Login Concluído!', `Olá, ${finalName || 'cliente'}! Você agora está conectado.`, 'success');
+    showSiteAlert('Login Concluído!', `Olá! Você agora está conectado com seu WhatsApp.`, 'success');
   };
 
   const handleCustomerLogout = () => {
@@ -495,7 +509,6 @@ export default function DeliveryView({
       localStorage.removeItem('nuu_customer_session');
     } catch (err) {}
     setLoginPhoneInput('');
-    setLoginNameInput('');
     setCustomerModalTab('login');
     showSiteAlert('Desconectado', 'Sua sessão foi encerrada com sucesso.', 'info');
   };
@@ -4990,30 +5003,6 @@ export default function DeliveryView({
                         onChange={(e) => setLoginPhoneInput(e.target.value)}
                         placeholder="(38) 99999-9999"
                         autoFocus
-                        style={{
-                          width: '100%',
-                          padding: '12px 12px 12px 38px',
-                          backgroundColor: 'rgba(255,255,255,0.06)',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                          borderRadius: '10px',
-                          color: '#fff',
-                          fontSize: '0.92rem'
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>
-                      Seu Nome (opcional)
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <User size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                      <input 
-                        type="text"
-                        value={loginNameInput}
-                        onChange={(e) => setLoginNameInput(e.target.value)}
-                        placeholder="Como prefere ser chamado(a)"
                         style={{
                           width: '100%',
                           padding: '12px 12px 12px 38px',

@@ -4,7 +4,7 @@ import DeliveryView from './views/delivery/DeliveryView';
 import AdminView from './views/admin/AdminView';
 import AdminLoginView from './views/admin/AdminLoginView';
 import OperationView from './views/operation/OperationView';
-import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield, LogOut } from 'lucide-react';
+import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield, LogOut, User, XCircle } from 'lucide-react';
 import { VIEW_CONFIG } from './config/viewConfig';
 import './App.css';
 
@@ -138,6 +138,29 @@ function AppContent() {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState('menu');
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [loggedCustomer, setLoggedCustomer] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nuu_customer_session');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  });
+
+  useEffect(() => {
+    const syncSession = () => {
+      try {
+        const saved = localStorage.getItem('nuu_customer_session');
+        setLoggedCustomer(saved ? JSON.parse(saved) : null);
+      } catch (e) {}
+    };
+    window.addEventListener('storage', syncSession);
+    window.addEventListener('nuu_customer_session_changed', syncSession);
+    return () => {
+      window.removeEventListener('storage', syncSession);
+      window.removeEventListener('nuu_customer_session_changed', syncSession);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isImmersiveEnabled && viewMode !== 'grid') {
@@ -354,6 +377,37 @@ function AppContent() {
                 </button>
               )}
 
+              {/* Botão Entrar / Minha Conta no Header Desktop */}
+              <button 
+                type="button"
+                onClick={() => setIsCustomerModalOpen(true)}
+                style={{ 
+                  background: loggedCustomer ? 'rgba(234, 179, 8, 0.16)' : 'rgba(255,255,255,0.12)', 
+                  border: loggedCustomer ? '1px solid rgba(234, 179, 8, 0.5)' : '1px solid rgba(255,255,255,0.2)', 
+                  color: loggedCustomer ? '#facc15' : '#fff', 
+                  borderRadius: '99px', 
+                  padding: '8px 16px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(5px)',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                  transition: 'all 0.2s ease'
+                }}
+                title={loggedCustomer ? `Conectado: ${loggedCustomer.phone}` : "Entrar ou ver Meus Pedidos"}
+              >
+                <User size={18} color={loggedCustomer ? '#facc15' : '#fff'} />
+                <span>
+                  {loggedCustomer 
+                    ? (loggedCustomer.name && loggedCustomer.name !== 'Cliente' 
+                        ? loggedCustomer.name.split(' ')[0] 
+                        : (loggedCustomer.phone ? loggedCustomer.phone : 'Minha Conta')) 
+                    : 'Entrar'}
+                </span>
+              </button>
+
               <div 
                 style={{ 
                   cursor: 'pointer', 
@@ -507,6 +561,10 @@ function AppContent() {
             setIsCartOpen={setIsCartOpen}
             checkoutStep={checkoutStep}
             setCheckoutStep={setCheckoutStep}
+            isCustomerModalOpen={isCustomerModalOpen}
+            setIsCustomerModalOpen={setIsCustomerModalOpen}
+            loggedCustomer={loggedCustomer}
+            setLoggedCustomer={setLoggedCustomer}
           />
         )}
       </main>

@@ -690,9 +690,14 @@ export const SystemProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.storeAddress && parsed.storeAddress.includes('Montes Claros')) {
+          const fees = { ...INITIAL_STORE_SETTINGS.deliveryFeesByNeighborhood, ...(parsed.deliveryFeesByNeighborhood || {}) };
+          if (fees['Sagrada Família'] === 5 || fees['Sagrada Família'] === 5.00) {
+            fees['Sagrada Família'] = 0.00;
+          }
           const normalized = {
             ...INITIAL_STORE_SETTINGS,
             ...parsed,
+            deliveryFeesByNeighborhood: fees,
             closeTime: (parsed.closeTime === '23:59' || parsed.closeTime === '00:00') ? '23:30' : (parsed.closeTime || '23:30'),
             openTime: parsed.openTime || '18:00'
           };
@@ -705,9 +710,14 @@ export const SystemProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(oldV4);
         if (parsed.storeAddress && parsed.storeAddress.includes('Montes Claros')) {
+          const fees = { ...INITIAL_STORE_SETTINGS.deliveryFeesByNeighborhood, ...(parsed.deliveryFeesByNeighborhood || {}) };
+          if (fees['Sagrada Família'] === 5 || fees['Sagrada Família'] === 5.00) {
+            fees['Sagrada Família'] = 0.00;
+          }
           const migrated = {
             ...INITIAL_STORE_SETTINGS,
             ...parsed,
+            deliveryFeesByNeighborhood: fees,
             openTime: '18:00',
             closeTime: '23:30',
             openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom']
@@ -724,7 +734,10 @@ export const SystemProvider = ({ children }) => {
     const saved = localStorage.getItem('nuu_neighborhoods_v2');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map(n => n.name === 'Sagrada Família' && (n.fee === 5 || n.fee === 5.00) ? { ...n, fee: 0.00 } : n);
+        }
       } catch (e) {}
     }
     const old = localStorage.getItem('nuu_neighborhoods');
@@ -732,7 +745,7 @@ export const SystemProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(old);
         if (Array.isArray(parsed) && parsed.some(n => n.name === 'Sagrada Família')) {
-          return parsed;
+          return parsed.map(n => n.name === 'Sagrada Família' && (n.fee === 5 || n.fee === 5.00) ? { ...n, fee: 0.00 } : n);
         }
       } catch (e) {}
     }
@@ -1498,7 +1511,7 @@ export const SystemProvider = ({ children }) => {
     }
   };
 
-  // --- Cálculo Dinâmico de Frete (Bairro / Raio / Frete Grátis) ---
+  // --- Cálculo Dinâmico de Frete (Bairro Específico > Raio em KM > Frete Grátis) ---
   const calculateDeliveryFee = (arg1, arg2, arg3) => {
     let neighborhoodName = '';
     let distanceKm = null;
@@ -1514,6 +1527,7 @@ export const SystemProvider = ({ children }) => {
       if (typeof arg3 === 'number') subtotal = arg3;
     }
 
+    // 1. Frete Grátis por valor do pedido
     const freeThreshold = Number(storeSettings?.freeDeliveryThreshold) || 70.00;
     if (freeThreshold > 0 && subtotal >= freeThreshold) {
       return { fee: 0, isFree: true, reason: `Frete Grátis acima de R$ ${freeThreshold.toFixed(2)}!` };
@@ -1524,16 +1538,62 @@ export const SystemProvider = ({ children }) => {
       : (storeSettings?.deliveryRadius || INITIAL_RADIUSES);
     const sortedRadiuses = [...radiusesList].sort((a, b) => a.maxKm - b.maxKm);
 
-    // 1. Se foi passada distância explicitamente (via GPS ou seleção de faixa em KM):
+    // 2. SOBREPOSIÇÃO PRIORITÁRIA DE BAIRRO:
+    // Qualquer taxa cadastrada especificamente em Bairros sobressai e prevalece sobre a regra de KM.
+    if (neighborhoodName) {
+      const cleanName = (neighborhoodName || '').trim().toLowerCase();
+
+      // Checagem em storeSettings.deliveryFeesByNeighborhood (usado no Admin)
+      if (storeSettings?.deliveryFeesByNeighborhood) {
+        const matchKey = Object.keys(storeSettings.deliveryFeesByNeighborhood).find(
+          k => k.trim().toLowerCase() === cleanName
+        );
+        if (matchKey !== undefined) {
+          const customFee = Number(storeSettings.deliveryFeesByNeighborhood[matchKey]) || 0;
+          const isStoreNeighborhood = cleanName.includes('sagrada') || cleanName.includes('família') || cleanName.includes('familia');
+          return {
+            fee: customFee,
+            isFree: customFee === 0,
+            distanceKm: distanceKm || null,
+            reason: customFee === 0 
+              ? (isStoreNeighborhood ? 'Frete Grátis (Bairro da Loja)' : `Frete Grátis no bairro ${matchKey}`)
+              : `Taxa Específica do Bairro ${matchKey}`
+          };
+        }
+      }
+
+      // Checagem na lista deliveryNeighborhoods
+      const foundInList = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.active !== false);
+      if (foundInList && foundInList.fee !== undefined) {
+        const customFee = Number(foundInList.fee) || 0;
+        const isStoreNeighborhood = cleanName.includes('sagrada') || cleanName.includes('família') || cleanName.includes('familia');
+        return {
+          fee: customFee,
+          isFree: customFee === 0,
+          distanceKm: foundInList.distanceKm || distanceKm || null,
+          reason: customFee === 0 
+            ? (isStoreNeighborhood ? 'Frete Grátis (Bairro da Loja)' : `Frete Grátis no bairro ${foundInList.name}`)
+            : `Taxa Específica do Bairro ${foundInList.name}`
+        };
+      }
+
+      // Regra de segurança para o bairro da loja (Sagrada Família): sempre R$ 0,00
+      if (cleanName.includes('sagrada') || cleanName.includes('família') || cleanName.includes('familia')) {
+        return { fee: 0, isFree: true, reason: 'Frete Grátis (Bairro da Loja)' };
+      }
+    }
+
+    // 3. CÁLCULO PADRÃO POR QUILOMETRAGEM / RAIO (KM):
+    // Utilizado como padrão para todos os bairros/endereços sem valor específico cadastrado.
     if (distanceKm !== null && distanceKm !== undefined && !isNaN(distanceKm)) {
       const numKm = Number(distanceKm);
       const match = sortedRadiuses.find(r => numKm <= r.maxKm && r.active !== false);
       if (match) {
         return { 
           fee: Number(match.fee) || 0, 
-          isFree: false, 
+          isFree: Number(match.fee) === 0, 
           distanceKm: numKm,
-          reason: `Raio até ${match.maxKm} km (${match.description || 'da loja'})` 
+          reason: `Raio até ${match.maxKm} km (${match.description || 'Montes Claros'})` 
         };
       }
       const maxBand = sortedRadiuses[sortedRadiuses.length - 1];
@@ -1547,47 +1607,27 @@ export const SystemProvider = ({ children }) => {
       }
     }
 
-    // 2. Se o cliente selecionou um bairro de Montes Claros:
+    // Se o bairro possui distância mapeada em Montes Claros (sem taxa fixa sobrescrita):
     if (neighborhoodName) {
       const cleanName = (neighborhoodName || '').trim().toLowerCase();
-      const found = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.active !== false);
-      
-      if (found) {
-        // Se a loja estiver no modo de cálculo por raio e o bairro possuir km mapeado:
-        if (storeSettings?.deliveryMode === 'radius' && found.distanceKm) {
-          const matchRadius = sortedRadiuses.find(r => found.distanceKm <= r.maxKm && r.active !== false);
-          if (matchRadius) {
-            return { 
-              fee: Number(matchRadius.fee) || Number(found.fee) || 0, 
-              isFree: false, 
-              distanceKm: found.distanceKm,
-              reason: `Bairro ${found.name} (~${found.distanceKm} km da loja)` 
-            };
-          }
-        }
-        return { 
-          fee: Number(found.fee) || 0, 
-          isFree: false, 
-          distanceKm: found.distanceKm || null,
-          reason: `Bairro ${found.name}${found.distanceKm ? ` (~${found.distanceKm} km)` : ''}` 
-        };
-      }
-
-      // Fallback para storeSettings.deliveryFeesByNeighborhood
-      if (storeSettings?.deliveryFeesByNeighborhood) {
-        const matchKey = Object.keys(storeSettings.deliveryFeesByNeighborhood).find(
-          k => k.trim().toLowerCase() === cleanName
-        );
-        if (matchKey) {
-          return { fee: Number(storeSettings.deliveryFeesByNeighborhood[matchKey]) || 0, isFree: false, reason: `Taxa do Bairro ${matchKey}` };
+      const foundWithDistance = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.distanceKm);
+      if (foundWithDistance) {
+        const matchRadius = sortedRadiuses.find(r => foundWithDistance.distanceKm <= r.maxKm && r.active !== false);
+        if (matchRadius) {
+          return { 
+            fee: Number(matchRadius.fee) || 0, 
+            isFree: Number(matchRadius.fee) === 0, 
+            distanceKm: foundWithDistance.distanceKm,
+            reason: `Raio até ${matchRadius.maxKm} km (~${foundWithDistance.distanceKm} km da loja)` 
+          };
         }
       }
     }
 
-    // 3. Taxa inicial base do primeiro raio (ou R$ 5,00)
+    // 4. TAXA PADRÃO BASE (Primeira faixa de raio ou R$ 5,00)
     const baseRadius = sortedRadiuses[0];
     const defaultFee = baseRadius ? Number(baseRadius.fee) : 5.00;
-    return { fee: defaultFee, isFree: false, reason: 'Taxa Padrão' };
+    return { fee: defaultFee, isFree: defaultFee === 0, reason: 'Taxa Padrão por Faixa de KM' };
   };
 
   // --- Cupons de Desconto ---

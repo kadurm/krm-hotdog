@@ -349,26 +349,44 @@ export default function DeliveryView({
     }
   }, [orders, activeTrackingOrder?.id, activeTrackingOrder?.status]);
 
-  // Lista consolidada de bairros para entrega (Montes Claros) com quilometragem
+  // Lista consolidada de bairros para entrega (Montes Claros) com prioridade para taxas específicas e Grátis na Loja
   const availableNeighborhoods = React.useMemo(() => {
-    if (deliveryNeighborhoods && deliveryNeighborhoods.length > 0) {
-      const activeList = deliveryNeighborhoods.filter(n => n.active !== false);
-      if (activeList.length > 0) {
-        return activeList.map(n => ({ 
+    const map = new Map();
+
+    // 1. Iniciar com deliveryNeighborhoods
+    if (deliveryNeighborhoods && Array.isArray(deliveryNeighborhoods)) {
+      deliveryNeighborhoods.filter(n => n.active !== false).forEach(n => {
+        map.set(n.name.trim().toLowerCase(), { 
           name: n.name, 
           fee: Number(n.fee) || 0,
           distanceKm: n.distanceKm || null
-        }));
-      }
+        });
+      });
     }
+
+    // 2. Sobrepor / adicionar com storeSettings.deliveryFeesByNeighborhood
     if (storeSettings?.deliveryFeesByNeighborhood) {
-      return Object.entries(storeSettings.deliveryFeesByNeighborhood).map(([name, fee]) => ({
-        name,
-        fee: Number(fee) || 0,
-        distanceKm: null
-      }));
+      Object.entries(storeSettings.deliveryFeesByNeighborhood).forEach(([name, fee]) => {
+        const key = name.trim().toLowerCase();
+        const existing = map.get(key);
+        map.set(key, {
+          name: existing ? existing.name : name,
+          fee: Number(fee) || 0,
+          distanceKm: existing ? existing.distanceKm : null
+        });
+      });
     }
-    return [];
+
+    // 3. Garantir que Sagrada Família (bairro da loja) tenha fee = 0
+    const sagradaKey = 'sagrada família';
+    if (map.has(sagradaKey)) {
+      const cur = map.get(sagradaKey);
+      map.set(sagradaKey, { ...cur, fee: 0 });
+    } else {
+      map.set(sagradaKey, { name: 'Sagrada Família', fee: 0, distanceKm: 0.5 });
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [deliveryNeighborhoods, storeSettings?.deliveryFeesByNeighborhood]);
 
   // Lista consolidada de faixas de raio por quilometragem (KM)

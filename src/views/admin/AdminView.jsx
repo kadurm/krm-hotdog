@@ -43,6 +43,9 @@ export default function AdminView({ onLogout, onGoOperation }) {
     deliveryRadiuses = [],
     upsertRadius,
     deleteRadius,
+    deliveryNeighborhoods = [],
+    upsertNeighborhood,
+    deleteNeighborhood,
     coupons = [],
     upsertCoupon,
     deleteCoupon,
@@ -3191,10 +3194,10 @@ export default function AdminView({ onLogout, onGoOperation }) {
               <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Bike size={18} color="var(--color-brand)" /> Modo de Cobrança de Frete
+                    <Bike size={18} color="var(--color-brand)" /> Modo de Cobrança de Frete & Prioridades
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    Defina se a taxa de entrega deve ser calculada por raio de quilometragem da loja ou por lista fixa de bairros.
+                    O cálculo por raio de quilometragem (KM) é o <strong>padrão</strong>. Valores específicos adicionados em qualquer bairro abaixo <strong>sobressaem ao raio</strong> (no bairro da loja, Sagrada Família, o frete é Grátis R$ 0,00).
                   </p>
                 </div>
                 <select
@@ -3211,8 +3214,8 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     cursor: 'pointer'
                   }}
                 >
-                  <option value="radius">📏 Raio por Quilometragem (KM) [Recomendado]</option>
-                  <option value="neighborhood">🏙️ Bairros Fixos</option>
+                  <option value="radius">📏 Raio por KM com Sobrescrita de Bairros (Padrão Recomendado)</option>
+                  <option value="neighborhood">🏙️ Somente Bairros Fixos</option>
                 </select>
               </div>
 
@@ -3309,12 +3312,19 @@ export default function AdminView({ onLogout, onGoOperation }) {
 
                 {/* Tabela de Taxas por Bairro */}
                 <div className="glass-panel" style={{ padding: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin size={18} color="#38bdf8" /> Bairros (Montes Claros)
-                  </h3>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                    Taxas personalizadas para cada bairro da cidade.
-                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MapPin size={18} color="#38bdf8" /> Bairros Específicos (Montes Claros)
+                      </h3>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        Valores cadastrados aqui <strong>sobressaem ao raio por KM</strong> (ideal para taxas dinâmicas de apps ou frete grátis na loja).
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                      Sobressai ao Raio
+                    </span>
+                  </div>
 
                   {/* Formulário para adicionar bairro */}
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
@@ -3328,6 +3338,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     <input
                       type="number"
                       step="0.50"
+                      min="0"
                       placeholder="Taxa R$"
                       value={newNeighborhoodFee}
                       onChange={(e) => setNewNeighborhoodFee(e.target.value)}
@@ -3335,39 +3346,124 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     />
                     <button
                       onClick={() => {
-                        if (!newNeighborhoodName.trim()) return alert('Digite o nome do bairro');
+                        const cleanName = newNeighborhoodName.trim();
+                        if (!cleanName) return alert('Digite o nome do bairro');
+                        const feeVal = parseFloat(newNeighborhoodFee) || 0;
                         const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
-                        fees[newNeighborhoodName.trim()] = parseFloat(newNeighborhoodFee) || 0;
+                        fees[cleanName] = Math.max(0, feeVal);
                         updateStoreSettings({ deliveryFeesByNeighborhood: fees });
+
+                        // Sincronizar também em deliveryNeighborhoods
+                        const existing = (deliveryNeighborhoods || []).find(n => n.name.trim().toLowerCase() === cleanName.toLowerCase());
+                        upsertNeighborhood({
+                          id: existing?.id,
+                          name: cleanName,
+                          fee: Math.max(0, feeVal),
+                          active: true
+                        });
+
                         setNewNeighborhoodName('');
+                        setNewNeighborhoodFee('0.00');
                       }}
                       className="btn-primary"
                       style={{ padding: '8px 14px', fontSize: '0.8rem' }}
                     >
-                      Adicionar
+                      + Salvar
                     </button>
                   </div>
 
-                  <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
-                    {Object.entries(storeSettings?.deliveryFeesByNeighborhood || {}).map(([bairro, fee]) => (
-                      <div key={bairro} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{bairro}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--color-brand)' }}>R$ {Number(fee || 0).toFixed(2)}</span>
-                          <button
-                            onClick={() => {
-                              const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
-                              delete fees[bairro];
-                              updateStoreSettings({ deliveryFeesByNeighborhood: fees });
-                            }}
-                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px' }}
-                            title="Remover Bairro"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {(() => {
+                      // Consolidar lista de bairros com taxa personalizada
+                      const entriesMap = new Map();
+                      // Padrão obrigatório da Loja: Sagrada Família R$ 0,00
+                      entriesMap.set('sagrada família', { name: 'Sagrada Família', fee: 0, isStore: true });
+
+                      if (storeSettings?.deliveryFeesByNeighborhood) {
+                        Object.entries(storeSettings.deliveryFeesByNeighborhood).forEach(([name, fee]) => {
+                          const isStore = name.toLowerCase().includes('sagrada');
+                          entriesMap.set(name.toLowerCase(), { 
+                            name, 
+                            fee: isStore ? 0 : (Number(fee) || 0), 
+                            isStore 
+                          });
+                        });
+                      }
+
+                      if (deliveryNeighborhoods && Array.isArray(deliveryNeighborhoods)) {
+                        deliveryNeighborhoods.forEach(n => {
+                          const key = n.name.toLowerCase();
+                          const isStore = key.includes('sagrada');
+                          if (!entriesMap.has(key)) {
+                            entriesMap.set(key, { 
+                              name: n.name, 
+                              fee: isStore ? 0 : (Number(n.fee) || 0), 
+                              id: n.id,
+                              isStore 
+                            });
+                          }
+                        });
+                      }
+
+                      const sortedList = Array.from(entriesMap.values()).sort((a, b) => {
+                        if (a.isStore) return -1;
+                        if (b.isStore) return 1;
+                        return a.name.localeCompare(b.name, 'pt-BR');
+                      });
+
+                      return sortedList.map((item) => (
+                        <div 
+                          key={item.name} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            padding: '8px 12px', 
+                            borderRadius: '6px',
+                            background: item.isStore ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255,255,255,0.02)',
+                            border: item.isStore ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid rgba(255,255,255,0.04)' 
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fff' }}>{item.name}</span>
+                            {item.isStore && (
+                              <span style={{ fontSize: '0.68rem', backgroundColor: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                Loja (Sede)
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {item.fee === 0 ? (
+                              <span style={{ fontWeight: 700, color: '#4ade80', fontSize: '0.85rem' }}>GRÁTIS (R$ 0,00)</span>
+                            ) : (
+                              <span style={{ fontWeight: 700, color: 'var(--color-brand)', fontSize: '0.85rem' }}>R$ {Number(item.fee).toFixed(2)}</span>
+                            )}
+                            {!item.isStore ? (
+                              <button
+                                onClick={() => {
+                                  const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
+                                  delete fees[item.name];
+                                  Object.keys(fees).forEach(k => {
+                                    if (k.toLowerCase() === item.name.toLowerCase()) delete fees[k];
+                                  });
+                                  updateStoreSettings({ deliveryFeesByNeighborhood: fees });
+                                  const foundNb = (deliveryNeighborhoods || []).find(n => n.name.toLowerCase() === item.name.toLowerCase());
+                                  if (foundNb) {
+                                    deleteNeighborhood(foundNb.id);
+                                  }
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px' }}
+                                title="Remover Taxa Específica"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Fixo</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 </div>
 

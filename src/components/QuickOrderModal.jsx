@@ -10,6 +10,8 @@ export default function QuickOrderModal({ onClose, onOrderCreated }) {
     products, 
     complements = [], 
     deliveryNeighborhoods = [], 
+    storeSettings = {},
+    calculateDeliveryFee,
     createOrder, 
     lookupCustomer, 
     saveCustomer,
@@ -84,10 +86,40 @@ export default function QuickOrderModal({ onClose, onOrderCreated }) {
     }, 0);
   };
 
-  const deliveryFee = orderType === 'delivery' 
-    ? (deliveryNeighborhoods.find(n => n.name === neighborhood)?.fee || 5.00) 
-    : 0;
+  // Bairros consolidados com prioridade para taxas específicas e Grátis na Loja
+  const consolidatedNeighborhoods = React.useMemo(() => {
+    const map = new Map();
+    if (deliveryNeighborhoods && Array.isArray(deliveryNeighborhoods)) {
+      deliveryNeighborhoods.filter(n => n.active !== false).forEach(n => {
+        map.set(n.name.trim().toLowerCase(), {
+          name: n.name,
+          fee: Number(n.fee) || 0
+        });
+      });
+    }
+    if (storeSettings?.deliveryFeesByNeighborhood) {
+      Object.entries(storeSettings.deliveryFeesByNeighborhood).forEach(([name, fee]) => {
+        const key = name.trim().toLowerCase();
+        const existing = map.get(key);
+        map.set(key, {
+          name: existing ? existing.name : name,
+          fee: Number(fee) || 0
+        });
+      });
+    }
+    const sagradaKey = 'sagrada família';
+    if (map.has(sagradaKey)) {
+      const cur = map.get(sagradaKey);
+      map.set(sagradaKey, { ...cur, fee: 0 });
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [deliveryNeighborhoods, storeSettings?.deliveryFeesByNeighborhood]);
 
+  const deliveryCalc = (orderType === 'delivery' && neighborhood)
+    ? calculateDeliveryFee(neighborhood, null, calculateSubtotal())
+    : { fee: 0, isFree: true, reason: '' };
+
+  const deliveryFee = orderType === 'delivery' ? (Number(deliveryCalc?.fee) || 0) : 0;
   const total = calculateSubtotal() + deliveryFee;
 
   const handleSubmit = (e) => {
@@ -465,10 +497,10 @@ export default function QuickOrderModal({ onClose, onOrderCreated }) {
                         className="form-input"
                         style={{ padding: '6px 10px', fontSize: '0.85rem' }}
                       >
-                        <option value="">Selecione...</option>
-                        {deliveryNeighborhoods.map(nb => (
-                          <option key={nb.id} value={nb.name}>
-                            {nb.name} (R$ {nb.fee.toFixed(2)})
+                        <option value="">Selecione o bairro...</option>
+                        {consolidatedNeighborhoods.map(nb => (
+                          <option key={nb.name} value={nb.name}>
+                            {nb.name} {nb.fee === 0 ? '(Grátis - R$ 0,00)' : `(R$ ${Number(nb.fee).toFixed(2)})`}
                           </option>
                         ))}
                       </select>
@@ -637,8 +669,12 @@ export default function QuickOrderModal({ onClose, onOrderCreated }) {
               </div>
               {orderType === 'delivery' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Taxa de Entrega:</span>
-                  <span style={{ color: '#fff', fontWeight: 600 }}>R$ {deliveryFee.toFixed(2)}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    Taxa de Entrega {deliveryCalc?.reason ? `(${deliveryCalc.reason})` : ''}:
+                  </span>
+                  <span style={{ color: deliveryFee === 0 ? '#4ade80' : '#fff', fontWeight: 600 }}>
+                    {deliveryFee === 0 ? 'GRÁTIS (R$ 0,00)' : `R$ ${deliveryFee.toFixed(2)}`}
+                  </span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '1.15rem' }}>

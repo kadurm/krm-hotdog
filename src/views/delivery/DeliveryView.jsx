@@ -44,6 +44,7 @@ export default function DeliveryView({
   }, []);
 
   const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
+  const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [internalViewMode, setInternalViewMode] = useState(VIEW_CONFIG.DEFAULT_VIEW_MODE);
@@ -106,19 +107,6 @@ export default function DeliveryView({
   const [identifiedCustomer, setIdentifiedCustomer] = useState(null);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
 
-  // Voucher de Fidelidade disponível (10º Pedido Concluído)
-  const activeFidelityVoucher = useMemo(() => {
-    const rawClean = (phone || customerSearchPhone || '').replace(/\D/g, '');
-    if (!rawClean) return null;
-    return coupons.find(c => 
-      c.active && 
-      c.isFidelityVoucher && 
-      c.customerPhone && 
-      c.customerPhone.replace(/\D/g, '') === rawClean && 
-      (c.usesCount || 0) === 0
-    ) || null;
-  }, [coupons, phone, customerSearchPhone]);
-
   // Checkout States
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -132,6 +120,19 @@ export default function DeliveryView({
   const [addressNumber, setAddressNumber] = useState('');
   const [addressComplement, setAddressComplement] = useState('');
   const [addressNeighborhood, setAddressNeighborhood] = useState('');
+
+  // Voucher de Fidelidade disponível (10º Pedido Concluído)
+  const activeFidelityVoucher = useMemo(() => {
+    const rawClean = (phone || customerSearchPhone || '').replace(/\D/g, '');
+    if (!rawClean) return null;
+    return coupons.find(c => 
+      c.active && 
+      c.isFidelityVoucher && 
+      c.customerPhone && 
+      c.customerPhone.replace(/\D/g, '') === rawClean && 
+      (c.usesCount || 0) === 0
+    ) || null;
+  }, [coupons, phone, customerSearchPhone]);
 
   // Validação com destaque em vermelho e scroll automático intuitivo
   const [formErrors, setFormErrors] = useState({});
@@ -991,8 +992,6 @@ export default function DeliveryView({
   const backgroundColor = checkoutStep !== 'menu' ? 'var(--bg-primary)' 
                         : viewMode === 'grid' ? '#121212'
                         : (activeProduct ? activeProduct.color : '#121212');
-
-  const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
 
   // Categoria ativa a ser destacada nas pills
   const activePillId = viewMode === 'slider'

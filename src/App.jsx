@@ -8,6 +8,68 @@ import { Lock, LayoutGrid, MonitorPlay, ShoppingBag, Clock, ChefHat, Shield, Log
 import { VIEW_CONFIG } from './config/viewConfig';
 import './App.css';
 
+class GlobalErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Erro capturado no Sistema:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ 
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem 1.5rem',
+          backgroundColor: '#090d16',
+          color: '#fff',
+          textAlign: 'center'
+        }}>
+          <img 
+            src="/logoNuuPrensado-semfundo.png" 
+            alt="Nuu Prensado" 
+            style={{ height: '70px', objectFit: 'contain', marginBottom: '1.5rem' }} 
+          />
+          <div style={{
+            maxWidth: '480px',
+            backgroundColor: '#111827',
+            padding: '2rem',
+            borderRadius: '16px',
+            border: '1px solid rgba(234, 179, 8, 0.3)',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
+          }}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#eab308', marginBottom: '0.75rem' }}>
+              Nuu Prensado!!
+            </h2>
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Ocorreu uma pequena instabilidade ao carregar o cardápio. Clique no botão abaixo para restaurar e recarregar a página.
+            </p>
+            <button 
+              className="btn-primary" 
+              style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '0.95rem', fontWeight: 700 }}
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+            >
+              🔄 Recarregar Cardápio
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 class AdminErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -185,7 +247,7 @@ function AppContent() {
               )}
               {checkoutStep === 'menu' && (() => {
                 const savedId = typeof window !== 'undefined' ? localStorage.getItem('nuu_customer_last_order_id') : null;
-                const activeOrder = savedId ? orders.find(o => o.id === parseInt(savedId) && o.status !== 'delivered') : null;
+                const activeOrder = (savedId && Array.isArray(orders)) ? orders.find(o => o.id === parseInt(savedId) && o.status !== 'delivered') : null;
                 if (!activeOrder) return null;
                 return (
                   <button 
@@ -399,8 +461,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SystemProvider>
-      <AppContent />
-    </SystemProvider>
+    <GlobalErrorBoundary>
+      <SystemProvider>
+        <AppContent />
+      </SystemProvider>
+    </GlobalErrorBoundary>
   );
 }

@@ -597,7 +597,12 @@ export const SystemProvider = ({ children }) => {
 
   const [quotations, setQuotations] = useState(() => {
     const saved = localStorage.getItem('hd_quotations');
-    return saved ? JSON.parse(saved) : INITIAL_QUOTATIONS;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_QUOTATIONS;
   });
 
   const [complements, setComplements] = useState(() => {
@@ -670,17 +675,32 @@ export const SystemProvider = ({ children }) => {
 
   const [coupons, setCoupons] = useState(() => {
     const saved = localStorage.getItem('nuu_coupons');
-    return saved ? JSON.parse(saved) : INITIAL_COUPONS;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_COUPONS;
   });
 
   const [motoboys, setMotoboys] = useState(() => {
     const saved = localStorage.getItem('nuu_motoboys');
-    return saved ? JSON.parse(saved) : INITIAL_MOTOBOYS;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_MOTOBOYS;
   });
 
   const [customers, setCustomers] = useState(() => {
     const saved = localStorage.getItem('nuu_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_CUSTOMERS;
   });
 
   const [operators, setOperators] = useState(() => {

@@ -45,6 +45,8 @@ export default function DeliveryView({
 
   const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
   const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
+  const displayOpenTime = storeSettings?.openTime || '18:00';
+  const displayCloseTime = (storeSettings?.closeTime === '23:59' || storeSettings?.closeTime === '00:00' || !storeSettings?.closeTime) ? '23:30' : storeSettings.closeTime;
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [internalViewMode, setInternalViewMode] = useState(VIEW_CONFIG.DEFAULT_VIEW_MODE);
@@ -1067,7 +1069,7 @@ export default function DeliveryView({
           <Clock size={15} color="#fbbf24" />
           <span>
             {storeSettings?.closedNotice || 'Loja fechada no momento para novos pedidos.'} 
-            {` • Atendimento: Terça a Domingo das ${storeSettings?.openTime || '18:00'} às ${storeSettings?.closeTime || '23:30'}`}
+            {` • Atendimento: Terça a Domingo das ${displayOpenTime} às ${displayCloseTime}`}
           </span>
         </div>
       ) : null}
@@ -1303,7 +1305,7 @@ export default function DeliveryView({
               <Clock size={14} color="#fbbf24" />
               <span>
                 {storeSettings?.closedNotice || 'Loja fechada no momento para novos pedidos.'} 
-                {` • Atendimento: Terça a Domingo das ${storeSettings?.openTime || '18:00'} às ${storeSettings?.closeTime || '23:30'}`}
+                {` • Atendimento: Terça a Domingo das ${displayOpenTime} às ${displayCloseTime}`}
               </span>
             </div>
           ) : null}
@@ -3140,7 +3142,7 @@ export default function DeliveryView({
                     }
                     showSiteAlert(
                       'Loja Fechada',
-                      `Nosso horário de atendimento é de Terça a Domingo das ${storeSettings?.openTime || '18:00'} às ${storeSettings?.closeTime || '23:30'}. Fique à vontade para conferir todos os ingredientes e escolher seus itens favoritos!`,
+                      `Nosso horário de atendimento é de Terça a Domingo das ${displayOpenTime} às ${displayCloseTime}. Fique à vontade para conferir todos os ingredientes e escolher seus itens favoritos!`,
                       'warning',
                       'Horário'
                     );
@@ -3629,7 +3631,7 @@ export default function DeliveryView({
                     storeSettings.closedNotice
                   ) : (
                     <>
-                      Nosso atendimento é de <strong>Terça a Domingo das {storeSettings?.openTime || '18:00'} às {storeSettings?.closeTime || '23:30'}</strong>.
+                      Nosso atendimento é de <strong>Terça a Domingo das {displayOpenTime} às {displayCloseTime}</strong>.
                       <br />
                       Sinta-se à vontade para <strong>olhar todo o cardápio</strong>, conferir os ingredientes e escolher seus prensados favoritos!
                     </>

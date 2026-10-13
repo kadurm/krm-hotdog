@@ -685,19 +685,25 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [storeSettings, setStoreSettings] = useState(() => {
-    const saved = localStorage.getItem('nuu_store_settings_v4');
+    const saved = localStorage.getItem('nuu_store_settings_v5');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.storeAddress && parsed.storeAddress.includes('Montes Claros')) {
-          return { ...INITIAL_STORE_SETTINGS, ...parsed };
+          const normalized = {
+            ...INITIAL_STORE_SETTINGS,
+            ...parsed,
+            closeTime: (parsed.closeTime === '23:59' || parsed.closeTime === '00:00') ? '23:30' : (parsed.closeTime || '23:30'),
+            openTime: parsed.openTime || '18:00'
+          };
+          return normalized;
         }
       } catch (e) {}
     }
-    const oldV3 = localStorage.getItem('nuu_store_settings_v3');
-    if (oldV3) {
+    const oldV4 = localStorage.getItem('nuu_store_settings_v4') || localStorage.getItem('nuu_store_settings_v3');
+    if (oldV4) {
       try {
-        const parsed = JSON.parse(oldV3);
+        const parsed = JSON.parse(oldV4);
         if (parsed.storeAddress && parsed.storeAddress.includes('Montes Claros')) {
           const migrated = {
             ...INITIAL_STORE_SETTINGS,
@@ -706,7 +712,7 @@ export const SystemProvider = ({ children }) => {
             closeTime: '23:30',
             openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom']
           };
-          localStorage.setItem('nuu_store_settings_v4', JSON.stringify(migrated));
+          localStorage.setItem('nuu_store_settings_v5', JSON.stringify(migrated));
           return migrated;
         }
       } catch (e) {}
@@ -859,6 +865,7 @@ export const SystemProvider = ({ children }) => {
   }, [complements]);
 
   useEffect(() => {
+    localStorage.setItem('nuu_store_settings_v5', JSON.stringify(storeSettings));
     localStorage.setItem('nuu_store_settings_v4', JSON.stringify(storeSettings));
     localStorage.setItem('nuu_store_settings_v3', JSON.stringify(storeSettings));
   }, [storeSettings]);
@@ -1219,8 +1226,8 @@ export const SystemProvider = ({ children }) => {
               isOpen: d.isOpen !== undefined ? Boolean(d.isOpen) : prev.isOpen,
               autoSchedule: d.autoSchedule !== undefined ? Boolean(d.autoSchedule) : prev.autoSchedule,
               openDays: d.openDays || prev.openDays,
-              openTime: d.openTime || prev.openTime,
-              closeTime: d.closeTime || prev.closeTime,
+              openTime: d.openTime || prev.openTime || '18:00',
+              closeTime: (d.closeTime === '23:59' || d.closeTime === '00:00') ? '23:30' : (d.closeTime || prev.closeTime || '23:30'),
               deliveryFeeMode: d.deliveryFeeMode || prev.deliveryFeeMode,
               fixedDeliveryFee: d.fixedDeliveryFee !== undefined ? Number(d.fixedDeliveryFee) : prev.fixedDeliveryFee,
               perKmDeliveryFee: d.perKmDeliveryFee !== undefined ? Number(d.perKmDeliveryFee) : prev.perKmDeliveryFee,

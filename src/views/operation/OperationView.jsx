@@ -280,41 +280,41 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
           className="glass-panel animate-scale-up" 
           style={{
             width: '100%',
-            maxWidth: '560px',
-            padding: '2.5rem',
-            borderRadius: '20px',
+            maxWidth: '460px',
+            padding: '1.6rem 1.75rem',
+            borderRadius: '16px',
             border: '1px solid rgba(234, 179, 8, 0.35)',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.8)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.85)',
             textAlign: 'center'
           }}
         >
           {/* Logo e Selo */}
-          <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <img 
               src="/logoNuuPrensado-semfundo.png" 
               alt="Nuu Prensado!!" 
-              style={{ height: '70px', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }} 
+              style={{ height: '48px', objectFit: 'contain', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.4))' }} 
             />
             <div style={{
-              marginTop: '12px',
+              marginTop: '8px',
               backgroundColor: 'rgba(234, 179, 8, 0.15)',
               border: '1px solid var(--color-brand)',
               color: 'var(--color-brand-yellow)',
-              padding: '4px 14px',
+              padding: '3px 10px',
               borderRadius: '99px',
-              fontSize: '0.75rem',
+              fontSize: '0.68rem',
               fontWeight: 800,
-              letterSpacing: '1.5px',
+              letterSpacing: '1px',
               textTransform: 'uppercase'
             }}>
               Frente de Operação & Turno do Dia
             </div>
           </div>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '6px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '4px' }}>
             Quem está no atendimento hoje?
           </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
             Selecione seu usuário e digite sua senha de acesso individual.
           </p>
 
@@ -325,39 +325,39 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
               className="animate-fade-in"
               style={{
                 backgroundColor: 'rgba(255,255,255,0.04)',
-                padding: '1.5rem',
-                borderRadius: '16px',
+                padding: '1.2rem',
+                borderRadius: '12px',
                 border: '1px solid rgba(234, 179, 8, 0.3)',
-                marginBottom: '1.5rem',
+                marginBottom: '1rem',
                 textAlign: 'center'
               }}
             >
               <div style={{
-                width: '54px',
-                height: '54px',
+                width: '42px',
+                height: '42px',
                 borderRadius: '50%',
                 backgroundColor: 'rgba(234, 179, 8, 0.2)',
-                border: '2px solid var(--color-brand)',
+                border: '1.5px solid var(--color-brand)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'var(--color-brand-yellow)',
                 fontWeight: 800,
-                fontSize: '1.4rem',
-                margin: '0 auto 10px auto'
+                fontSize: '1.15rem',
+                margin: '0 auto 8px auto'
               }}>
                 {selectedOperatorForLogin.name.charAt(0).toUpperCase()}
               </div>
 
-              <h3 style={{ margin: '0 0 2px 0', fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+              <h3 style={{ margin: '0 0 2px 0', fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
                 {selectedOperatorForLogin.name}
               </h3>
-              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 {selectedOperatorForLogin.role}
               </p>
 
-              <div style={{ maxWidth: '280px', margin: '0 auto 1rem auto', textAlign: 'left' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+              <div style={{ maxWidth: '240px', margin: '0 auto 0.85rem auto', textAlign: 'left' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
                   Digite sua Senha de Acesso:
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -373,8 +373,8 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                     autoFocus
                     className="form-input"
                     style={{
-                      padding: '10px 14px',
-                      fontSize: '1.2rem',
+                      padding: '8px 12px',
+                      fontSize: '1.1rem',
                       letterSpacing: '4px',
                       textAlign: 'center',
                       borderColor: loginError ? '#ef4444' : 'rgba(255,255,255,0.2)'
@@ -382,13 +382,13 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                   />
                 </div>
                 {loginError && (
-                  <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '6px', textAlign: 'center', fontWeight: 600 }}>
+                  <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', textAlign: 'center', fontWeight: 600 }}>
                     {loginError}
                   </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -397,16 +397,16 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                     setLoginError('');
                   }}
                   className="btn-secondary"
-                  style={{ padding: '10px 18px', fontSize: '0.85rem' }}
+                  style={{ padding: '8px 14px', fontSize: '0.8rem' }}
                 >
                   Voltar
                 </button>
                 <button
                   type="submit"
                   className="btn-primary"
-                  style={{ padding: '10px 24px', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '8px 18px', fontSize: '0.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '5px' }}
                 >
-                  <Lock size={15} />
+                  <Lock size={14} />
                   <span>Entrar no Turno</span>
                 </button>
               </div>
@@ -414,7 +414,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
           ) : !isAddingNewOp ? (
             /* Lista de Operadores Cadastrados */
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '8px', marginBottom: '1rem' }}>
                 {operators.map(op => (
                   <button
                     key={op.id}
@@ -422,12 +422,12 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                     style={{
                       background: 'rgba(255,255,255,0.04)',
                       border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '14px',
-                      padding: '1.25rem 0.75rem',
+                      borderRadius: '10px',
+                      padding: '0.85rem 0.5rem',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '8px',
+                      gap: '5px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                       color: '#fff',
@@ -436,7 +436,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = 'var(--color-brand)';
                       e.currentTarget.style.background = 'rgba(234, 179, 8, 0.15)';
-                      e.currentTarget.style.transform = 'translateY(-3px)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -445,8 +445,8 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                     }}
                   >
                     <div style={{
-                      width: '46px',
-                      height: '46px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '50%',
                       backgroundColor: 'rgba(234, 179, 8, 0.2)',
                       border: '1px solid var(--color-brand)',
@@ -455,44 +455,43 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                       justifyContent: 'center',
                       color: 'var(--color-brand-yellow)',
                       fontWeight: 800,
-                      fontSize: '1.2rem'
+                      fontSize: '0.95rem'
                     }}>
                       {op.name.charAt(0).toUpperCase()}
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: '1rem' }}>{op.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{op.role}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{op.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{op.role}</div>
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '3px',
-                      fontSize: '0.7rem',
-                      color: 'var(--text-muted)',
-                      marginTop: '2px'
+                      fontSize: '0.65rem',
+                      color: 'var(--text-muted)'
                     }}>
-                      <Lock size={10} /> Requer Senha
+                      <Lock size={9} /> Requer Senha
                     </div>
                   </button>
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '1.25rem' }}>
                 <button
                   type="button"
                   onClick={() => setIsAddingNewOp(true)}
                   style={{
                     background: 'none',
-                    border: '1px dashed rgba(255,255,255,0.25)',
+                    border: '1px dashed rgba(255,255,255,0.22)',
                     color: 'var(--text-secondary)',
-                    padding: '8px 16px',
+                    padding: '6px 14px',
                     borderRadius: '99px',
-                    fontSize: '0.82rem',
+                    fontSize: '0.76rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '5px'
                   }}
                 >
-                  <PlusCircle size={15} />
+                  <PlusCircle size={14} />
                   <span>Outro Atendente / Novo Operador</span>
                 </button>
               </div>
@@ -592,12 +591,12 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
 
           {/* Links para Navegação Externa (Admin ou Cardápio Cliente) */}
           <div style={{ 
-            paddingTop: '1.25rem', 
-            borderTop: '1px solid rgba(255,255,255,0.1)', 
+            paddingTop: '0.9rem', 
+            borderTop: '1px solid rgba(255,255,255,0.08)', 
             display: 'flex', 
             justifyContent: 'space-between',
             alignItems: 'center',
-            fontSize: '0.82rem'
+            fontSize: '0.76rem'
           }}>
             <button
               type="button"
@@ -609,10 +608,10 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px'
+                gap: '4px'
               }}
             >
-              <Store size={15} />
+              <Store size={14} />
               <span>Ver Loja Online</span>
             </button>
 
@@ -627,10 +626,10 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px'
+                gap: '4px'
               }}
             >
-              <Lock size={15} />
+              <Lock size={14} />
               <span>Gestão Estratégica ERP (Admin)</span>
             </button>
           </div>

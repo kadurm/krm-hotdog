@@ -13,7 +13,7 @@ import {
   ChefHat, Bike, DollarSign, PlusCircle, Printer, Clock, 
   Phone, MapPin, CheckCircle2, AlertTriangle, Volume2, VolumeX, 
   LogOut, User, Lock, Store, ShoppingBag, ArrowRight, Shield, 
-  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database, Flame,
+  RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Database, Flame,
   Pause, Play, Power, ChevronDown, AlertCircle, Calendar, Filter, Ban, XCircle
 } from 'lucide-react';
 

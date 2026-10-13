@@ -132,8 +132,8 @@ export default function MercadoPagoWhiteLabelCheckout({
       try {
         const supportedPaymentMethods = [];
         
-        // Suporte Apple Pay (Safari / iOS)
-        if (window.ApplePaySession && window.ApplePaySession.canMakePayments()) {
+        // Suporte Apple Pay oficial apenas para dispositivos Apple (onde funciona com sucesso)
+        if (isAppleDevice && window.ApplePaySession && window.ApplePaySession.canMakePayments()) {
           supportedPaymentMethods.push({
             supportedMethods: 'https://apple.com/apple-pay',
             data: {
@@ -146,43 +146,6 @@ export default function MercadoPagoWhiteLabelCheckout({
             }
           });
         }
-
-        // Suporte Google Pay (Chrome / Android)
-        supportedPaymentMethods.push({
-          supportedMethods: 'https://google.com/pay',
-          data: {
-            environment: 'PRODUCTION',
-            apiVersion: 2,
-            apiVersionMinor: 0,
-            merchantInfo: {
-              merchantName: 'Nuu Prensado Delivery'
-            },
-            allowedPaymentMethods: [
-              {
-                type: 'CARD',
-                parameters: {
-                  allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
-                  allowedCardNetworks: ['VISA', 'MASTERCARD', 'ELO', 'AMEX']
-                },
-                tokenizationSpecification: {
-                  type: 'PAYMENT_GATEWAY',
-                  parameters: {
-                    gateway: 'mercadopago',
-                    'gatewayMerchantId': 'APP_USR-5871168214552840-101316-1948f98e71fbd6fa559b3aa99105d959-611629089'
-                  }
-                }
-              }
-            ]
-          }
-        });
-
-        // Suporte a cartões gerais da carteira do navegador
-        supportedPaymentMethods.push({
-          supportedMethods: 'basic-card',
-          data: {
-            supportedNetworks: ['visa', 'mastercard', 'elo', 'amex']
-          }
-        });
 
         const paymentDetails = {
           total: {
@@ -738,7 +701,11 @@ export default function MercadoPagoWhiteLabelCheckout({
                 transition: 'all 0.2s ease'
               }}
             >
-              <Smartphone size={14} /> Carteira do Celular
+              {isAppleDevice ? (
+                <><span style={{ fontSize: '1.05rem', lineHeight: 1 }}></span> Apple Pay</>
+              ) : (
+                <><Sparkles size={14} /> Cartão Salvo no Navegador</>
+              )}
             </button>
             <button
               type="button"
@@ -763,11 +730,11 @@ export default function MercadoPagoWhiteLabelCheckout({
                 transition: 'all 0.2s ease'
               }}
             >
-              <CreditCard size={14} /> Inserir Dados
+              <CreditCard size={14} /> Digitar Dados
             </button>
           </div>
 
-          {/* MODO CARTEIRA DO CELULAR */}
+          {/* MODO CARTEIRA DO CELULAR / NAVEGADOR */}
           {cardInputMethod === 'wallet' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="animate-fade-in">
               {/* Box de Ação para Pagar com a Carteira Digital */}
@@ -788,14 +755,14 @@ export default function MercadoPagoWhiteLabelCheckout({
                     </span>
                   ) : (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fde047' }}>
-                      <Smartphone size={18} color="#eab308" /> Carteira Digital (Google Pay)
+                      <CreditCard size={18} color="#eab308" /> Cartão Salvo no Navegador / Google
                     </span>
                   )}
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.82)', margin: 0, lineHeight: 1.4 }}>
                   {isAppleDevice 
                     ? 'Pague com 1 toque seguro usando Face ID e os cartões cadastrados no seu iPhone.'
-                    : 'Pague com 1 toque seguro usando sua biometria e os cartões salvos no seu aparelho.'}
+                    : 'Preencha instantaneamente com os cartões salvos na sua Conta Google ou neste navegador.'}
                 </p>
 
                 {cardError && (
@@ -842,7 +809,7 @@ export default function MercadoPagoWhiteLabelCheckout({
                   ) : isAppleDevice ? (
                     <><span style={{ fontSize: '1.25rem', lineHeight: 1 }}></span> Pagar com Apple Pay • R$ {Number(amount).toFixed(2)}</>
                   ) : (
-                    <><Lock size={15} /> Pagar com Google Pay • R$ {Number(amount).toFixed(2)}</>
+                    <><Sparkles size={16} /> Preencher com Cartão Salvo no Navegador</>
                   )}
                 </button>
               </div>

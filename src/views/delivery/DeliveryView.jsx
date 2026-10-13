@@ -85,7 +85,7 @@ export default function DeliveryView({
   const extraOptions = complements.filter(c => c.category === 'extra' || c.group === 'extras');
 
   // Estados dinâmicos de personalização do lanche
-  const [selectedBread, setSelectedBread] = useState('Pão 3 Queijos');
+  const [selectedBread, setSelectedBread] = useState('Pão tradicional');
   const [selectedCreamy, setSelectedCreamy] = useState('Catupiry');
   const [selectedMelted, setSelectedMelted] = useState('Mussarela');
   const [selectedSide, setSelectedSide] = useState(false);
@@ -633,7 +633,7 @@ export default function DeliveryView({
     setSelectedSide(false);
 
     const activeBread = breadOptions.find(b => b.active);
-    setSelectedBread(activeBread ? activeBread.name : (breadOptions[0]?.name || 'Pão 3 Queijos'));
+    setSelectedBread(activeBread ? activeBread.name : (breadOptions[0]?.name || 'Pão tradicional'));
 
     const activeCreamy = creamyOptions.find(c => c.active);
     setSelectedCreamy(activeCreamy ? activeCreamy.name : (creamyOptions[0]?.name || 'Catupiry'));

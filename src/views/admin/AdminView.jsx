@@ -4982,6 +4982,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                         { name: 'Frango', path: '/Produtos/Prensado de Frango.jpeg' },
                         { name: 'Pernil', path: '/Produtos/Prensado de Pernil.jpeg' },
                         { name: 'Costela', path: '/Produtos/Prensado de Costela.jpeg' },
+                        { name: 'Fraldinha', path: '/images/lanches/prensado de fraldinha.jfif' },
                         { name: 'Logo Nuu', path: '/logoNuuPrensado-semfundo.png' },
                       ].map(preset => (
                         <button

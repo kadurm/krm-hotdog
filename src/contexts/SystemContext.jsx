@@ -540,7 +540,7 @@ export const SystemProvider = ({ children }) => {
 
   // --- Estados Principais ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('nuu_products_v14');
+    const saved = localStorage.getItem('nuu_products_v15');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -551,27 +551,35 @@ export const SystemProvider = ({ children }) => {
         return INITIAL_PRODUCTS;
       }
     }
-    const oldSaved = localStorage.getItem('nuu_products_v13') || localStorage.getItem('nuu_products_v12');
+    const oldSaved = localStorage.getItem('nuu_products_v14') || localStorage.getItem('nuu_products_v13') || localStorage.getItem('nuu_products_v12');
     if (oldSaved) {
       try {
         const parsed = JSON.parse(oldSaved);
         const updated = parsed.map(p => {
+          let price = p.price;
+          // Todos os lanches que são R$22 mudam para 23. Prensado de Costela vai para R$28.
+          if (price === 22) price = 23;
+          if (p.name && p.name.toLowerCase().includes('costela')) price = 28;
+          if (p.name && (p.name.toLowerCase().includes('frango') || p.name.toLowerCase().includes('pernil')) && price < 23) price = 23;
           const initMatch = INITIAL_PRODUCTS.find(ip => ip.id === p.id);
-          if (initMatch) {
-            return { ...p, image: initMatch.image };
-          }
-          return p;
+          return {
+            ...p,
+            price,
+            image: initMatch ? initMatch.image : p.image
+          };
         });
         const existingIds = new Set(updated.map(p => p.id));
         const missing = INITIAL_PRODUCTS.filter(p => !existingIds.has(p.id));
-        return missing.length > 0 ? [...updated, ...missing] : updated;
+        const finalProducts = missing.length > 0 ? [...updated, ...missing] : updated;
+        localStorage.setItem('nuu_products_v15', JSON.stringify(finalProducts));
+        return finalProducts;
       } catch (e) {}
     }
     return INITIAL_PRODUCTS;
   });
 
   const [inventory, setInventory] = useState(() => {
-    const saved = localStorage.getItem('hd_inventory_v5');
+    const saved = localStorage.getItem('hd_inventory_v6');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -581,6 +589,22 @@ export const SystemProvider = ({ children }) => {
       } catch (e) {
         return INITIAL_INVENTORY;
       }
+    }
+    const oldSaved = localStorage.getItem('hd_inventory_v5');
+    if (oldSaved) {
+      try {
+        const parsed = JSON.parse(oldSaved);
+        const updated = parsed.map(i => {
+          if (i.id === 1 && i.name.includes('3 Queijos')) return { ...i, name: 'Pão Tradicional' };
+          if (i.id === 21 && i.name.includes('Parmesão')) return { ...i, name: 'Pão 3 Queijos' };
+          return i;
+        });
+        const existingIds = new Set(updated.map(i => i.id));
+        const missing = INITIAL_INVENTORY.filter(i => !existingIds.has(i.id));
+        const finalInv = missing.length > 0 ? [...updated, ...missing] : updated;
+        localStorage.setItem('hd_inventory_v6', JSON.stringify(finalInv));
+        return finalInv;
+      } catch (e) {}
     }
     return INITIAL_INVENTORY;
   });
@@ -632,17 +656,29 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [complements, setComplements] = useState(() => {
-    const saved = localStorage.getItem('nuu_complements_v6');
+    const saved = localStorage.getItem('nuu_complements_v7');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch (e) {}
     }
-    const oldV5 = localStorage.getItem('nuu_complements_v5');
-    if (oldV5) {
+    const oldV6 = localStorage.getItem('nuu_complements_v6') || localStorage.getItem('nuu_complements_v5');
+    if (oldV6) {
       try {
-        const parsed = JSON.parse(oldV5);
-        return parsed.map(c => c.id === 'side-vinagrete' ? { ...c, name: 'Vinagrete' } : c);
+        const parsed = JSON.parse(oldV6);
+        let filtered = parsed.filter(c => c.id !== 'bread-parmesao' && !c.name?.toLowerCase().includes('parmes'));
+        filtered = filtered.map(c => {
+          if (c.id === 'bread-3-queijos') return { ...c, name: 'Pão 3 queijos' };
+          return c;
+        });
+        if (!filtered.some(c => c.id === 'bread-tradicional')) {
+          filtered.unshift({ id: 'bread-tradicional', name: 'Pão tradicional', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true });
+        }
+        if (!filtered.some(c => c.id === 'extra-fraldinha')) {
+          filtered.push({ id: 'extra-fraldinha', name: 'Fraldinha', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 6.00, active: true });
+        }
+        localStorage.setItem('nuu_complements_v7', JSON.stringify(filtered));
+        return filtered;
       } catch (e) {}
     }
     return INITIAL_COMPLEMENTS;
@@ -792,10 +828,12 @@ export const SystemProvider = ({ children }) => {
 
   // --- Sincronização LocalStorage & BroadcastChannel ---
   useEffect(() => {
+    localStorage.setItem('nuu_products_v15', JSON.stringify(products));
     localStorage.setItem('nuu_products_v14', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
+    localStorage.setItem('hd_inventory_v6', JSON.stringify(inventory));
     localStorage.setItem('hd_inventory_v5', JSON.stringify(inventory));
   }, [inventory]);
 
@@ -816,6 +854,7 @@ export const SystemProvider = ({ children }) => {
   }, [quotations]);
 
   useEffect(() => {
+    localStorage.setItem('nuu_complements_v7', JSON.stringify(complements));
     localStorage.setItem('nuu_complements_v6', JSON.stringify(complements));
   }, [complements]);
 
@@ -1038,13 +1077,24 @@ export const SystemProvider = ({ children }) => {
         });
 
         if (remoteMap.size > 0) {
+          // Se o produto Fraldinha (id 15) não estiver no remote, sincroniza ele
+          const fraldinha = INITIAL_PRODUCTS.find(p => p.id === 15);
+          if (fraldinha && !remoteMap.has(15)) {
+            syncProductToRemote(fraldinha);
+          }
+
           setProducts(prev => {
             let changed = false;
             const updated = prev.map(p => {
               const rem = remoteMap.get(Number(p.id));
               if (!rem) return p;
               const newActive = rem.active !== undefined ? Boolean(rem.active) : p.active;
-              const newPrice = rem.price !== undefined ? Number(rem.price) : p.price;
+              let newPrice = rem.price !== undefined ? Number(rem.price) : p.price;
+              // Migração de preços caso o Firestore ainda tenha valores anteriores
+              if (newPrice === 22) newPrice = 23;
+              if (p.name && p.name.toLowerCase().includes('costela') && (newPrice === 25 || newPrice === 22)) newPrice = 28;
+              if (p.name && (p.name.toLowerCase().includes('frango') || p.name.toLowerCase().includes('pernil')) && newPrice < 23) newPrice = 23;
+
               if (p.active !== newActive || p.price !== newPrice) {
                 changed = true;
               }
@@ -1096,21 +1146,45 @@ export const SystemProvider = ({ children }) => {
         });
 
         if (remoteMap.size > 0) {
+          if (remoteMap.has('bread-parmesao')) {
+            deleteDoc(doc(db, 'complements', 'bread-parmesao')).catch(() => {});
+          }
+          const tradBread = INITIAL_COMPLEMENTS.find(c => c.id === 'bread-tradicional');
+          if (tradBread && !remoteMap.has('bread-tradicional')) {
+            syncComplementToRemote(tradBread);
+          }
+          const fraldinhaExtra = INITIAL_COMPLEMENTS.find(c => c.id === 'extra-fraldinha');
+          if (fraldinhaExtra && !remoteMap.has('extra-fraldinha')) {
+            syncComplementToRemote(fraldinhaExtra);
+          }
+
           setComplements(prev => {
             let changed = false;
-            const updated = prev.map(c => {
+            let filtered = prev.filter(c => c.id !== 'bread-parmesao' && !c.name?.toLowerCase().includes('parmes'));
+            if (!filtered.some(c => c.id === 'bread-tradicional')) {
+              filtered.unshift({ id: 'bread-tradicional', name: 'Pão tradicional', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true });
+              changed = true;
+            }
+            if (!filtered.some(c => c.id === 'extra-fraldinha')) {
+              filtered.push({ id: 'extra-fraldinha', name: 'Fraldinha', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 6.00, active: true });
+              changed = true;
+            }
+            const updated = filtered.map(c => {
               const rem = remoteMap.get(String(c.id));
               if (!rem) return c;
               const newActive = rem.active !== undefined ? Boolean(rem.active) : c.active;
               const newPrice = rem.price !== undefined ? Number(rem.price) : c.price;
-              if (c.active !== newActive || c.price !== newPrice) {
+              let newName = rem.name || c.name;
+              if (c.id === 'bread-3-queijos') newName = 'Pão 3 queijos';
+              if (c.id === 'bread-tradicional') newName = 'Pão tradicional';
+              if (c.active !== newActive || c.price !== newPrice || c.name !== newName) {
                 changed = true;
               }
               return {
                 ...c,
                 active: newActive,
                 price: newPrice,
-                name: rem.name || c.name
+                name: newName
               };
             });
             return changed ? updated : prev;
@@ -2585,8 +2659,11 @@ export const SystemProvider = ({ children }) => {
     setProducts(INITIAL_PRODUCTS);
     setInventory(INITIAL_INVENTORY);
     setComplements(INITIAL_COMPLEMENTS);
+    localStorage.setItem('nuu_products_v15', JSON.stringify(INITIAL_PRODUCTS));
     localStorage.setItem('nuu_products_v14', JSON.stringify(INITIAL_PRODUCTS));
+    localStorage.setItem('hd_inventory_v6', JSON.stringify(INITIAL_INVENTORY));
     localStorage.setItem('hd_inventory_v5', JSON.stringify(INITIAL_INVENTORY));
+    localStorage.setItem('nuu_complements_v7', JSON.stringify(INITIAL_COMPLEMENTS));
     localStorage.setItem('nuu_complements_v6', JSON.stringify(INITIAL_COMPLEMENTS));
     INITIAL_PRODUCTS.forEach(p => syncProductToRemote(p));
     INITIAL_COMPLEMENTS.forEach(c => syncComplementToRemote(c));

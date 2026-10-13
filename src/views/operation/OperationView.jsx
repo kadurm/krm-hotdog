@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSystem, playNotificationChime } from '../../contexts/SystemContext';
 import OrderTimerBadge from '../../components/OrderTimerBadge';
 import ThermalPrintReceipt from '../../components/ThermalPrintReceipt';
@@ -14,7 +14,7 @@ import {
   Phone, MapPin, CheckCircle2, AlertTriangle, Volume2, VolumeX, 
   LogOut, User, Lock, Store, ShoppingBag, ArrowRight, Shield, 
   RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database, Flame,
-  Pause, Play, Power, ChevronDown, AlertCircle
+  Pause, Play, Power, ChevronDown, AlertCircle, Calendar, Filter
 } from 'lucide-react';
 
 export default function OperationView({ onOpenAdmin, onGoDelivery }) {
@@ -88,10 +88,127 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     return localStorage.getItem('nuu_auto_print_thermal') === 'true';
   });
 
+  // Helper para formatar data local no padrão YYYY-MM-DD para inputs de calendário
+  const formatDateToInput = (date) => {
+    if (!date || isNaN(date.getTime())) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // Helper para extrair a data real do pedido
+  const getOrderDate = (order) => {
+    const raw = order?.deliveredAt || order?.date || order?.createdAt || order?.created_at;
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  // Helper para comparar se duas datas pertencem ao mesmo dia local
+  const isSameDay = (d1, d2) => {
+    if (!d1 || !d2) return false;
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
+  // Helper para formatar exibição de hora/data de conclusão do pedido
+  const formatOrderTimeOrDate = (rawDate) => {
+    if (!rawDate) return '';
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (isSameDay(d, now)) {
+      return timeStr;
+    }
+    const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return `${dateStr} às ${timeStr}`;
+  };
+
+  // Filtros de período da Operação ('today' | 'shift' | 'yesterday' | '7days' | 'custom' | 'all')
+  const [periodFilter, setPeriodFilter] = useState('today');
+  const [customStartDate, setCustomStartDate] = useState(() => formatDateToInput(new Date()));
+  const [customEndDate, setCustomEndDate] = useState(() => formatDateToInput(new Date()));
+
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
   const shippingOrders = orders.filter(o => o.status === 'shipping');
-  const deliveredOrders = orders.filter(o => o.status === 'delivered');
+
+  const deliveredOrders = useMemo(() => {
+    return orders.filter(o => {
+      if (o.status !== 'delivered') return false;
+      const orderDate = getOrderDate(o);
+      if (!orderDate) return false;
+
+      const now = new Date();
+
+      if (periodFilter === 'today') {
+        return isSameDay(orderDate, now);
+      }
+
+      if (periodFilter === 'shift') {
+        if (activeShift?.openedAt) {
+          const shiftOpen = new Date(activeShift.openedAt);
+          if (!isNaN(shiftOpen.getTime())) {
+            return orderDate >= shiftOpen;
+          }
+        }
+        return isSameDay(orderDate, now);
+      }
+
+      if (periodFilter === 'yesterday') {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        return isSameDay(orderDate, yesterday);
+      }
+
+      if (periodFilter === '7days') {
+        const past = new Date(now);
+        past.setDate(now.getDate() - 6);
+        past.setHours(0, 0, 0, 0);
+        return orderDate >= past;
+      }
+
+      if (periodFilter === 'custom') {
+        if (!customStartDate && !customEndDate) return true;
+        const start = customStartDate ? new Date(customStartDate + 'T00:00:00') : new Date(0);
+        const end = customEndDate ? new Date(customEndDate + 'T23:59:59.999') : new Date(8640000000000000);
+        return orderDate >= start && orderDate <= end;
+      }
+
+      if (periodFilter === 'all') {
+        return true;
+      }
+
+      return isSameDay(orderDate, now);
+    });
+  }, [orders, periodFilter, activeShift, customStartDate, customEndDate]);
+
+  const getPeriodLabel = () => {
+    switch (periodFilter) {
+      case 'today': return 'Hoje';
+      case 'shift': return 'Turno Atual';
+      case 'yesterday': return 'Ontem';
+      case '7days': return 'Últimos 7 dias';
+      case 'custom': return 'Personalizado';
+      case 'all': return 'Todos';
+      default: return 'Hoje';
+    }
+  };
+
+  const getDeliveredColumnTitle = () => {
+    switch (periodFilter) {
+      case 'today': return 'Concluídos Hoje';
+      case 'shift': return 'Concluídos no Turno';
+      case 'yesterday': return 'Concluídos Ontem';
+      case '7days': return 'Concluídos (7 dias)';
+      case 'custom': return 'Concluídos no Período';
+      case 'all': return 'Todos Concluídos';
+      default: return 'Concluídos';
+    }
+  };
 
   const [prevOrdersList, setPrevOrdersList] = useState(orders);
   useEffect(() => {
@@ -793,101 +910,202 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
         </div>
       </header>
 
-      {/* 2. BARRA DE NAVEGAÇÃO DE ABAS OPERACIONAIS */}
+      {/* 2. BARRA DE NAVEGAÇÃO DE ABAS OPERACIONAIS E FILTRO DE PERÍODOS */}
       <div style={{
         backgroundColor: '#0c111c',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         padding: '0.5rem 1.5rem',
         display: 'flex',
-        gap: '8px',
-        alignItems: 'center'
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px'
       }}>
-        <button
-          onClick={() => setActiveTab('kds')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'kds' ? 'var(--color-brand)' : 'transparent',
-            color: activeTab === 'kds' ? '#000' : 'var(--text-secondary)',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: '0.2s'
-          }}
-        >
-          <ChefHat size={18} />
-          <span>Cozinha & KDS</span>
-          {(pendingOrders.length + preparingOrders.length) > 0 && (
-            <span style={{
-              backgroundColor: activeTab === 'kds' ? '#000' : 'var(--color-brand)',
-              color: activeTab === 'kds' ? '#fff' : '#000',
-              padding: '1px 6px',
-              borderRadius: '99px',
-              fontSize: '0.72rem',
-              fontWeight: 900
-            }}>
-              {pendingOrders.length + preparingOrders.length}
-            </span>
-          )}
-        </button>
+        {/* Abas Operacionais */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('kds')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: activeTab === 'kds' ? 'var(--color-brand)' : 'transparent',
+              color: activeTab === 'kds' ? '#000' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: '0.2s'
+            }}
+          >
+            <ChefHat size={18} />
+            <span>Cozinha & KDS</span>
+            {(pendingOrders.length + preparingOrders.length) > 0 && (
+              <span style={{
+                backgroundColor: activeTab === 'kds' ? '#000' : 'var(--color-brand)',
+                color: activeTab === 'kds' ? '#fff' : '#000',
+                padding: '1px 6px',
+                borderRadius: '99px',
+                fontSize: '0.72rem',
+                fontWeight: 900
+              }}>
+                {pendingOrders.length + preparingOrders.length}
+              </span>
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveTab('cash')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'cash' ? 'var(--color-brand)' : 'transparent',
-            color: activeTab === 'cash' ? '#000' : 'var(--text-secondary)',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: '0.2s'
-          }}
-        >
-          <DollarSign size={18} />
-          <span>Frente de Caixa & Turno</span>
-        </button>
+          <button
+            onClick={() => setActiveTab('cash')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: activeTab === 'cash' ? 'var(--color-brand)' : 'transparent',
+              color: activeTab === 'cash' ? '#000' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: '0.2s'
+            }}
+          >
+            <DollarSign size={18} />
+            <span>Frente de Caixa & Turno</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('delivery')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'delivery' ? 'var(--color-brand)' : 'transparent',
-            color: activeTab === 'delivery' ? '#000' : 'var(--text-secondary)',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: '0.2s'
-          }}
-        >
-          <Bike size={18} />
-          <span>Despache & Motoboys</span>
-          {shippingOrders.length > 0 && (
-            <span style={{
-              backgroundColor: activeTab === 'delivery' ? '#000' : '#38bdf8',
-              color: activeTab === 'delivery' ? '#fff' : '#000',
-              padding: '1px 6px',
-              borderRadius: '99px',
-              fontSize: '0.72rem',
-              fontWeight: 900
-            }}>
-              {shippingOrders.length}
-            </span>
+          <button
+            onClick={() => setActiveTab('delivery')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: activeTab === 'delivery' ? 'var(--color-brand)' : 'transparent',
+              color: activeTab === 'delivery' ? '#000' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: '0.2s'
+            }}
+          >
+            <Bike size={18} />
+            <span>Despache & Motoboys</span>
+            {shippingOrders.length > 0 && (
+              <span style={{
+                backgroundColor: activeTab === 'delivery' ? '#000' : '#38bdf8',
+                color: activeTab === 'delivery' ? '#fff' : '#000',
+                padding: '1px 6px',
+                borderRadius: '99px',
+                fontSize: '0.72rem',
+                fontWeight: 900
+              }}>
+                {shippingOrders.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Filtro de Período da Operação */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          flexWrap: 'wrap',
+          backgroundColor: 'rgba(255,255,255,0.03)',
+          padding: '4px 10px',
+          borderRadius: '10px',
+          border: '1px solid rgba(255,255,255,0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Calendar size={14} color="var(--color-brand-yellow)" />
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600 }}>Período:</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {[
+              { id: 'today', label: 'Hoje' },
+              { id: 'shift', label: activeShift ? 'Turno Atual 🟢' : 'Turno Atual' },
+              { id: 'yesterday', label: 'Ontem' },
+              { id: '7days', label: '7 Dias' },
+              { id: 'custom', label: 'Personalizado' },
+              { id: 'all', label: 'Todos' }
+            ].map(preset => {
+              const isSelected = periodFilter === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => setPeriodFilter(preset.id)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: isSelected ? 800 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    border: isSelected ? '1px solid var(--color-brand-yellow)' : '1px solid rgba(255,255,255,0.06)',
+                    backgroundColor: isSelected ? 'rgba(234, 179, 8, 0.2)' : 'rgba(255,255,255,0.02)',
+                    color: isSelected ? 'var(--color-brand-yellow)' : 'var(--text-secondary)'
+                  }}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Inputs de data personalizada se 'custom' estiver ativo */}
+          {periodFilter === 'custom' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '4px', flexWrap: 'wrap' }}>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={e => setCustomStartDate(e.target.value)}
+                style={{
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '0.75rem',
+                  padding: '3px 6px'
+                }}
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>até</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={e => setCustomEndDate(e.target.value)}
+                style={{
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '0.75rem',
+                  padding: '3px 6px'
+                }}
+              />
+            </div>
           )}
-        </button>
+
+          {/* Badge de contagem dos concluídos no período */}
+          <div style={{
+            fontSize: '0.74rem',
+            padding: '2px 8px',
+            borderRadius: '99px',
+            backgroundColor: deliveredOrders.length > 0 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.05)',
+            color: deliveredOrders.length > 0 ? '#4ade80' : 'var(--text-muted)',
+            fontWeight: 700,
+            border: deliveredOrders.length > 0 ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(255,255,255,0.1)'
+          }} title="Total de pedidos concluídos no período selecionado">
+            {deliveredOrders.length} {deliveredOrders.length === 1 ? 'concluído' : 'concluídos'}
+          </div>
+        </div>
       </div>
 
       {/* 3. CONTEÚDO DA ABA SELECIONADA */}
@@ -1191,48 +1409,85 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                 </div>
               </div>
 
-              {/* 4. CONCLUÍDOS HOJE */}
+              {/* 4. CONCLUÍDOS NO PERÍODO */}
               <div className="glass-panel" style={{ padding: '1.25rem', backgroundColor: 'rgba(0,0,0,0.3)', borderTop: '4px solid var(--color-success)' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }}></span>
-                    Concluídos Hoje
-                  </span>
-                  <span className="badge badge-success">{deliveredOrders.length}</span>
-                </h3>
+                    {getDeliveredColumnTitle()}
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <select
+                      value={periodFilter}
+                      onChange={e => setPeriodFilter(e.target.value)}
+                      style={{
+                        backgroundColor: 'rgba(0,0,0,0.45)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: 'var(--text-secondary)',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        padding: '2px 6px',
+                        cursor: 'pointer',
+                        outline: 'none'
+                      }}
+                      title="Alterar período dos pedidos concluídos"
+                    >
+                      <option value="today">Hoje</option>
+                      <option value="shift">Turno Atual</option>
+                      <option value="yesterday">Ontem</option>
+                      <option value="7days">Últimos 7 dias</option>
+                      <option value="custom">Personalizado</option>
+                      <option value="all">Todos</option>
+                    </select>
+                    <span className="badge badge-success">{deliveredOrders.length}</span>
+                  </div>
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '550px', overflowY: 'auto' }}>
-                  {deliveredOrders.map(order => (
-                    <div key={order.id} style={{
-                      backgroundColor: 'rgba(255,255,255,0.03)',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
-                          #{order.id} • {order.customerName}
+                  {deliveredOrders.map(order => {
+                    const formattedTime = formatOrderTimeOrDate(order.deliveredAt || order.date || order.createdAt || order.created_at);
+                    return (
+                      <div key={order.id} style={{
+                        backgroundColor: 'rgba(255,255,255,0.03)',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
+                            #{order.id} • {order.customerName}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span>{order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'itens'}</span>
+                            <span>•</span>
+                            <span>{order.paymentMethod}</span>
+                            <span>•</span>
+                            <span style={{ color: '#4ade80', fontWeight: 600 }}>R$ {order.total?.toFixed(2)}</span>
+                            {formattedTime && (
+                              <>
+                                <span>•</span>
+                                <span style={{ color: 'var(--color-brand-yellow)' }}>🕒 {formattedTime}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          {order.items.length} itens • {order.paymentMethod} • R$ {order.total?.toFixed(2)}
-                        </div>
+                        <button
+                          onClick={() => setReceiptOrder(order)}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                          title="Reimprimir Comanda"
+                        >
+                          <Printer size={15} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setReceiptOrder(order)}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-                        title="Reimprimir Comanda"
-                      >
-                        <Printer size={15} />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {deliveredOrders.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      Nenhum pedido entregue ainda hoje.
+                      Nenhum pedido entregue em {getPeriodLabel().toLowerCase()}.
                     </div>
                   )}
                 </div>

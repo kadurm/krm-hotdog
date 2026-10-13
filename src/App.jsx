@@ -114,7 +114,9 @@ class AdminErrorBoundary extends React.Component {
 }
 
 function AppContent() {
-  const { orders, storeSettings } = useSystem();
+  const { orders, storeSettings, isStoreOpenNow, getStorePauseStatus } = useSystem();
+  const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
+  const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
   const isImmersiveEnabled = storeSettings?.enableImmersiveView ?? VIEW_CONFIG.ENABLE_IMMERSIVE_VIEW;
   const preferredDefaultMode = storeSettings?.defaultViewMode || VIEW_CONFIG.DEFAULT_VIEW_MODE;
 
@@ -215,25 +217,60 @@ function AppContent() {
         <header className="app-header">
           <div className="container flex justify-between items-center" style={{ padding: '0.75rem 1.5rem' }}>
             
-            {/* Logo Oficial */}
-            <span 
-              className="nav-logo" 
-              style={{ cursor: 'pointer' }}
-              onClick={() => { 
-                setCurrentMode('delivery'); 
-                setCheckoutStep('menu');
-              }}
-            >
-              <img 
-                src="/logoNuuPrensado-semfundo.png" 
-                alt="Nuu Prensado!!" 
-                style={{ 
-                  height: '48px', 
-                  objectFit: 'contain', 
-                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))'
-                }} 
-              />
-            </span>
+            {/* Logo Oficial + Status da Loja */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <span 
+                className="nav-logo" 
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                onClick={() => { 
+                  setCurrentMode('delivery'); 
+                  setCheckoutStep('menu');
+                }}
+              >
+                <img 
+                  src="/logoNuuPrensado-semfundo.png" 
+                  alt="Nuu Prensado!!" 
+                  style={{ 
+                    height: '46px', 
+                    objectFit: 'contain', 
+                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))'
+                  }} 
+                />
+              </span>
+
+              {/* Badge Oficial de Status de Abertura e Horário */}
+              <div 
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '99px',
+                  backgroundColor: pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.18)' : isStoreOpen ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                  border: `1px solid ${pauseStatus.isPaused ? 'rgba(234, 179, 8, 0.5)' : isStoreOpen ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
+                  color: pauseStatus.isPaused ? '#fef08a' : isStoreOpen ? '#4ade80' : '#f87171',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  transition: 'all 0.2s ease',
+                  letterSpacing: '0.2px'
+                }}
+              >
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: pauseStatus.isPaused ? '#f59e0b' : isStoreOpen ? '#22c55e' : '#ef4444',
+                  boxShadow: pauseStatus.isPaused ? '0 0 6px #f59e0b' : isStoreOpen ? '0 0 6px #22c55e' : '0 0 6px #ef4444'
+                }} />
+                <span>
+                  {pauseStatus.isPaused 
+                    ? `Pausada • Volta em ~${pauseStatus.remainingMinutes} min` 
+                    : isStoreOpen 
+                      ? `Aberto • ~${storeSettings?.estimatedTime || '35-50 min'}` 
+                      : `Fechado • Abre às ${storeSettings?.openTime || '18:00'}`}
+                </span>
+              </div>
+            </div>
 
             {/* Botões de Ação na Barra Superior */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>

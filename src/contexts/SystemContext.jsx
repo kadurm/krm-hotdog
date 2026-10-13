@@ -418,8 +418,8 @@ const INITIAL_STORE_SETTINGS = {
   mercadoPago: {
     enabled: true,
     sandbox: false,
-    accessToken: '',
-    publicKey: ''
+    accessToken: 'APP_USR-5871168214552840-101316-1948f98e71fbd6fa559b3aa99105d959-611629089',
+    publicKey: 'APP_USR-e5cc3365-f723-40e8-a6fa-358d62d442fa'
   },
   // Experiência do Cardápio (Delivery)
   enableImmersiveView: false,

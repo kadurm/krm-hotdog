@@ -33,8 +33,9 @@ export default async function handler(req, res) {
       customAccessToken
     } = req.body;
 
-    // Obtém o Access Token do Mercado Pago (via env var ou customizado pelo lojista no painel)
-    const accessToken = customAccessToken || process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.VITE_MERCADOPAGO_ACCESS_TOKEN;
+    // Obtém o Access Token do Mercado Pago (via env var, customizado pelo lojista ou padrão oficial da loja)
+    const DEFAULT_ACCESS_TOKEN = 'APP_USR-5871168214552840-101316-1948f98e71fbd6fa559b3aa99105d959-611629089';
+    const accessToken = customAccessToken || process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.VITE_MERCADOPAGO_ACCESS_TOKEN || DEFAULT_ACCESS_TOKEN;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valor do pedido inválido.' });

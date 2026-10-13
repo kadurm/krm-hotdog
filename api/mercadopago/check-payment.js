@@ -31,7 +31,8 @@ export default async function handler(req, res) {
     });
   }
 
-  const accessToken = customAccessToken || process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.VITE_MERCADOPAGO_ACCESS_TOKEN;
+  const DEFAULT_ACCESS_TOKEN = 'APP_USR-5871168214552840-101316-1948f98e71fbd6fa559b3aa99105d959-611629089';
+  const accessToken = customAccessToken || process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.VITE_MERCADOPAGO_ACCESS_TOKEN || DEFAULT_ACCESS_TOKEN;
 
   if (!accessToken) {
     return res.status(200).json({

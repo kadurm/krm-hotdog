@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Check, Copy, AlertCircle, ShieldCheck, Loader2, RefreshCw, 
-  CreditCard, Smartphone, CheckCircle, ArrowLeft, Lock, Sparkles
+  CreditCard, Smartphone, CheckCircle, ArrowLeft, Lock, Sparkles, Trash2
 } from 'lucide-react';
 import { 
   createMercadoPagoPix, 
@@ -37,7 +37,7 @@ export default function MercadoPagoWhiteLabelCheckout({
   const [pixSecondsLeft, setPixSecondsLeft] = useState(600); // 10 minutos
   const pollingRef = useRef(null);
 
-  // Estados de Cartão
+  // Estados de Cartão & Carteira do Celular
   const [cardLoading, setCardLoading] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState(customerName || '');
@@ -46,7 +46,64 @@ export default function MercadoPagoWhiteLabelCheckout({
   const [cardCpf, setCardCpf] = useState('');
   const [cardInstallments, setCardInstallments] = useState(1);
   const [cardError, setCardError] = useState(null);
-  const [detectedBrand, setDetectedBrand] = useState({ id: 'generic', name: 'Cartão' });
+  const [detectedBrand, setDetectedBrand] = useState({ id: 'generic', name: 'Cartão', color: '#eab308' });
+  const [cardInputMethod, setCardInputMethod] = useState('wallet'); // 'wallet' | 'manual'
+  const [savedCards, setSavedCards] = useState([]);
+  const [selectedSavedCard, setSelectedSavedCard] = useState(null);
+  const [saveCardForFuture, setSaveCardForFuture] = useState(true);
+  const cardNumberInputRef = useRef(null);
+
+  // Carrega cartões salvos no dispositivo do cliente
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('nuu_saved_cards');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSavedCards(parsed);
+          setSelectedSavedCard(parsed[0]);
+          handleApplyCard(parsed[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('Falha ao carregar cartões salvos:', e);
+    }
+  }, []);
+
+  const handleApplyCard = (card) => {
+    setSelectedSavedCard(card);
+    setCardNumber(card.fullNumber ? card.fullNumber.replace(/(\d{4})/g, '$1 ').trim() : `•••• •••• •••• ${card.last4}`);
+    setCardHolder(card.holder || '');
+    setCardExpiry(card.expiry || '');
+    setCardCpf(card.cpf || '');
+    if (card.brandId) {
+      setDetectedBrand({ id: card.brandId, name: card.brand || 'Cartão', color: '#eab308' });
+    }
+  };
+
+  const handleDeleteSavedCard = (cardId, e) => {
+    e.stopPropagation();
+    const updated = savedCards.filter(c => c.id !== cardId);
+    setSavedCards(updated);
+    try {
+      localStorage.setItem('nuu_saved_cards', JSON.stringify(updated));
+    } catch (err) {}
+    if (selectedSavedCard?.id === cardId) {
+      setSelectedSavedCard(null);
+      setCardNumber('');
+      setCardCvv('');
+    }
+  };
+
+  const handleTriggerWalletAutofill = () => {
+    setCardInputMethod('manual');
+    setSelectedSavedCard(null);
+    setTimeout(() => {
+      if (cardNumberInputRef.current) {
+        cardNumberInputRef.current.focus();
+      }
+    }, 150);
+  };
 
   // 1. GERAÇÃO AUTOMÁTICA DE PIX
   useEffect(() => {
@@ -220,6 +277,28 @@ export default function MercadoPagoWhiteLabelCheckout({
       setCardLoading(false);
 
       if (res.success && res.status === 'approved') {
+        if (saveCardForFuture && cleanNumber.length >= 13) {
+          try {
+            const existing = JSON.parse(localStorage.getItem('nuu_saved_cards') || '[]');
+            const last4 = cleanNumber.slice(-4);
+            const filtered = existing.filter(c => c.last4 !== last4);
+            const newCard = {
+              id: Date.now().toString(),
+              brand: detectedBrand.name,
+              brandId: detectedBrand.id,
+              last4,
+              fullNumber: cleanNumber,
+              holder: cardHolder.trim(),
+              expiry: cardExpiry,
+              cpf: cleanCpf
+            };
+            const updated = [newCard, ...filtered];
+            localStorage.setItem('nuu_saved_cards', JSON.stringify(updated));
+            setSavedCards(updated);
+          } catch (storageErr) {
+            console.warn('Erro ao salvar cartão localmente:', storageErr);
+          }
+        }
         if (onPaymentSuccess) {
           onPaymentSuccess({
             paymentId: res.paymentId,
@@ -494,222 +573,532 @@ export default function MercadoPagoWhiteLabelCheckout({
 
       {/* --- MODO CARTÃO WHITE LABEL (CRÉDITO / DÉBITO) --- */}
       {(mode === 'credit' || mode === 'debit') && (
-        <form onSubmit={handleSubmitCard} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           
-          {/* Número do Cartão */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                Número do Cartão
-              </label>
-              <span style={{ fontSize: '0.7rem', color: detectedBrand.color, fontWeight: 800, textTransform: 'uppercase' }}>
-                {detectedBrand.name}
-              </span>
+          {/* Seletor Amigável: Carteira do Celular vs Inserir Manualmente */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '6px',
+            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+            padding: '3px',
+            borderRadius: '10px',
+            border: '1px solid var(--border-glass)'
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                setCardInputMethod('wallet');
+                setCardError(null);
+              }}
+              style={{
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: cardInputMethod === 'wallet' ? '#eab308' : 'transparent',
+                color: cardInputMethod === 'wallet' ? '#000' : 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Smartphone size={14} /> Carteira do Celular
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCardInputMethod('manual');
+                setSelectedSavedCard(null);
+                setCardError(null);
+              }}
+              style={{
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: cardInputMethod === 'manual' ? '#eab308' : 'transparent',
+                color: cardInputMethod === 'manual' ? '#000' : 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <CreditCard size={14} /> Inserir Dados
+            </button>
+          </div>
+
+          {/* MODO CARTEIRA DO CELULAR */}
+          {cardInputMethod === 'wallet' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="animate-fade-in">
+              {/* Box de Ação para Carteira Digital / Navegador */}
+              <div style={{
+                backgroundColor: 'rgba(234, 179, 8, 0.06)',
+                border: '1px dashed rgba(234, 179, 8, 0.35)',
+                borderRadius: '10px',
+                padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                textAlign: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#fde047', fontWeight: 800, fontSize: '0.86rem' }}>
+                  <Smartphone size={16} /> Cartões Salvos no Celular
+                </div>
+                <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Preencha automaticamente usando Google Pay, Apple Pay ou cartões salvos no seu smartphone.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleTriggerWalletAutofill}
+                  className="btn-primary"
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: '0.84rem',
+                    fontWeight: 800,
+                    borderRadius: '8px',
+                    justifyContent: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 14px rgba(234, 179, 8, 0.25)'
+                  }}
+                >
+                  <Sparkles size={14} /> Selecionar Cartão da Carteira
+                </button>
+              </div>
+
+              {/* Lista de Cartões Salvos neste Aparelho (se houver) */}
+              {savedCards.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Cartões Salvos neste Aparelho:
+                  </label>
+                  {savedCards.map(c => {
+                    const isSelected = selectedSavedCard?.id === c.id;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => handleApplyCard(c)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          backgroundColor: isSelected ? 'rgba(234, 179, 8, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                          border: isSelected ? '1.5px solid #eab308' : '1px solid var(--border-glass)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <CreditCard size={18} color="#eab308" />
+                          <div>
+                            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>
+                              {c.brand} •••• {c.last4}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                              Titular: {c.holder} • Val: {c.expiry}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteSavedCard(c.id, e)}
+                            title="Remover cartão salvo"
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Se houver cartão salvo selecionado, pede só o CVV e confirmação */}
+              {selectedSavedCard ? (
+                <form onSubmit={handleSubmitCard} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: mode === 'credit' ? '1fr 1fr' : '1fr', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        CVV (Código de Segurança)
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="123"
+                        maxLength={4}
+                        autoFocus
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-glass)',
+                          backgroundColor: 'rgba(0,0,0,0.4)',
+                          color: '#fff',
+                          fontSize: '0.85rem',
+                          outline: 'none',
+                          fontFamily: 'monospace'
+                        }}
+                      />
+                    </div>
+                    {mode === 'credit' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          Parcelas
+                        </label>
+                        <select
+                          value={cardInstallments}
+                          onChange={(e) => setCardInstallments(Number(e.target.value))}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-glass)',
+                            backgroundColor: 'var(--bg-tertiary)',
+                            color: '#fff',
+                            fontSize: '0.84rem',
+                            outline: 'none'
+                          }}
+                        >
+                          <option value={1}>1x de R$ {Number(amount).toFixed(2)} (sem juros)</option>
+                          {amount >= 50 && <option value={2}>2x de R$ {(amount / 2).toFixed(2)} (sem juros)</option>}
+                          {amount >= 90 && <option value={3}>3x de R$ {(amount / 3).toFixed(2)} (sem juros)</option>}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {cardError && (
+                    <div style={{ fontSize: '0.74rem', color: '#f87171', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.25)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <AlertCircle size={13} />
+                      <span>{cardError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={cardLoading}
+                    className="btn-primary"
+                    style={{
+                      padding: '11px',
+                      fontSize: '0.92rem',
+                      fontWeight: 800,
+                      borderRadius: '8px',
+                      width: '100%',
+                      justifyContent: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      marginTop: '4px',
+                      boxShadow: '0 4px 15px rgba(234, 179, 8, 0.3)'
+                    }}
+                  >
+                    {cardLoading ? (
+                      <><Loader2 size={16} className="animate-spin" /> Processando Pagamento...</>
+                    ) : (
+                      <><Lock size={14} /> Pagar R$ {Number(amount).toFixed(2)} com Segurança</>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <div style={{ textAlign: 'center', paddingTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCardInputMethod('manual')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Caso não tenha cartão na carteira, clique aqui para inserir os dados
+                  </button>
+                </div>
+              )}
             </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="0000 0000 0000 0000"
-                maxLength={19}
-                value={cardNumber}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim();
-                  setCardNumber(v);
-                }}
+          ) : (
+            /* MODO INSERIR DADOS MANUALMENTE */
+            <form onSubmit={handleSubmitCard} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className="animate-fade-in">
+              
+              {/* Número do Cartão */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label htmlFor="card-number-input" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Número do Cartão
+                  </label>
+                  <span style={{ fontSize: '0.7rem', color: detectedBrand.color || '#eab308', fontWeight: 800, textTransform: 'uppercase' }}>
+                    {detectedBrand.name}
+                  </span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    ref={cardNumberInputRef}
+                    id="card-number-input"
+                    name="cardNumber"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    placeholder="0000 0000 0000 0000"
+                    maxLength={19}
+                    value={cardNumber}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim();
+                      setCardNumber(v);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-glass)',
+                      backgroundColor: 'rgba(0,0,0,0.4)',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      fontFamily: 'monospace',
+                      letterSpacing: '1px'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Nome Impresso */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <label htmlFor="card-holder-input" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  Nome do Titular (como no cartão)
+                </label>
+                <input
+                  id="card-holder-input"
+                  name="cardHolder"
+                  type="text"
+                  autoComplete="cc-name"
+                  placeholder="Ex: CARLOS E SILVA"
+                  value={cardHolder}
+                  onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-glass)',
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    color: '#fff',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    textTransform: 'uppercase'
+                  }}
+                />
+              </div>
+
+              {/* Validade e CVV */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <label htmlFor="card-expiry-input" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Validade (MM/AA)
+                  </label>
+                  <input
+                    id="card-expiry-input"
+                    name="cardExpiry"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="cc-exp"
+                    placeholder="MM/AA"
+                    maxLength={5}
+                    value={cardExpiry}
+                    onChange={(e) => {
+                      let v = e.target.value.replace(/\D/g, '');
+                      if (v.length > 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
+                      setCardExpiry(v);
+                    }}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-glass)',
+                      backgroundColor: 'rgba(0,0,0,0.4)',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <label htmlFor="card-cvv-input" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    CVV
+                  </label>
+                  <input
+                    id="card-cvv-input"
+                    name="cardCvv"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="cc-csc"
+                    placeholder="123"
+                    maxLength={4}
+                    value={cardCvv}
+                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-glass)',
+                      backgroundColor: 'rgba(0,0,0,0.4)',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* CPF do Titular */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <label htmlFor="card-cpf-input" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  CPF do Titular do Cartão
+                </label>
+                <input
+                  id="card-cpf-input"
+                  name="cardCpf"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  value={cardCpf}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, '');
+                    if (v.length <= 11) {
+                      v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                    }
+                    setCardCpf(v);
+                  }}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-glass)',
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    color: '#fff',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Parcelamento se Crédito */}
+              {mode === 'credit' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <label htmlFor="card-installments-select" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Número de Parcelas
+                  </label>
+                  <select
+                    id="card-installments-select"
+                    value={cardInstallments}
+                    onChange={(e) => setCardInstallments(Number(e.target.value))}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-glass)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: '#fff',
+                      fontSize: '0.84rem',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value={1}>1x de R$ {Number(amount).toFixed(2)} (sem juros)</option>
+                    {amount >= 50 && (
+                      <option value={2}>2x de R$ {(amount / 2).toFixed(2)} (sem juros)</option>
+                    )}
+                    {amount >= 90 && (
+                      <option value={3}>3x de R$ {(amount / 3).toFixed(2)} (sem juros)</option>
+                    )}
+                  </select>
+                </div>
+              )}
+
+              {/* Opção para Salvar Cartão no Aparelho */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: 'var(--text-secondary)', cursor: 'pointer', padding: '2px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={saveCardForFuture}
+                  onChange={(e) => setSaveCardForFuture(e.target.checked)}
+                  style={{ accentColor: '#eab308' }}
+                />
+                <span>Lembrar este cartão na carteira deste celular para próximas compras</span>
+              </label>
+
+              {cardError && (
+                <div style={{
+                  fontSize: '0.74rem',
+                  color: '#f87171',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}>
+                  <AlertCircle size={13} />
+                  <span>{cardError}</span>
+                </div>
+              )}
+
+              {/* Botão de Pagamento com Cartão */}
+              <button
+                type="submit"
+                disabled={cardLoading}
+                className="btn-primary"
                 style={{
+                  padding: '11px',
+                  fontSize: '0.92rem',
+                  fontWeight: 800,
+                  borderRadius: '8px',
                   width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-glass)',
-                  backgroundColor: 'rgba(0,0,0,0.4)',
-                  color: '#fff',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  fontFamily: 'monospace',
-                  letterSpacing: '1px'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Nome Impresso */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-              Nome do Titular (como no cartão)
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: CARLOS E SILVA"
-              value={cardHolder}
-              onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-              style={{
-                padding: '8px 10px',
-                borderRadius: '6px',
-                border: '1px solid var(--border-glass)',
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                color: '#fff',
-                fontSize: '0.85rem',
-                outline: 'none',
-                textTransform: 'uppercase'
-              }}
-            />
-          </div>
-
-          {/* Validade e CVV */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                Validade (MM/AA)
-              </label>
-              <input
-                type="text"
-                placeholder="MM/AA"
-                maxLength={5}
-                value={cardExpiry}
-                onChange={(e) => {
-                  let v = e.target.value.replace(/\D/g, '');
-                  if (v.length > 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
-                  setCardExpiry(v);
-                }}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-glass)',
-                  backgroundColor: 'rgba(0,0,0,0.4)',
-                  color: '#fff',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  fontFamily: 'monospace'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                CVV
-              </label>
-              <input
-                type="password"
-                placeholder="123"
-                maxLength={4}
-                value={cardCvv}
-                onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-glass)',
-                  backgroundColor: 'rgba(0,0,0,0.4)',
-                  color: '#fff',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  fontFamily: 'monospace'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* CPF do Titular */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-              CPF do Titular do Cartão
-            </label>
-            <input
-              type="text"
-              placeholder="000.000.000-00"
-              maxLength={14}
-              value={cardCpf}
-              onChange={(e) => {
-                let v = e.target.value.replace(/\D/g, '');
-                if (v.length <= 11) {
-                  v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-                setCardCpf(v);
-              }}
-              style={{
-                padding: '8px 10px',
-                borderRadius: '6px',
-                border: '1px solid var(--border-glass)',
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                color: '#fff',
-                fontSize: '0.85rem',
-                outline: 'none'
-              }}
-            />
-          </div>
-
-          {/* Parcelamento se Crédito */}
-          {mode === 'credit' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <label style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                Número de Parcelas
-              </label>
-              <select
-                value={cardInstallments}
-                onChange={(e) => setCardInstallments(Number(e.target.value))}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-glass)',
-                  backgroundColor: 'var(--bg-tertiary)',
-                  color: '#fff',
-                  fontSize: '0.84rem',
-                  outline: 'none'
+                  justifyContent: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginTop: '4px',
+                  boxShadow: '0 4px 15px rgba(234, 179, 8, 0.3)'
                 }}
               >
-                <option value={1}>1x de R$ {Number(amount).toFixed(2)} (sem juros)</option>
-                {amount >= 50 && (
-                  <option value={2}>2x de R$ {(amount / 2).toFixed(2)} (sem juros)</option>
+                {cardLoading ? (
+                  <><Loader2 size={16} className="animate-spin" /> Processando Pagamento...</>
+                ) : (
+                  <><Lock size={14} /> Pagar R$ {Number(amount).toFixed(2)} com Segurança</>
                 )}
-                {amount >= 90 && (
-                  <option value={3}>3x de R$ {(amount / 3).toFixed(2)} (sem juros)</option>
-                )}
-              </select>
-            </div>
-          )}
+              </button>
 
-          {cardError && (
-            <div style={{
-              fontSize: '0.74rem',
-              color: '#f87171',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              padding: '6px 10px',
-              borderRadius: '6px',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}>
-              <AlertCircle size={13} />
-              <span>{cardError}</span>
-            </div>
+              <div style={{ textAlign: 'center', marginTop: '2px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCardInputMethod('wallet')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  📱 Voltar para Carteira do Celular
+                </button>
+              </div>
+            </form>
           )}
-
-          {/* Botão de Pagamento com Cartão */}
-          <button
-            type="submit"
-            disabled={cardLoading}
-            className="btn-primary"
-            style={{
-              padding: '11px',
-              fontSize: '0.92rem',
-              fontWeight: 800,
-              borderRadius: '8px',
-              width: '100%',
-              justifyContent: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginTop: '4px',
-              boxShadow: '0 4px 15px rgba(234, 179, 8, 0.3)'
-            }}
-          >
-            {cardLoading ? (
-              <><Loader2 size={16} className="animate-spin" /> Processando Pagamento...</>
-            ) : (
-              <><Lock size={14} /> Pagar R$ {Number(amount).toFixed(2)} com Segurança</>
-            )}
-          </button>
-        </form>
+        </div>
       )}
 
       {/* Rodapé de Segurança */}

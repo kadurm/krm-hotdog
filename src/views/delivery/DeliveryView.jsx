@@ -3058,7 +3058,7 @@ export default function DeliveryView({
                     }} className="animate-fade-in">
                       <ShieldCheck size={18} color="#4ade80" />
                       <div style={{ fontSize: '0.75rem', color: '#fff' }}>
-                        <strong style={{ color: '#4ade80' }}>Checkout White Label Seguro:</strong>{' '}
+                        <strong style={{ color: '#4ade80' }}>Checkout Seguro:</strong>{' '}
                         {paymentMethod === 'Pix (Mercado Pago)' 
                           ? 'O QR Code Pix e o Copia e Cola serão gerados no próximo passo com verificação bancária em tempo real.'
                           : 'Você preencherá os dados do cartão de forma 100% segura e criptografada no próximo passo.'}

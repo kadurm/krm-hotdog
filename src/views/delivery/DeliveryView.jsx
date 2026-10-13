@@ -965,8 +965,12 @@ export default function DeliveryView({
   // Cálculos de Totais
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   
-  // O preço da taxa de delivery só é calculado e exibido após o preenchimento do bairro/endereço
-  const isDeliveryAddressProvided = Boolean(addressNeighborhood.trim());
+  // O preço da taxa de delivery só é calculado e exibido após o preenchimento real do endereço completo (Rua, Número e Bairro)
+  const isDeliveryAddressProvided = Boolean(
+    addressStreet.trim() && 
+    addressNumber.trim() && 
+    addressNeighborhood.trim()
+  );
 
   const deliveryFeeResult = deliveryType === 'delivery' 
     ? (isDeliveryAddressProvided
@@ -2940,11 +2944,11 @@ export default function DeliveryView({
                               Taxa de Entrega:
                             </span>
                             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)' }}>
-                              {isDeliveryAddressProvided 
+                                {isDeliveryAddressProvided 
                                 ? (deliveryFeeResult?.isFree 
                                     ? '🎉 Frete Grátis no seu pedido!'
                                     : `Bairro ${addressNeighborhood.trim()}`)
-                                : 'Informe seu bairro para calcular'}
+                                : 'Informe seu endereço para calcular'}
                             </div>
                           </div>
                         </div>

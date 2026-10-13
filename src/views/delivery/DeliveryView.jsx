@@ -1019,53 +1019,6 @@ export default function DeliveryView({
         overflowX: 'hidden'
       }}
     >
-      {/* BANNER DE STATUS DA LOJA */}
-      {pauseStatus.isPaused && checkoutStep === 'menu' ? (
-        <div style={{
-          backgroundColor: '#b45309',
-          color: '#fff',
-          padding: '10px 16px',
-          fontSize: '0.84rem',
-          fontWeight: 700,
-          textAlign: 'center',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          zIndex: 100,
-          boxShadow: '0 2px 14px rgba(180, 83, 9, 0.5)'
-        }}>
-          <Clock size={17} />
-          <span>
-            ⏸️ <strong>Cozinha em Pausa Temporária:</strong> {pauseStatus.pauseReason || 'Muitos pedidos sendo preparados no momento'}. Retomamos os pedidos em aproximadamente <strong>{pauseStatus.remainingMinutes} min</strong>!
-          </span>
-        </div>
-      ) : !isStoreOpen && checkoutStep === 'menu' ? (
-        <div style={{
-          background: 'linear-gradient(90deg, rgba(220, 38, 38, 0.22) 0%, rgba(180, 83, 9, 0.26) 100%)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
-          color: '#fef08a',
-          padding: '8px 16px',
-          fontSize: '0.80rem',
-          fontWeight: 600,
-          textAlign: 'center',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          zIndex: 100,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.25)'
-        }}>
-          <Clock size={15} color="#fbbf24" />
-          <span>
-            {storeSettings?.closedNotice || 'Loja fechada no momento para novos pedidos.'} 
-            {` • Atendimento: Terça a Domingo das ${storeSettings?.openTime || '18:00'} às ${storeSettings?.closeTime || '23:30'}`}
-          </span>
-        </div>
-      ) : null}
-
       {/* NOVO: CONTROLES FLUTUANTES PARA MOBILE & DESKTOP */}
       {checkoutStep === 'menu' && (
         <div 
@@ -1203,6 +1156,51 @@ export default function DeliveryView({
               </button>
             </div>
           </div>
+
+          {/* BANNER DE STATUS DA LOJA (ABAIXO DA LOGO / TOPO) */}
+          {pauseStatus.isPaused ? (
+            <div style={{
+              backgroundColor: '#b45309',
+              color: '#fff',
+              padding: '8px 14px',
+              fontSize: '0.80rem',
+              fontWeight: 700,
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(180, 83, 9, 0.4)'
+            }}>
+              <Clock size={16} />
+              <span>
+                ⏸️ <strong>Cozinha em Pausa Temporária:</strong> {pauseStatus.pauseReason || 'Muitos pedidos sendo preparados no momento'}. Retomamos em aproximadamente <strong>{pauseStatus.remainingMinutes} min</strong>!
+              </span>
+            </div>
+          ) : !isStoreOpen ? (
+            <div style={{
+              background: 'linear-gradient(90deg, rgba(220, 38, 38, 0.28) 0%, rgba(180, 83, 9, 0.32) 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              color: '#fef08a',
+              padding: '8px 14px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.3)'
+            }}>
+              <Clock size={14} color="#fbbf24" />
+              <span>
+                {storeSettings?.closedNotice || 'Loja fechada no momento para novos pedidos.'} 
+                {` • Atendimento: Terça a Domingo das ${storeSettings?.openTime || '18:00'} às ${storeSettings?.closeTime || '23:30'}`}
+              </span>
+            </div>
+          ) : null}
 
           {/* BARRA DE CATEGORIAS (PILLS HORIZONTAIS) */}
           <div style={{

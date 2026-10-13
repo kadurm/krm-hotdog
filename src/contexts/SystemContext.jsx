@@ -333,9 +333,9 @@ const INITIAL_STORE_SETTINGS = {
   autoSchedule: false,
   pausedUntil: null,
   pauseReason: null,
-  openTime: '19:00',
-  closeTime: '00:00',
-  openDays: ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
+  openTime: '18:00',
+  closeTime: '23:30',
+  openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
   estimatedTime: '35 a 50 min',
   storeAddress: 'Rua Agapanto, 264 - Sagrada Família, Montes Claros - MG, CEP 39401-022',
   whatsapp: '38991611378',
@@ -623,7 +623,7 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [storeSettings, setStoreSettings] = useState(() => {
-    const saved = localStorage.getItem('nuu_store_settings_v3');
+    const saved = localStorage.getItem('nuu_store_settings_v4');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -632,12 +632,20 @@ export const SystemProvider = ({ children }) => {
         }
       } catch (e) {}
     }
-    const oldV2 = localStorage.getItem('nuu_store_settings_v2');
-    if (oldV2) {
+    const oldV3 = localStorage.getItem('nuu_store_settings_v3');
+    if (oldV3) {
       try {
-        const parsed = JSON.parse(oldV2);
+        const parsed = JSON.parse(oldV3);
         if (parsed.storeAddress && parsed.storeAddress.includes('Montes Claros')) {
-          return { ...INITIAL_STORE_SETTINGS, ...parsed };
+          const migrated = {
+            ...INITIAL_STORE_SETTINGS,
+            ...parsed,
+            openTime: '18:00',
+            closeTime: '23:30',
+            openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom']
+          };
+          localStorage.setItem('nuu_store_settings_v4', JSON.stringify(migrated));
+          return migrated;
         }
       } catch (e) {}
     }
@@ -786,6 +794,7 @@ export const SystemProvider = ({ children }) => {
   }, [complements]);
 
   useEffect(() => {
+    localStorage.setItem('nuu_store_settings_v4', JSON.stringify(storeSettings));
     localStorage.setItem('nuu_store_settings_v3', JSON.stringify(storeSettings));
   }, [storeSettings]);
 
@@ -1350,8 +1359,8 @@ export const SystemProvider = ({ children }) => {
       const currentDay = days[now.getDay()];
       const yesterday = days[(now.getDay() + 6) % 7];
 
-      const [openHour, openMin] = (storeSettings.openTime || '19:00').split(':').map(Number);
-      const [closeHour, closeMin] = (storeSettings.closeTime || '00:00').split(':').map(Number);
+      const [openHour, openMin] = (storeSettings.openTime || '18:00').split(':').map(Number);
+      const [closeHour, closeMin] = (storeSettings.closeTime || '23:30').split(':').map(Number);
 
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const openMinutes = openHour * 60 + openMin;

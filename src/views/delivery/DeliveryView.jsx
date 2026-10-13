@@ -1061,7 +1061,7 @@ export default function DeliveryView({
           <Clock size={15} color="#fbbf24" />
           <span>
             {storeSettings?.closedNotice || 'Loja fechada no momento para novos pedidos.'} 
-            {` • Atendimento: todos os dias das ${storeSettings?.openTime || '19:00'} às ${storeSettings?.closeTime || '00:00'}`}
+            {` • Atendimento: Terça a Domingo das ${storeSettings?.openTime || '18:00'} às ${storeSettings?.closeTime || '23:30'}`}
           </span>
         </div>
       ) : null}
@@ -1127,7 +1127,26 @@ export default function DeliveryView({
                     ? `Pausada • Volta em ~${pauseStatus.remainingMinutes} min` 
                     : isStoreOpen 
                       ? `Aberto • ~${storeSettings?.estimatedTime || '35-50 min'}` 
-                      : `Fechado • Abre às ${storeSettings?.openTime || '19:00'}`}
+                      : (() => {
+                          const openDays = storeSettings?.openDays || ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+                          const now = new Date();
+                          const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+                          const currentDay = days[now.getDay()];
+                          const [openH, openM] = (storeSettings?.openTime || '18:00').split(':').map(Number);
+                          const nowMins = now.getHours() * 60 + now.getMinutes();
+                          const openMins = openH * 60 + (openM || 0);
+
+                          if (openDays.includes(currentDay) && nowMins < openMins) {
+                            return `Fechado • Abre às ${storeSettings?.openTime || '18:00'}`;
+                          }
+                          if (currentDay === 'seg') {
+                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '18:00'}`;
+                          }
+                          if (currentDay === 'dom' && nowMins >= openMins) {
+                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '18:00'}`;
+                          }
+                          return `Fechado • Abre amanhã às ${storeSettings?.openTime || '18:00'}`;
+                        })()}
                 </span>
               </div>
             </div>
@@ -1707,7 +1726,7 @@ export default function DeliveryView({
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                               }}
                             >
-                              Pausado
+                              Esgotado
                             </span>
                           )}
                         </div>
@@ -3014,7 +3033,7 @@ export default function DeliveryView({
                     }
                     showSiteAlert(
                       'Loja Fechada',
-                      `Nosso horário de atendimento é todos os dias das ${storeSettings?.openTime || '19:00'} às ${storeSettings?.closeTime || '00:00'}. Fique à vontade para conferir todos os ingredientes e escolher seus itens favoritos!`,
+                      `Nosso horário de atendimento é de Terça a Domingo das ${storeSettings?.openTime || '18:00'} às ${storeSettings?.closeTime || '23:30'}. Fique à vontade para conferir todos os ingredientes e escolher seus itens favoritos!`,
                       'warning',
                       'Horário'
                     );
@@ -3036,7 +3055,7 @@ export default function DeliveryView({
                   ? `Adicionar • R$ ${currentTotalPrice.toFixed(2)}` 
                   : pauseStatus.isPaused 
                     ? `Cozinha Pausada (~${pauseStatus.remainingMinutes}m)` 
-                    : `Fechado • Abre às ${storeSettings?.openTime || '19:00'}`}
+                    : `Fechado • Abre às ${storeSettings?.openTime || '18:00'}`}
               </button>
             </div>
           </div>
@@ -3455,7 +3474,7 @@ export default function DeliveryView({
                   <span style={{ fontSize: '0.76rem', color: '#fbbf24', fontWeight: 700 }}>
                     {pauseStatus.isPaused 
                       ? `Retomamos em aproximadamente ~${pauseStatus.remainingMinutes} min` 
-                      : `Abrimos às ${storeSettings?.openTime || '19:00'} (todos os dias)`}
+                      : `Abrimos às ${storeSettings?.openTime || '18:00'} (Terça a Domingo)`}
                   </span>
                 </div>
               </div>
@@ -3503,7 +3522,7 @@ export default function DeliveryView({
                     storeSettings.closedNotice
                   ) : (
                     <>
-                      Nosso atendimento é diariamente das <strong>{storeSettings?.openTime || '19:00'} às {storeSettings?.closeTime || '00:00'}</strong>.
+                      Nosso atendimento é de <strong>Terça a Domingo das {storeSettings?.openTime || '18:00'} às {storeSettings?.closeTime || '23:30'}</strong>.
                       <br />
                       Sinta-se à vontade para <strong>olhar todo o cardápio</strong>, conferir os ingredientes e escolher seus prensados favoritos!
                     </>

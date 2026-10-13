@@ -2995,7 +2995,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                         <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Horário de Abertura</span>
                         <input
                           type="time"
-                          value={storeSettings?.openTime || '19:00'}
+                          value={storeSettings?.openTime || '18:00'}
                           onChange={(e) => updateStoreSettings({ openTime: e.target.value })}
                           style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}
                         />
@@ -3004,7 +3004,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                         <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Horário de Fechamento</span>
                         <input
                           type="time"
-                          value={storeSettings?.closeTime || '00:00'}
+                          value={storeSettings?.closeTime || '23:30'}
                           onChange={(e) => updateStoreSettings({ closeTime: e.target.value })}
                           style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}
                         />
@@ -3026,13 +3026,13 @@ export default function AdminView({ onLogout, onGoOperation }) {
                         <button
                           type="button"
                           onClick={() => {
-                            const allDays = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
-                            const isAll = (storeSettings?.openDays || []).length === 7;
-                            updateStoreSettings({ openDays: isAll ? ['seg', 'ter', 'qua', 'qui', 'sex'] : allDays });
+                            const standardDays = ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+                            const isStandard = (storeSettings?.openDays || []).length === 6 && !(storeSettings?.openDays || []).includes('seg');
+                            updateStoreSettings({ openDays: isStandard ? ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'] : standardDays });
                           }}
                           style={{ background: 'none', border: 'none', color: 'var(--color-brand)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
                         >
-                          {(storeSettings?.openDays || []).length === 7 ? 'Marcar apenas Seg a Sex' : 'Marcar Todos os Dias'}
+                          {((storeSettings?.openDays || []).length === 6 && !(storeSettings?.openDays || []).includes('seg')) ? 'Marcar Todos os Dias' : 'Marcar Terça a Domingo'}
                         </button>
                       </div>
 
@@ -3046,13 +3046,13 @@ export default function AdminView({ onLogout, onGoOperation }) {
                           { id: 'sab', label: 'Sáb' },
                           { id: 'dom', label: 'Dom' }
                         ].map(day => {
-                          const isActive = (storeSettings?.openDays || ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom']).includes(day.id);
+                          const isActive = (storeSettings?.openDays || ['ter', 'qua', 'qui', 'sex', 'sab', 'dom']).includes(day.id);
                           return (
                             <button
                               key={day.id}
                               type="button"
                               onClick={() => {
-                                const currentDays = storeSettings?.openDays || ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
+                                const currentDays = storeSettings?.openDays || ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
                                 const nextDays = isActive
                                   ? currentDays.filter(d => d !== day.id)
                                   : [...currentDays, day.id];
@@ -3078,7 +3078,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
 
                       <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
                         {storeSettings?.autoSchedule ? (
-                          <span>💡 <strong>Agendamento Automático Ativo:</strong> A loja abre às <strong>{storeSettings?.openTime || '19:00'}</strong> e fecha às <strong>{storeSettings?.closeTime || '00:00'}</strong> nos dias marcados.</span>
+                          <span>💡 <strong>Agendamento Automático Ativo:</strong> A loja abre às <strong>{storeSettings?.openTime || '18:00'}</strong> e fecha às <strong>{storeSettings?.closeTime || '23:30'}</strong> nos dias marcados.</span>
                         ) : (
                           <span>💡 <strong>Controle Manual Ativo:</strong> Você pode abrir ou fechar a loja a qualquer momento com 1 clique no botão superior.</span>
                         )}

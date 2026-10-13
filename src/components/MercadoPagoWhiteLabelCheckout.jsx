@@ -701,11 +701,7 @@ export default function MercadoPagoWhiteLabelCheckout({
                 transition: 'all 0.2s ease'
               }}
             >
-              {isAppleDevice ? (
-                <><span style={{ fontSize: '1.05rem', lineHeight: 1 }}></span> Apple Pay</>
-              ) : (
-                <><Sparkles size={14} /> Cartão Salvo no Navegador</>
-              )}
+              <Smartphone size={14} /> Carteira Digital
             </button>
             <button
               type="button"
@@ -1172,7 +1168,7 @@ export default function MercadoPagoWhiteLabelCheckout({
                   onChange={(e) => setSaveCardForFuture(e.target.checked)}
                   style={{ accentColor: '#eab308' }}
                 />
-                <span>Lembrar este cartão na carteira deste celular para próximas compras</span>
+                <span>Lembrar este cartão na carteira digital para próximas compras</span>
               </label>
 
               {cardError && (
@@ -1231,7 +1227,7 @@ export default function MercadoPagoWhiteLabelCheckout({
                     textDecoration: 'underline'
                   }}
                 >
-                  📱 Voltar para Carteira do Celular
+                  📱 Voltar para Carteira Digital
                 </button>
               </div>
             </form>

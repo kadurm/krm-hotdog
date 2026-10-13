@@ -3000,14 +3000,12 @@ export default function DeliveryView({
                   </div>
 
                   {/* CARDS INTERATIVOS DE FORMAS DE PAGAMENTO */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     {[
                       { id: 'Pix (Mercado Pago)', label: 'Pix Online', desc: 'Aprovação instantânea', icon: '⚡', highlight: true },
                       { id: 'Cartão de Crédito Online', label: 'Crédito Online', desc: 'No site (Mercado Pago)', icon: '💳', highlight: true },
                       { id: 'Cartão de Débito Online', label: 'Débito Online', desc: 'No site (Mercado Pago)', icon: '💳', highlight: true },
-                      { id: 'Cartão na Entrega', label: 'Na Maquininha', desc: 'Crédito ou débito na entrega', icon: '🛵', highlight: false },
-                      { id: 'Dinheiro', label: 'Dinheiro', desc: 'Em espécie na entrega', icon: '💵', highlight: false },
-                      { id: 'Pix Manual', label: 'Pix Manual', desc: 'Chave oficial da loja', icon: '🔑', highlight: false }
+                      { id: 'Dinheiro', label: 'Dinheiro', desc: 'Em espécie na entrega', icon: '💵', highlight: false }
                     ].map(pm => {
                       const isSelected = paymentMethod === pm.id;
                       return (
@@ -3064,46 +3062,6 @@ export default function DeliveryView({
                           ? 'O QR Code Pix e o Copia e Cola serão gerados no próximo passo com verificação bancária em tempo real.'
                           : 'Você preencherá os dados do cartão de forma 100% segura e criptografada no próximo passo.'}
                       </div>
-                    </div>
-                  )}
-
-                  {/* CHAVE PIX MANUAL */}
-                  {paymentMethod === 'Pix Manual' && (
-                    <div style={{ 
-                      padding: '10px 12px', 
-                      background: 'rgba(234, 179, 8, 0.08)', 
-                      border: '1px solid rgba(234, 179, 8, 0.25)', 
-                      borderRadius: '10px', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '6px' 
-                    }} className="animate-fade-in">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.78rem', color: '#eab308', fontWeight: 700 }}>Chave Pix Oficial da Loja:</span>
-                        <button 
-                          type="button" 
-                          onClick={handleCopyPix}
-                          style={{ 
-                            background: pixCopied ? 'var(--color-success)' : 'rgba(234, 179, 8, 0.25)', 
-                            color: '#fff', 
-                            border: 'none', 
-                            padding: '3px 8px', 
-                            borderRadius: '5px', 
-                            cursor: 'pointer', 
-                            fontSize: '0.74rem', 
-                            fontWeight: 700,
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '4px' 
-                          }}
-                        >
-                          {pixCopied ? <Check size={12} /> : <Copy size={12} />}
-                          {pixCopied ? 'Copiado!' : 'Copiar Chave'}
-                        </button>
-                      </div>
-                      <code style={{ fontSize: '0.8rem', color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '6px 10px', borderRadius: '5px', letterSpacing: '0.5px' }}>
-                        {officialPixKey}
-                      </code>
                     </div>
                   )}
 
@@ -3366,10 +3324,8 @@ export default function DeliveryView({
                         {paymentMethod === 'Pix (Mercado Pago)' && '⚡ Pix Online (Mercado Pago)'}
                         {paymentMethod === 'Cartão de Crédito Online' && '💳 Cartão de Crédito Online'}
                         {paymentMethod === 'Cartão de Débito Online' && '💳 Cartão de Débito Online'}
-                        {paymentMethod === 'Cartão na Entrega' && '🛵 Cartão na Entrega'}
-                        {paymentMethod === 'Dinheiro' && '💵 Dinheiro'}
-                        {paymentMethod === 'Pix Manual' && '🔑 Pix Manual (Chave da Loja)'}
-                        {!['Pix (Mercado Pago)', 'Cartão de Crédito Online', 'Cartão de Débito Online', 'Cartão na Entrega', 'Dinheiro', 'Pix Manual'].includes(paymentMethod) && paymentMethod}
+                        {paymentMethod === 'Dinheiro' && '💵 Dinheiro (Na Entrega)'}
+                        {!['Pix (Mercado Pago)', 'Cartão de Crédito Online', 'Cartão de Débito Online', 'Dinheiro'].includes(paymentMethod) && paymentMethod}
                       </div>
                       {paymentMethod === 'Dinheiro' && changeFor && (
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>

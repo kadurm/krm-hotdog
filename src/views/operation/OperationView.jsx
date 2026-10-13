@@ -24,7 +24,6 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     assignOrderMotoboy, 
     updateOrderStatus, 
     cancelOrder,
-    deleteOrder,
     operators = [], 
     currentOperator, 
     loginOperator, 
@@ -252,17 +251,6 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     });
   };
 
-  const handleDeleteOrder = (order) => {
-    showConfirm(`Deseja excluir permanentemente o pedido #${order.id}? Essa ação removerá o pedido e qualquer lançamento financeiro vinculado a ele.`, {
-      title: 'Excluir Pedido',
-      badge: `PEDIDO #${order.id}`,
-      type: 'error',
-      confirmText: 'Sim, Excluir',
-      cancelText: 'Cancelar',
-      confirmColor: '#ef4444',
-      onConfirm: () => deleteOrder(order.id)
-    });
-  };
 
   const handleSelectOperator = (op) => {
     setSelectedOperatorForLogin(op);
@@ -1190,13 +1178,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                           >
                             <Ban size={13} />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteOrder(order)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                            title="Excluir Permanentemente"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button
@@ -1304,13 +1286,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                           >
                             <Ban size={13} />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteOrder(order)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                            title="Excluir Permanentemente"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+
                         </div>
                         <button
                           onClick={() => setReceiptOrder(order)}
@@ -1410,13 +1386,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                           >
                             <Ban size={13} />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteOrder(order)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                            title="Excluir Permanentemente"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+
                         </div>
                       </div>
 
@@ -1541,13 +1511,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                           >
                             <Ban size={14} />
                           </button>
-                          <button
-                            onClick={() => handleDeleteOrder(order)}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                            title="Excluir Permanentemente"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+
                         </div>
                       </div>
                     );

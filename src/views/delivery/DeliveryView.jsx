@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSystem } from '../../contexts/SystemContext';
 import LoyaltyCard from '../../components/LoyaltyCard';
 import MercadoPagoWhiteLabelCheckout from '../../components/MercadoPagoWhiteLabelCheckout';
+import CheckoutErrorBoundary from '../../components/CheckoutErrorBoundary';
 import { 
   ShoppingBag, Plus, Minus, Trash2, 
   Clock, Utensils, ChevronRight, X, Sparkles,
@@ -3416,23 +3417,25 @@ export default function DeliveryView({
                       flexDirection: 'column',
                       gap: '0.75rem'
                     }}>
-                      <MercadoPagoWhiteLabelCheckout
-                        mode={
-                          paymentMethod === 'Cartão de Crédito Online' ? 'credit' :
-                          paymentMethod === 'Cartão de Débito Online' ? 'debit' : 'pix'
-                        }
-                        amount={grandTotal}
-                        description={`Pedido Nuu Prensado - ${customerName || 'Cliente'}`}
-                        customerName={customerName}
-                        customerPhone={cleanPhone}
-                        storeSettings={storeSettings}
-                        onPaymentSuccess={(paymentInfo) => {
-                          handleSubmitOrder(null, paymentInfo);
-                        }}
-                        onPaymentError={(errMsg) => {
-                          showSiteAlert('Atenção no Pagamento', errMsg, 'warning');
-                        }}
-                      />
+                      <CheckoutErrorBoundary onFallbackToOffline={() => setQuizStep(3)}>
+                        <MercadoPagoWhiteLabelCheckout
+                          mode={
+                            paymentMethod === 'Cartão de Crédito Online' ? 'credit' :
+                            paymentMethod === 'Cartão de Débito Online' ? 'debit' : 'pix'
+                          }
+                          amount={grandTotal}
+                          description={`Pedido Nuu Prensado - ${customerName || 'Cliente'}`}
+                          customerName={customerName}
+                          customerPhone={phone ? phone.replace(/\D/g, '') : ''}
+                          storeSettings={storeSettings}
+                          onPaymentSuccess={(paymentInfo) => {
+                            handleSubmitOrder(null, paymentInfo);
+                          }}
+                          onPaymentError={(errMsg) => {
+                            showSiteAlert('Atenção no Pagamento', errMsg, 'warning');
+                          }}
+                        />
+                      </CheckoutErrorBoundary>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <button

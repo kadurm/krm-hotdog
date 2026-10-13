@@ -344,6 +344,24 @@ export default function MercadoPagoWhiteLabelCheckout({
                 <RefreshCw size={12} /> Gerar Novo Pix
               </button>
             </div>
+          ) : pixStatus === 'error' ? (
+            <div style={{ padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={28} color="#f59e0b" />
+              <span style={{ fontSize: '0.84rem', color: '#fff', fontWeight: 600 }}>
+                Não foi possível gerar o QR Code no momento.
+              </span>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                Verifique sua conexão ou tente gerar novamente.
+              </span>
+              <button
+                type="button"
+                onClick={handleGeneratePix}
+                className="btn-primary"
+                style={{ padding: '8px 16px', fontSize: '0.82rem', borderRadius: '6px', fontWeight: 700 }}
+              >
+                <RefreshCw size={13} /> Tentar Novamente
+              </button>
+            </div>
           ) : pixData ? (
             <>
               {/* Box com QR Code e Instruções */}

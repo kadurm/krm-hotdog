@@ -887,7 +887,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ======================================================== */
-/* Cabeçalho Flutuante e Barra de Categorias               */
+/* Cabeçalho Flutuante e Barra de Categorias (Apenas Mobile) */
 /* ======================================================== */
 .mobile-floating-header {
   position: sticky;
@@ -910,16 +910,19 @@ input:focus, select:focus, textarea:focus {
   pointer-events: auto;
 }
 
-/* No Desktop: oculta apenas a primeira linha duplicada (logo + status + carrinho) que já existe no .app-header oficial */
+/* Desktop: Oculta completamente a barra flutuante mobile para nunca cobrir o site nem duplicar elementos */
 @media (min-width: 769px) {
-  .mobile-header-top-row {
+  .mobile-floating-header {
     display: none !important;
   }
-  .mobile-floating-header {
-    top: 68px; /* Posiciona logo abaixo da barra oficial .app-header */
-    z-index: 45;
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    pointer-events: auto;
+  .mobile-only-banner {
+    display: none !important;
+  }
+}
+
+/* Mobile: Oculta o banner direto do desktop para evitar duplicação */
+@media (max-width: 768px) {
+  .desktop-only-banner {
+    display: none !important;
   }
 }

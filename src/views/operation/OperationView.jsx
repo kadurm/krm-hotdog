@@ -138,7 +138,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
   };
 
   // Filtros de período da Operação ('today' | 'shift' | 'yesterday' | '7days' | 'custom' | 'all')
-  const [periodFilter, setPeriodFilter] = useState('today');
+  const [periodFilter, setPeriodFilter] = useState('7days');
   const [customStartDate, setCustomStartDate] = useState(() => formatDateToInput(new Date()));
   const [customEndDate, setCustomEndDate] = useState(() => formatDateToInput(new Date()));
 
@@ -1555,7 +1555,25 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
 
                   {deliveredOrders.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      Nenhum pedido entregue em {getPeriodLabel().toLowerCase()}.
+                      <p style={{ marginBottom: '8px' }}>Nenhum pedido entregue em {getPeriodLabel().toLowerCase()}.</p>
+                      {periodFilter !== '7days' && (
+                        <button
+                          type="button"
+                          onClick={() => setPeriodFilter('7days')}
+                          style={{
+                            backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                            color: 'var(--color-brand-yellow)',
+                            border: '1px solid rgba(234, 179, 8, 0.3)',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Ver Vendas Recentes (7 Dias)
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

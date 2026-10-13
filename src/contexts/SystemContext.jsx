@@ -18,6 +18,11 @@ import {
   getDoc 
 } from 'firebase/firestore';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
+import { 
+  REAL_SALES_ORDERS, 
+  REAL_CUSTOMERS, 
+  REAL_TRANSACTIONS 
+} from '../data/realSalesData';
 
 // Campainha sonora para novos pedidos na cozinha
 export const playNotificationChime = () => {
@@ -616,27 +621,51 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [orders, setOrders] = useState(() => {
+    let list = [...REAL_SALES_ORDERS];
     const saved = localStorage.getItem('hd_orders');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map(list.map(o => [String(o.id), o]));
+          parsed.forEach(o => {
+            if (o && o.id) {
+              const strId = String(o.id);
+              map.set(strId, { ...(map.get(strId) || {}), ...o });
+            }
+          });
+          list = Array.from(map.values());
+        }
       } catch (e) {
-        return [];
+        console.warn('Erro ao carregar hd_orders:', e);
       }
     }
-    return [];
+    list.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    return list;
   });
 
   const [transactions, setTransactions] = useState(() => {
+    let list = [...REAL_TRANSACTIONS];
     const saved = localStorage.getItem('hd_transactions');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map(list.map(t => [String(t.id), t]));
+          parsed.forEach(t => {
+            if (t && t.id) {
+              const strId = String(t.id);
+              map.set(strId, { ...(map.get(strId) || {}), ...t });
+            }
+          });
+          list = Array.from(map.values());
+        }
       } catch (e) {
-        return [];
+        console.warn('Erro ao carregar hd_transactions:', e);
       }
     }
-    return [];
+    list.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    return list;
   });
 
   const [invoices, setInvoices] = useState(() => {
@@ -789,13 +818,26 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [customers, setCustomers] = useState(() => {
+    let list = [...REAL_CUSTOMERS];
     const saved = localStorage.getItem('nuu_customers');
     if (saved) {
       try {
-        return JSON.parse(saved);
-      } catch (e) {}
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map(list.map(c => [String(c.phone).replace(/\D/g, ''), c]));
+          parsed.forEach(c => {
+            if (c && c.phone) {
+              const cleanPhone = String(c.phone).replace(/\D/g, '');
+              map.set(cleanPhone, { ...(map.get(cleanPhone) || {}), ...c });
+            }
+          });
+          list = Array.from(map.values());
+        }
+      } catch (e) {
+        console.warn('Erro ao carregar nuu_customers:', e);
+      }
     }
-    return INITIAL_CUSTOMERS;
+    return list;
   });
 
   const [operators, setOperators] = useState(() => {
@@ -919,6 +961,95 @@ export const SystemProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('nuu_cash_shifts', JSON.stringify(cashShifts));
   }, [cashShifts]);
+
+  // Reconciliação contínua e garantia absoluta: pedidos entregues geram receita em transactions
+  // e clientes com telefone são mantidos e atualizados em customers
+  useEffect(() => {
+    // 1. Reconciliação financeira: pedidos com status 'delivered' (e não cancelados)
+    const deliveredOrders = orders.filter(o => o.status === 'delivered' && o.status !== 'canceled');
+    if (deliveredOrders.length > 0) {
+      setTransactions(prevTransactions => {
+        let hasChanges = false;
+        const currentTrans = [...prevTransactions];
+        const existingOrderIds = new Set(
+          currentTrans
+            .filter(t => t.type === 'income')
+            .map(t => {
+              if (t.orderId) return String(t.orderId);
+              const m = t.description?.match(/pedido\s*#(\d+)/i);
+              return m ? m[1] : null;
+            })
+            .filter(Boolean)
+        );
+
+        deliveredOrders.forEach(order => {
+          const ordIdStr = String(order.id);
+          if (!existingOrderIds.has(ordIdStr)) {
+            hasChanges = true;
+            existingOrderIds.add(ordIdStr);
+            currentTrans.push({
+              id: `trans-rec-${ordIdStr}`,
+              orderId: ordIdStr,
+              date: order.deliveredAt || order.date || new Date().toISOString(),
+              type: 'income',
+              category: 'Vendas',
+              value: parseFloat(order.total) || 0,
+              grossValue: parseFloat(order.total) || 0,
+              description: `Pedido #${order.id} (${order.customerName || 'Cliente'}) - ${order.paymentMethod || 'Pix'}`
+            });
+          }
+        });
+
+        if (hasChanges) {
+          currentTrans.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+          return currentTrans;
+        }
+        return prevTransactions;
+      });
+    }
+
+    // 2. Reconciliação de clientes: garante que todos os clientes com telefone estejam em customers
+    const validOrdersWithPhone = orders.filter(o => o.phone && o.status !== 'canceled');
+    if (validOrdersWithPhone.length > 0) {
+      setCustomers(prevCust => {
+        const custMap = new Map();
+        prevCust.forEach(c => {
+          const clean = String(c.phone || '').replace(/\D/g, '');
+          if (clean) custMap.set(clean, { ...c });
+        });
+
+        let changed = false;
+        validOrdersWithPhone.forEach(ord => {
+          const clean = String(ord.phone).replace(/\D/g, '');
+          if (!clean) return;
+
+          const existing = custMap.get(clean);
+          if (!existing) {
+            changed = true;
+            custMap.set(clean, {
+              phone: clean,
+              name: ord.customerName || 'Cliente',
+              address: ord.address || '',
+              neighborhood: ord.neighborhood || '',
+              stampsCount: ord.status === 'delivered' ? 1 : 0,
+              totalOrders: 1,
+              lastOrderAt: ord.date || new Date().toISOString()
+            });
+          } else {
+            let updated = false;
+            if (!existing.name && ord.customerName) { existing.name = ord.customerName; updated = true; }
+            if (!existing.address && ord.address) { existing.address = ord.address; updated = true; }
+            if (updated) changed = true;
+          }
+        });
+
+        if (changed) {
+          return Array.from(custMap.values());
+        }
+        return prevCust;
+      });
+    }
+  }, [orders]);
 
   // Sincronização entre abas do mesmo navegador (BroadcastChannel)
   useEffect(() => {
@@ -1051,12 +1182,13 @@ export const SystemProvider = ({ children }) => {
 
         if (remoteOrders.length > 0) {
           setOrders(prev => {
-            const map = new Map(prev.map(o => [String(o.id), o]));
+            const map = new Map(REAL_SALES_ORDERS.map(o => [String(o.id), o]));
+            prev.forEach(o => {
+              if (o && o.id) map.set(String(o.id), { ...(map.get(String(o.id)) || {}), ...o });
+            });
             remoteOrders.forEach(rem => {
-              if (!map.has(String(rem.id))) {
-                map.set(String(rem.id), rem);
-              } else {
-                map.set(String(rem.id), { ...map.get(String(rem.id)), ...rem });
+              if (rem && rem.id) {
+                map.set(String(rem.id), { ...(map.get(String(rem.id)) || {}), ...rem });
               }
             });
             const merged = Array.from(map.values());

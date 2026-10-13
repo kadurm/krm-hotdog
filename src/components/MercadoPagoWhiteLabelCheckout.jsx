@@ -11,7 +11,8 @@ import {
   createMercadoPagoCard, 
   checkMercadoPagoStatus, 
   detectCardBrand,
-  loadMercadoPagoSDK 
+  loadMercadoPagoSDK,
+  createMercadoPagoPreference
 } from '../services/mercadoPagoService';
 
 export default function MercadoPagoWhiteLabelCheckout({
@@ -51,6 +52,7 @@ export default function MercadoPagoWhiteLabelCheckout({
   const [savedCards, setSavedCards] = useState([]);
   const [selectedSavedCard, setSelectedSavedCard] = useState(null);
   const [saveCardForFuture, setSaveCardForFuture] = useState(true);
+  const [walletLoading, setWalletLoading] = useState(false);
   const cardNumberInputRef = useRef(null);
 
   // Carrega cartões salvos no dispositivo do cliente
@@ -67,6 +69,28 @@ export default function MercadoPagoWhiteLabelCheckout({
       }
     } catch (e) {
       console.warn('Falha ao carregar cartões salvos:', e);
+    }
+  }, []);
+
+  // Detecta retorno automático se o cliente pagou pela Carteira Digital do Mercado Pago
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get('collection_status') || urlParams.get('status');
+      const paymentId = urlParams.get('payment_id') || urlParams.get('collection_id');
+      
+      if (status === 'approved' && onPaymentSuccess) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        onPaymentSuccess({
+          paymentId: paymentId || 'wallet_' + Date.now(),
+          method: 'Carteira Digital (Google Pay / Apple Pay)',
+          status: 'approved',
+          amount
+        });
+      }
+    } catch (e) {
+      console.warn('Erro ao verificar retorno da carteira:', e);
     }
   }, []);
 
@@ -95,14 +119,60 @@ export default function MercadoPagoWhiteLabelCheckout({
     }
   };
 
-  const handleTriggerWalletAutofill = () => {
-    setCardInputMethod('manual');
-    setSelectedSavedCard(null);
-    setTimeout(() => {
-      if (cardNumberInputRef.current) {
-        cardNumberInputRef.current.focus();
+  // Abre a Carteira Digital Oficial (Google Pay, Apple Pay e Mercado Pago)
+  const handlePayWithWallet = async () => {
+    setWalletLoading(true);
+    setCardError(null);
+
+    try {
+      const payerObj = {
+        name: customerName || 'Cliente',
+        phone: customerPhone || '',
+        email: `${(customerPhone || 'cliente').toString().replace(/\D/g, '') || 'cliente'}@nuuprensado.com.br`,
+        cpf: cardCpf ? cardCpf.replace(/\D/g, '') : '11111111111'
+      };
+
+      const res = await createMercadoPagoPreference({
+        amount,
+        description: description || `Pedido Nuu Prensado - ${customerName || 'Cliente'}`,
+        payer: payerObj,
+        customAccessToken,
+        backUrl: typeof window !== 'undefined' ? window.location.href : 'https://nuuprensado.com.br'
+      });
+
+      if (res.success && (res.initPoint || res.preferenceId)) {
+        // Tenta abrir o checkout modal oficial do SDK se disponível
+        if (publicKey && typeof window !== 'undefined') {
+          try {
+            const mp = await loadMercadoPagoSDK(publicKey);
+            if (mp && mp.checkout) {
+              mp.checkout({
+                preference: { id: res.preferenceId },
+                autoOpen: true
+              });
+              setWalletLoading(false);
+              return;
+            }
+          } catch (sdkErr) {
+            console.warn('Erro ao abrir checkout modal via SDK:', sdkErr);
+          }
+        }
+
+        // Se no mobile ou sem SDK modal, abre diretamente a tela oficial da Carteira
+        if (res.initPoint) {
+          window.location.href = res.initPoint;
+        } else {
+          setWalletLoading(false);
+          setCardError('Não foi possível carregar a carteira digital. Tente inserir os dados manualmente.');
+        }
+      } else {
+        setWalletLoading(false);
+        setCardError(res.error || 'Erro ao gerar pagamento com carteira digital.');
       }
-    }, 150);
+    } catch (err) {
+      setWalletLoading(false);
+      setCardError('Falha ao comunicar com a carteira digital. Tente novamente ou use a opção de inserir dados.');
+    }
   };
 
   // 1. GERAÇÃO AUTOMÁTICA DE PIX
@@ -639,40 +709,65 @@ export default function MercadoPagoWhiteLabelCheckout({
           {/* MODO CARTEIRA DO CELULAR */}
           {cardInputMethod === 'wallet' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="animate-fade-in">
-              {/* Box de Ação para Carteira Digital / Navegador */}
+              {/* Box de Ação para Pagar com a Carteira Digital */}
               <div style={{
-                backgroundColor: 'rgba(234, 179, 8, 0.06)',
-                border: '1px dashed rgba(234, 179, 8, 0.35)',
-                borderRadius: '10px',
-                padding: '12px',
+                backgroundColor: 'rgba(234, 179, 8, 0.08)',
+                border: '1.5px solid rgba(234, 179, 8, 0.35)',
+                borderRadius: '12px',
+                padding: '14px 12px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
+                gap: '10px',
                 textAlign: 'center'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#fde047', fontWeight: 800, fontSize: '0.86rem' }}>
-                  <Smartphone size={16} /> Cartões Salvos no Celular
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#fde047', fontWeight: 800, fontSize: '0.9rem' }}>
+                  <Smartphone size={18} color="#eab308" /> Pagar com Carteira Digital
                 </div>
-                <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: 0 }}>
-                  Preencha automaticamente usando Google Pay, Apple Pay ou cartões salvos no seu smartphone.
+                <p style={{ fontSize: '0.76rem', color: 'rgba(255, 255, 255, 0.8)', margin: 0, lineHeight: 1.4 }}>
+                  Pague com 1 clique utilizando <strong>Google Pay</strong>, <strong>Apple Pay</strong> ou cartões da sua carteira no celular.
                 </p>
+
+                {cardError && (
+                  <div style={{
+                    fontSize: '0.74rem',
+                    color: '#f87171',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}>
+                    <AlertCircle size={13} />
+                    <span>{cardError}</span>
+                  </div>
+                )}
+
                 <button
                   type="button"
-                  onClick={handleTriggerWalletAutofill}
+                  disabled={walletLoading}
+                  onClick={handlePayWithWallet}
                   className="btn-primary"
                   style={{
-                    padding: '10px 14px',
-                    fontSize: '0.84rem',
+                    padding: '12px 16px',
+                    fontSize: '0.92rem',
                     fontWeight: 800,
                     borderRadius: '8px',
                     justifyContent: 'center',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 14px rgba(234, 179, 8, 0.25)'
+                    gap: '8px',
+                    boxShadow: '0 4px 15px rgba(234, 179, 8, 0.35)',
+                    cursor: walletLoading ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <Sparkles size={14} /> Selecionar Cartão da Carteira
+                  {walletLoading ? (
+                    <><Loader2 size={16} className="animate-spin" /> Abrindo Carteira...</>
+                  ) : (
+                    <><Lock size={15} /> Pagar R$ {Number(amount).toFixed(2)} com a Carteira</>
+                  )}
                 </button>
               </div>
 

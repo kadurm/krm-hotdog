@@ -162,3 +162,40 @@ export function detectCardBrand(cardNumber = '') {
   if (/^3[47]/.test(clean)) return { id: 'amex', name: 'American Express', color: '#007bc1' };
   return { id: 'generic', name: 'Cartão', color: '#eab308' };
 }
+
+/**
+ * Cria uma preferência de pagamento para Carteira Digital (Google Pay, Apple Pay e Mercado Pago)
+ */
+export async function createMercadoPagoPreference({
+  amount,
+  description,
+  payer = {},
+  customAccessToken = '',
+  backUrl = ''
+}) {
+  try {
+    const response = await fetch('/api/mercadopago/create-preference', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        amount,
+        description,
+        payer,
+        customAccessToken,
+        backUrl
+      })
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Erro ao chamar create-preference:', error);
+    return {
+      success: false,
+      error: 'Não foi possível inicializar a carteira digital.',
+      message: error.message
+    };
+  }
+}

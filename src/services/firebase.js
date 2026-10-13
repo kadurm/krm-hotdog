@@ -56,6 +56,27 @@ export const saveFirebaseConfig = (config) => {
   }
 };
 
+// Sanitiza qualquer objeto ou payload para o Firestore eliminando valores undefined recursivamente
+export const cleanFirestoreData = (data) => {
+  if (data === null || data === undefined) return null;
+  if (typeof data !== 'object') return data;
+  if (data instanceof Date) return data.toISOString();
+  if (Array.isArray(data)) {
+    return data.map(item => cleanFirestoreData(item));
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) {
+      result[key] = null;
+    } else if (value && typeof value === 'object') {
+      result[key] = cleanFirestoreData(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+};
+
 let firebaseAppInstance = null;
 let firestoreDbInstance = null;
 let lastProjectId = '';

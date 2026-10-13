@@ -3,6 +3,7 @@ import {
   getFirestoreDb, 
   isFirebaseConfigured, 
   saveFirebaseConfig,
+  cleanFirestoreData,
   FIRESTORE_RULES_GUIDE 
 } from '../services/firebase';
 import { 
@@ -2323,12 +2324,12 @@ export const SystemProvider = ({ children }) => {
     }
 
 
-    // Salva no Firebase Firestore com proteção absoluta contra sobrescrita
+    // Salva no Firebase Firestore com sanitização estrita e proteção absoluta contra sobrescrita
     const firestoreDb = getFirestoreDb();
     if (firestoreDb) {
       (async () => {
+        let targetId = String(newOrder.id);
         try {
-          let targetId = String(newOrder.id);
           const existingSnap = await getDoc(doc(firestoreDb, 'orders', targetId));
           if (existingSnap.exists()) {
             const collisionSafeId = `${targetId}-${Date.now().toString().slice(-4)}`;
@@ -2336,13 +2337,44 @@ export const SystemProvider = ({ children }) => {
             newOrder.id = targetId;
             setOrders(prev => prev.map(o => o.id === newId ? { ...o, id: targetId } : o));
           }
-          await setDoc(doc(firestoreDb, 'orders', targetId), {
+          const cleanPayload = cleanFirestoreData({
             ...newOrder,
             id: targetId,
             updatedAt: new Date().toISOString()
           });
+          await setDoc(doc(firestoreDb, 'orders', targetId), cleanPayload);
+          console.log(`[Firestore] Pedido #${targetId} gravado com sucesso!`);
         } catch (err) {
-          console.warn('Firebase order insert error:', err);
+          console.error('[Firestore] Erro ao gravar pedido, executando retry seguro:', err);
+          try {
+            const fallbackPayload = cleanFirestoreData({
+              id: targetId,
+              customerName: newOrder.customerName || 'Cliente',
+              phone: newOrder.phone || '',
+              type: newOrder.type || 'delivery',
+              address: newOrder.address || '',
+              neighborhood: newOrder.neighborhood || '',
+              distanceKm: newOrder.distanceKm || null,
+              paymentMethod: newOrder.paymentMethod || 'Pix',
+              paymentStatus: newOrder.paymentStatus || 'pending',
+              paymentProvider: newOrder.paymentProvider || 'manual',
+              paymentId: newOrder.paymentId || null,
+              changeFor: newOrder.changeFor || null,
+              items: newOrder.items || [],
+              deliveryFee: Number(newOrder.deliveryFee) || 0,
+              discount: Number(newOrder.discount) || 0,
+              couponCode: newOrder.couponCode || null,
+              total: Number(newOrder.total) || 0,
+              status: newOrder.status || 'pending',
+              date: newOrder.date || new Date().toISOString(),
+              createdAt: newOrder.date || new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+            await setDoc(doc(firestoreDb, 'orders', targetId), fallbackPayload);
+            console.log(`[Firestore] Pedido #${targetId} gravado via fallback com sucesso!`);
+          } catch (retryErr) {
+            console.error('[Firestore CRÍTICO] Falha definitiva no retry do pedido:', retryErr);
+          }
         }
       })();
     }

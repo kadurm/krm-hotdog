@@ -405,6 +405,37 @@ export const REAL_SALES_ORDERS = [
     "paymentMethod": "Pix",
     "deliveryFee": 0,
     "status": "delivered"
+  },
+  {
+    "id": "1017",
+    "customerName": "Luiz caldeira",
+    "phone": "38998771056",
+    "type": "delivery",
+    "address": "Rua Vinícius de Morais, nº 274, Bairro Planalto - Montes Claros/MG (Planalto)",
+    "neighborhood": "Planalto",
+    "distanceKm": null,
+    "paymentMethod": "Pix (Mercado Pago)",
+    "paymentStatus": "paid",
+    "paymentProvider": "mercadopago",
+    "paidAt": "2026-10-13T22:16:00.000Z",
+    "changeFor": null,
+    "items": [
+      {
+        "productId": 3,
+        "name": "Prensado de Costela (Pão tradicional | Catupiry Original | + Vinagrete)",
+        "price": 28,
+        "quantity": 1,
+        "notes": "Manda uma salsicha a parte. Quero só uma no pão"
+      }
+    ],
+    "deliveryFee": 5.00,
+    "discount": 0,
+    "couponCode": null,
+    "total": 33.00,
+    "status": "pending",
+    "date": "2026-10-13T22:16:00.000Z",
+    "createdAt": "2026-10-13T22:16:00.000Z",
+    "updatedAt": "2026-10-13T22:16:00.000Z"
   }
 ];
 
@@ -508,6 +539,16 @@ export const REAL_CUSTOMERS = [
     "totalOrders": 1,
     "lastOrderDate": "2026-10-12T00:27:22.472Z",
     "createdAt": "2026-10-12T00:27:22.472Z"
+  },
+  {
+    "phone": "38998771056",
+    "name": "Luiz caldeira",
+    "address": "Rua Vinícius de Morais, nº 274, Bairro Planalto - Montes Claros/MG (Planalto)",
+    "neighborhood": "Planalto",
+    "stampsCount": 1,
+    "totalOrders": 1,
+    "lastOrderDate": "2026-10-13T22:16:00.000Z",
+    "createdAt": "2026-10-13T22:16:00.000Z"
   }
 ];
 
@@ -619,5 +660,14 @@ export const REAL_TRANSACTIONS = [
     "category": "Vendas",
     "value": 17.5,
     "description": "Pedido #1016 - Mateus Assis (Pix)"
+  },
+  {
+    "id": "t-order-1017",
+    "orderId": "1017",
+    "date": "2026-10-13T22:16:00.000Z",
+    "type": "income",
+    "category": "Vendas",
+    "value": 33.0,
+    "description": "Pedido #1017 - Luiz caldeira (Pix - Mercado Pago)"
   }
 ];

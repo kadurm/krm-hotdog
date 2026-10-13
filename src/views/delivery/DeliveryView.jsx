@@ -1230,25 +1230,33 @@ export default function DeliveryView({
           ? `Dinheiro (Troco p/ R$ ${changeFor})` 
           : paymentMethod);
 
+    const cleanCartItems = Array.isArray(cart) ? cart.map(it => ({
+      productId: Number(it.productId) || it.productId || 1,
+      name: it.name || 'Lanche',
+      price: Number(it.price) || 0,
+      quantity: Number(it.quantity) || 1,
+      notes: it.notes ? String(it.notes).trim() : null
+    })) : [];
+
     const created = createOrder({
-      customerName: customerName.trim(), 
-      phone: cleanPhone, 
-      type: deliveryType, 
+      customerName: (customerName || '').trim(), 
+      phone: cleanPhone || '', 
+      type: deliveryType || 'delivery', 
       address: formattedAddress,
-      neighborhood: deliveryType === 'delivery' ? addressNeighborhood.trim() : null,
-      distanceKm: deliveryType === 'delivery' ? selectedDistanceKm : null,
-      paymentMethod: finalPayment,
+      neighborhood: deliveryType === 'delivery' ? (addressNeighborhood ? addressNeighborhood.trim() : '') : null,
+      distanceKm: deliveryType === 'delivery' ? (selectedDistanceKm || null) : null,
+      paymentMethod: finalPayment || 'Pix',
       paymentStatus: isOnlinePaid ? 'paid' : 'pending',
       paymentProvider: isOnlinePaid ? 'mercadopago' : 'manual',
       paymentId: onlinePaymentData?.paymentId || null,
-      paymentDetails: onlinePaymentData || null,
+      paymentDetails: onlinePaymentData ? JSON.parse(JSON.stringify(onlinePaymentData, (k, v) => v === undefined ? null : v)) : null,
       paidAt: isOnlinePaid ? new Date().toISOString() : null,
-      changeFor: paymentMethod === 'Dinheiro' && changeFor ? changeFor : null,
-      items: cart, 
-      deliveryFee: parseFloat(Number(deliveryFee).toFixed(2)),
-      discount: parseFloat(Number(totalDiscount).toFixed(2)),
+      changeFor: (paymentMethod === 'Dinheiro' && changeFor) ? changeFor : null,
+      items: cleanCartItems, 
+      deliveryFee: parseFloat(Number(deliveryFee || 0).toFixed(2)),
+      discount: parseFloat(Number(totalDiscount || 0).toFixed(2)),
       couponCode: appliedCoupon ? appliedCoupon.code : null,
-      total: parseFloat(Number(grandTotal).toFixed(2))
+      total: parseFloat(Number(grandTotal || 0).toFixed(2))
     });
 
     // Salva ou atualiza a memória do cliente e adiciona selo de fidelidade

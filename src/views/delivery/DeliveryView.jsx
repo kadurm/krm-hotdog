@@ -1072,6 +1072,53 @@ export default function DeliveryView({
         </div>
       ) : null}
 
+      {/* BARRA DE CATEGORIAS EXCLUSIVA PARA DESKTOP (ESTÁTICA, NUNCA COBRE CONTEÚDO) */}
+      {checkoutStep === 'menu' && (
+        <div 
+          className="desktop-category-bar"
+          style={{
+            maxWidth: '1240px',
+            margin: '0 auto',
+            width: '100%',
+            padding: '16px 1.5rem 0 1.5rem',
+            display: 'flex',
+            gap: '10px',
+            overflowX: 'auto',
+            scrollbarWidth: 'none'
+          }}
+        >
+          {categoriesList.map(cat => {
+            const isSelected = activePillId === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handleSelectCategory(cat.id)}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '99px',
+                  border: isSelected ? '1px solid #eab308' : '1px solid rgba(255,255,255,0.15)',
+                  backgroundColor: isSelected ? '#eab308' : 'rgba(0,0,0,0.45)',
+                  color: isSelected ? '#000' : '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(5px)',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isSelected ? '0 0 14px rgba(234, 179, 8, 0.45)' : 'none'
+                }}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* NOVO: CONTROLES FLUTUANTES PARA MOBILE (OCULTO NO DESKTOP) */}
       {checkoutStep === 'menu' && (
         <div 

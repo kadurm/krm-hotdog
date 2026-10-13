@@ -910,7 +910,7 @@ input:focus, select:focus, textarea:focus {
   pointer-events: auto;
 }
 
-/* Desktop: Oculta completamente a barra flutuante mobile para nunca cobrir o site nem duplicar elementos */
+/* Desktop: Oculta completamente a barra flutuante mobile e exibe a barra desktop estática */
 @media (min-width: 769px) {
   .mobile-floating-header {
     display: none !important;
@@ -918,11 +918,17 @@ input:focus, select:focus, textarea:focus {
   .mobile-only-banner {
     display: none !important;
   }
+  .desktop-category-bar {
+    display: flex !important;
+  }
 }
 
-/* Mobile: Oculta o banner direto do desktop para evitar duplicação */
+/* Mobile: Oculta elementos exclusivos do desktop */
 @media (max-width: 768px) {
   .desktop-only-banner {
+    display: none !important;
+  }
+  .desktop-category-bar {
     display: none !important;
   }
 }

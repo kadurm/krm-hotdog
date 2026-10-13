@@ -378,7 +378,7 @@ const INITIAL_STORE_SETTINGS = {
   loyaltyRewardText: '1 Prensadinho Grátis ou R$ 20 OFF',
   autoPackagingDeduction: true,
   deliveryFeesByNeighborhood: {
-    'Sagrada Família': 5.00,
+    'Sagrada Família': 0.00,
     'Centro': 5.00,
     'Cândida Câmara': 5.00,
     'Todos os Santos': 5.00,
@@ -417,7 +417,7 @@ const INITIAL_STORE_SETTINGS = {
 
 // 5. BAIRROS DE ENTREGA (Montes Claros)
 const INITIAL_NEIGHBORHOODS = [
-  { id: 'nb-1', name: 'Sagrada Família', fee: 5.00, distanceKm: 1, active: true },
+  { id: 'nb-1', name: 'Sagrada Família', fee: 0.00, distanceKm: 1, active: true },
   { id: 'nb-2', name: 'Centro', fee: 5.00, distanceKm: 2.5, active: true },
   { id: 'nb-3', name: 'Cândida Câmara', fee: 5.00, distanceKm: 2, active: true },
   { id: 'nb-4', name: 'Todos os Santos', fee: 5.00, distanceKm: 2.5, active: true },

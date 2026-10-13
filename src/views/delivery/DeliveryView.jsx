@@ -6,7 +6,8 @@ import {
   Clock, Utensils, ChevronRight, X, Sparkles,
   ChevronUp, ChevronDown, CheckCircle,
   LayoutGrid, MonitorPlay, Copy, Check, Bike, Store, MessageCircle,
-  Tag, Award, AlertCircle, MapPin, Search, Gift, Phone, Navigation, ZoomIn
+  Tag, Award, AlertCircle, MapPin, Search, Gift, Phone, Navigation, ZoomIn,
+  User, ArrowLeft, ArrowRight, Edit2, CreditCard, DollarSign, CheckCircle2
 } from 'lucide-react';
 import { VIEW_CONFIG } from '../../config/viewConfig';
 
@@ -143,6 +144,96 @@ export default function DeliveryView({
   const streetInputRef = useRef(null);
   const numberInputRef = useRef(null);
   const neighborhoodInputRef = useRef(null);
+
+  // Fluxo de Quiz Interativo do Checkout (1: Identificação, 2: Entrega, 3: Pagamento, 4: Confirmação)
+  const [quizStep, setQuizStep] = useState(1);
+
+  // Reseta o quiz para a etapa 1 sempre que voltar ao cardápio
+  useEffect(() => {
+    if (checkoutStep === 'menu') {
+      setQuizStep(1);
+    }
+  }, [checkoutStep]);
+
+  const handleNextQuizStep = () => {
+    if (quizStep === 1) {
+      const errors = {};
+      let hasError = false;
+      if (!customerName.trim()) {
+        errors.name = true;
+        hasError = true;
+      }
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        errors.phone = true;
+        hasError = true;
+      }
+      if (hasError) {
+        setFormErrors(prev => ({ ...prev, ...errors }));
+        showSiteAlert(
+          'Identificação Necessária',
+          'Por favor, informe seu Nome Completo e WhatsApp válido com DDD (mínimo 10 dígitos) para continuar.',
+          'warning',
+          'Etapa 1'
+        );
+        return;
+      }
+      setFormErrors(prev => ({ ...prev, name: false, phone: false }));
+      setQuizStep(2);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (quizStep === 2) {
+      if (deliveryType === 'delivery') {
+        const errors = {};
+        let hasError = false;
+        if (!addressStreet.trim()) {
+          errors.street = true;
+          hasError = true;
+        }
+        if (!addressNumber.trim()) {
+          errors.number = true;
+          hasError = true;
+        }
+        if (!addressNeighborhood.trim()) {
+          errors.neighborhood = true;
+          hasError = true;
+        }
+        if (hasError) {
+          setFormErrors(prev => ({ ...prev, ...errors }));
+          showSiteAlert(
+            'Endereço Incompleto',
+            'Por favor, preencha a Rua/Av, Número e Bairro para calcularmos a entrega corretamente.',
+            'warning',
+            'Etapa 2'
+          );
+          return;
+        }
+        setFormErrors(prev => ({ ...prev, street: false, number: false, neighborhood: false }));
+      }
+      setQuizStep(3);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (quizStep === 3) {
+      if (!paymentMethod) {
+        showSiteAlert(
+          'Forma de Pagamento',
+          'Por favor, selecione como deseja realizar o pagamento.',
+          'warning',
+          'Etapa 3'
+        );
+        return;
+      }
+      setQuizStep(4);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePrevQuizStep = () => {
+    if (quizStep > 1) {
+      setQuizStep(prev => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setCheckoutStep('menu');
+    }
+  };
 
   // Auxiliar para extrair campos de endereços legados salvos
   const parseAddressString = (addrStr) => {
@@ -834,7 +925,7 @@ export default function DeliveryView({
 
   // Envio do Pedido
   const handleSubmitOrder = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
     if (!isStoreOpen) {
       if (pauseStatus.isPaused) {
@@ -862,7 +953,7 @@ export default function DeliveryView({
       return;
     }
 
-    // Validação com destaque em vermelho e scroll automático até a informação faltante
+    // Validação com destaque em vermelho e direcionamento para a etapa correta do Quiz
     const errors = {};
     let firstErrorRef = null;
     let firstErrorMessage = '';
@@ -870,6 +961,7 @@ export default function DeliveryView({
     if (!customerName.trim()) {
       errors.name = true;
       if (!firstErrorRef) {
+        setQuizStep(1);
         firstErrorRef = nameInputRef;
         firstErrorMessage = 'Por favor, informe seu nome completo para identificação do pedido.';
       }
@@ -879,6 +971,7 @@ export default function DeliveryView({
     if (cleanPhone.length < 10) {
       errors.phone = true;
       if (!firstErrorRef) {
+        setQuizStep(1);
         firstErrorRef = phoneInputRef;
         firstErrorMessage = 'Por favor, informe seu número de WhatsApp com DDD (mínimo 10 dígitos, ex: 38 99999-8888).';
       }
@@ -888,6 +981,7 @@ export default function DeliveryView({
       if (!addressStreet.trim()) {
         errors.street = true;
         if (!firstErrorRef) {
+          setQuizStep(2);
           firstErrorRef = streetInputRef;
           firstErrorMessage = 'Por favor, preencha o nome da sua Rua ou Avenida para entrega.';
         }
@@ -896,6 +990,7 @@ export default function DeliveryView({
       if (!addressNumber.trim()) {
         errors.number = true;
         if (!firstErrorRef) {
+          setQuizStep(2);
           firstErrorRef = numberInputRef;
           firstErrorMessage = 'Por favor, preencha o número do local da entrega.';
         }
@@ -904,6 +999,7 @@ export default function DeliveryView({
       if (!addressNeighborhood.trim()) {
         errors.neighborhood = true;
         if (!firstErrorRef) {
+          setQuizStep(2);
           firstErrorRef = neighborhoodInputRef;
           firstErrorMessage = 'Por favor, informe o bairro para entrega em Montes Claros.';
         }
@@ -1915,216 +2011,461 @@ export default function DeliveryView({
         </div>
       )}
 
-      {/* FORMULÁRIO DE CHECKOUT */}
+      {/* CHECKOUT EM FORMATO DE QUIZ INTERATIVO */}
       {checkoutStep === 'form' && (
-        <div style={{ maxWidth: '960px', margin: '1.25rem auto 4.5rem auto', width: '100%', padding: '0 1.25rem' }} className="animate-fade-in">
-          <div className="glass-panel" style={{ padding: '1.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: 0 }}>Finalizar Pedido</h2>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>• Nuu Prensado</span>
+        <div style={{ maxWidth: '860px', margin: '1.25rem auto 4.5rem auto', width: '100%', padding: '0 1rem' }} className="animate-fade-in">
+          <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+            
+            {/* CABEÇALHO DO QUIZ */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.85rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', margin: 0 }}>Finalizar Pedido</h2>
+                  <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fde047', fontWeight: 700, border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                    Etapa {quizStep} de 4
+                  </span>
+                </div>
+                <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nuu Prensado • Montagem rápida</p>
               </div>
               <button 
+                type="button"
                 onClick={() => setCheckoutStep('menu')} 
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.88rem', fontWeight: 600 }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', transition: 'all 0.2s ease' }}
               >
-                Voltar ao Cardápio
+                <ArrowLeft size={15} /> Voltar ao Cardápio
               </button>
             </div>
 
-            {/* SEÇÃO DE LOGIN / MEMÓRIA DO CLIENTE VIA TELEFONE */}
-            <div style={{
-              backgroundColor: 'rgba(234,179,8,0.08)',
-              border: '1px solid rgba(234,179,8,0.25)',
-              borderRadius: '12px',
-              padding: '10px 14px',
-              marginBottom: '1.25rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.82rem', color: '#fde047', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Award size={15} /> Já comprou com a gente? Busque seus dados
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
-                <input
-                  type="tel"
-                  placeholder="DDD + Seu WhatsApp"
-                  value={customerSearchPhone}
-                  onChange={(e) => setCustomerSearchPhone(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleLookupPhone(e);
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    backgroundColor: 'rgba(0,0,0,0.4)',
-                    color: '#fff',
-                    fontSize: '0.85rem'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleLookupPhone}
-                  style={{
-                    backgroundColor: '#eab308',
-                    color: '#000',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 14px',
-                    fontWeight: 800,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0
-                  }}
-                >
-                  <Search size={14} /> Buscar
-                </button>
+            {/* BARRA DE PROGRESSO & STEPPER GAMIFICADO */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              {/* Barra de progresso contínua */}
+              <div style={{ height: '6px', width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.85rem' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${(quizStep / 4) * 100}%`,
+                  background: 'linear-gradient(90deg, #eab308 0%, var(--color-brand) 100%)',
+                  borderRadius: '999px',
+                  transition: 'width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 0 10px rgba(234, 179, 8, 0.5)'
+                }} />
               </div>
 
-              {/* Exibe o Cartão Fidelidade se o cliente for identificado */}
-              {identifiedCustomer && (
-                <div style={{ marginTop: '10px' }}>
-                  <LoyaltyCard customer={identifiedCustomer} onApplyReward={handleApplyLoyaltyReward} />
-                </div>
-              )}
+              {/* Indicadores das 4 Etapas do Quiz */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                {[
+                  { step: 1, label: 'Identificação', icon: User },
+                  { step: 2, label: 'Entrega', icon: Bike },
+                  { step: 3, label: 'Pagamento', icon: CreditCard },
+                  { step: 4, label: 'Confirmação', icon: CheckCircle2 }
+                ].map(({ step, label, icon: IconComponent }) => {
+                  const isCompleted = quizStep > step;
+                  const isCurrent = quizStep === step;
+                  return (
+                    <button
+                      key={step}
+                      type="button"
+                      onClick={() => {
+                        // Permite voltar livremente para etapas já alcançadas
+                        if (step < quizStep) {
+                          setQuizStep(step);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      disabled={step > quizStep}
+                      style={{
+                        background: isCurrent 
+                          ? 'rgba(234, 179, 8, 0.12)' 
+                          : isCompleted 
+                            ? 'rgba(34, 197, 94, 0.08)' 
+                            : 'rgba(255, 255, 255, 0.02)',
+                        border: isCurrent 
+                          ? '1px solid #eab308' 
+                          : isCompleted 
+                            ? '1px solid rgba(34, 197, 94, 0.3)' 
+                            : '1px solid rgba(255, 255, 255, 0.06)',
+                        borderRadius: '10px',
+                        padding: '6px 4px',
+                        cursor: step <= quizStep ? 'pointer' : 'default',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '3px',
+                        transition: 'all 0.25s ease'
+                      }}
+                    >
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isCurrent 
+                          ? '#eab308' 
+                          : isCompleted 
+                            ? '#22c55e' 
+                            : 'rgba(255, 255, 255, 0.1)',
+                        color: isCurrent ? '#000' : '#fff',
+                        fontSize: '0.75rem',
+                        fontWeight: 800
+                      }}>
+                        {isCompleted ? <Check size={13} strokeWidth={3} /> : step}
+                      </div>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        fontWeight: isCurrent ? 700 : 500,
+                        color: isCurrent ? '#fde047' : isCompleted ? '#4ade80' : 'var(--text-muted)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%'
+                      }}>
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <form onSubmit={handleSubmitOrder} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Grid Responsivo de 2 Colunas para telas médias/grandes */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: '1.5rem',
-                alignItems: 'start'
-              }}>
-                
-                {/* COLUNA 1: DADOS PESSOAIS & ENDEREÇO DE ENTREGA */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {/* Nome Completo com validação visual */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '0.88rem', color: formErrors.name ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                      Nome Completo <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input 
-                      ref={nameInputRef}
-                      type="text" 
-                      placeholder="Ex: Carlos Eduardo"
-                      value={customerName}
-                      onChange={(e) => {
-                        setCustomerName(e.target.value);
-                        if (formErrors.name) setFormErrors(prev => ({ ...prev, name: false }));
-                      }}
-                      style={{
-                        padding: '9px 12px',
-                        borderRadius: '8px',
-                        border: formErrors.name ? '2px solid #ef4444' : '1px solid var(--border-glass)',
-                        backgroundColor: formErrors.name ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                        boxShadow: formErrors.name ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
-                        transition: 'all 0.2s ease',
-                        outline: 'none',
-                        color: '#fff',
-                        fontSize: '0.88rem'
-                      }}
-                    />
-                    {formErrors.name && (
-                      <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <AlertCircle size={12} /> Informe seu nome completo
+            {/* CONTEÚDO DAS ETAPAS DO QUIZ */}
+            <form onSubmit={handleSubmitOrder} noValidate>
+              
+              {/* ETAPA 1: QUEM É VOCÊ? (IDENTIFICAÇÃO & CLUBE FIDELIDADE) */}
+              {quizStep === 1 && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fde047', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
+                      <Sparkles size={16} /> Etapa 1 • Quem é você?
+                    </div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
+                      Vamos nos conhecer! 🌭
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Informe seu nome e WhatsApp para identificarmos seu pedido e pontuar no Clube Fidelidade Nuu Prensado.
+                    </p>
+                  </div>
+
+                  {/* SEÇÃO DE LOGIN / MEMÓRIA DO CLIENTE VIA TELEFONE */}
+                  <div style={{
+                    backgroundColor: 'rgba(234,179,8,0.08)',
+                    border: '1px solid rgba(234,179,8,0.25)',
+                    borderRadius: '12px',
+                    padding: '12px 14px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#fde047', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Award size={15} /> Já comprou com a gente? Busque seus dados
                       </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                      <input
+                        type="tel"
+                        placeholder="DDD + Seu WhatsApp (ex: 38999998888)"
+                        value={customerSearchPhone}
+                        onChange={(e) => setCustomerSearchPhone(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleLookupPhone(e);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          backgroundColor: 'rgba(0,0,0,0.4)',
+                          color: '#fff',
+                          fontSize: '0.88rem',
+                          outline: 'none'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleLookupPhone}
+                        style={{
+                          backgroundColor: '#eab308',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '10px 16px',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
+                        }}
+                      >
+                        <Search size={15} /> Buscar
+                      </button>
+                    </div>
+
+                    {/* Exibe o Cartão Fidelidade se o cliente for identificado */}
+                    {identifiedCustomer && (
+                      <div style={{ marginTop: '12px' }}>
+                        <LoyaltyCard customer={identifiedCustomer} onApplyReward={handleApplyLoyaltyReward} />
+                      </div>
                     )}
                   </div>
 
-                  {/* Telefone / WhatsApp com validação visual */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '0.88rem', color: formErrors.phone ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                      Telefone / WhatsApp <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input 
-                      ref={phoneInputRef}
-                      type="tel" 
-                      placeholder="Ex: (38) 98888-7777"
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(e.target.value);
-                        if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
-                      }}
-                      style={{
-                        padding: '9px 12px',
-                        borderRadius: '8px',
-                        border: formErrors.phone ? '2px solid #ef4444' : '1px solid var(--border-glass)',
-                        backgroundColor: formErrors.phone ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                        boxShadow: formErrors.phone ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
-                        transition: 'all 0.2s ease',
-                        outline: 'none',
-                        color: '#fff',
-                        fontSize: '0.88rem'
-                      }}
-                    />
-                    {formErrors.phone && (
-                      <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <AlertCircle size={12} /> Informe seu WhatsApp com DDD (mínimo 10 dígitos)
-                      </span>
-                    )}
-                  </div>
+                  {/* Campos Principais: Nome e WhatsApp */}
+                  <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '12px',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}>
+                    {/* Nome Completo */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ fontSize: '0.88rem', color: formErrors.name ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <User size={15} color={formErrors.name ? '#ef4444' : 'var(--color-brand-yellow)'} />
+                        Seu Nome Completo <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input 
+                        ref={nameInputRef}
+                        type="text" 
+                        placeholder="Ex: Carlos Eduardo"
+                        value={customerName}
+                        onChange={(e) => {
+                          setCustomerName(e.target.value);
+                          if (formErrors.name) setFormErrors(prev => ({ ...prev, name: false }));
+                        }}
+                        style={{
+                          padding: '11px 14px',
+                          borderRadius: '10px',
+                          border: formErrors.name ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                          backgroundColor: formErrors.name ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                          boxShadow: formErrors.name ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                          transition: 'all 0.2s ease',
+                          outline: 'none',
+                          color: '#fff',
+                          fontSize: '0.95rem'
+                        }}
+                      />
+                      {formErrors.name && (
+                        <span style={{ color: '#ef4444', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={13} /> Por favor, informe seu nome completo
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Tipo de Entrega com taxa condicional */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Tipo de Entrega</label>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <label style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: deliveryType === 'delivery' ? 'var(--color-brand-glow)' : 'transparent', borderColor: deliveryType === 'delivery' ? 'var(--color-brand)' : 'var(--border-glass)' }}>
-                        <input 
-                          type="radio" 
-                          name="deliveryType" 
-                          value="delivery"
-                          checked={deliveryType === 'delivery'}
-                          onChange={() => setDeliveryType('delivery')}
-                          style={{ accentColor: 'var(--color-brand)' }}
-                        />
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Delivery</div>
-                          <div style={{ fontSize: '0.74rem', color: isDeliveryAddressProvided ? 'var(--text-secondary)' : 'rgba(255, 255, 255, 0.65)' }}>
-                            {isDeliveryAddressProvided 
-                              ? (deliveryFee === 0 ? '🎉 Frete Grátis!' : `+ R$ ${deliveryFee.toFixed(2)}`)
-                              : 'Taxa calculada no endereço'}
-                          </div>
-                        </div>
+                    {/* Telefone / WhatsApp */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ fontSize: '0.88rem', color: formErrors.phone ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Phone size={15} color={formErrors.phone ? '#ef4444' : 'var(--color-brand-yellow)'} />
+                        WhatsApp com DDD <span style={{ color: '#ef4444' }}>*</span>
                       </label>
-                      <label style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: deliveryType === 'pickup' ? 'var(--color-brand-glow)' : 'transparent', borderColor: deliveryType === 'pickup' ? 'var(--color-brand)' : 'var(--border-glass)' }}>
-                        <input 
-                          type="radio" 
-                          name="deliveryType" 
-                          value="pickup"
-                          checked={deliveryType === 'pickup'}
-                          onChange={() => setDeliveryType('pickup')}
-                          style={{ accentColor: 'var(--color-brand)' }}
-                        />
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Retirada</div>
-                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Sem taxa de entrega</div>
-                        </div>
-                      </label>
+                      <input 
+                        ref={phoneInputRef}
+                        type="tel" 
+                        placeholder="Ex: (38) 98888-7777"
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
+                        }}
+                        style={{
+                          padding: '11px 14px',
+                          borderRadius: '10px',
+                          border: formErrors.phone ? '2px solid #ef4444' : '1px solid var(--border-glass)',
+                          backgroundColor: formErrors.phone ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
+                          boxShadow: formErrors.phone ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
+                          transition: 'all 0.2s ease',
+                          outline: 'none',
+                          color: '#fff',
+                          fontSize: '0.95rem'
+                        }}
+                      />
+                      {formErrors.phone && (
+                        <span style={{ color: '#ef4444', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={13} /> Informe seu WhatsApp com DDD (mínimo 10 dígitos)
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Se for delivery: campos individuais de endereço e taxa calculada */}
+                  {/* Botões de Ação do Passo 1 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutStep('menu')}
+                      className="btn-secondary"
+                      style={{ padding: '12px 18px', fontSize: '0.92rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <ArrowLeft size={16} /> Voltar ao Cardápio
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextQuizStep}
+                      className="btn-primary"
+                      style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 800, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234, 179, 8, 0.25)' }}
+                    >
+                      Avançar para Entrega <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 2: COMO VOCÊ VAI RECEBER? (DELIVERY OU RETIRADA & ENDEREÇO) */}
+              {quizStep === 2 && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fde047', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
+                      <Sparkles size={16} /> Etapa 2 • Recebimento
+                    </div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
+                      Como prefere receber seu lanche? 🛵
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Levamos até você em Montes Claros ou você pode retirar direto no nosso balcão.
+                    </p>
+                  </div>
+
+                  {/* CARDS INTERATIVOS DE SELEÇÃO: DELIVERY VS RETIRADA */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+                    {/* Card Delivery */}
+                    <div
+                      onClick={() => setDeliveryType('delivery')}
+                      style={{
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: deliveryType === 'delivery' ? '2px solid #eab308' : '1px solid var(--border-glass)',
+                        backgroundColor: deliveryType === 'delivery' ? 'rgba(234, 179, 8, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        position: 'relative'
+                      }}
+                    >
+                      <div style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        backgroundColor: deliveryType === 'delivery' ? '#eab308' : 'rgba(255, 255, 255, 0.08)',
+                        color: deliveryType === 'delivery' ? '#000' : '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Bike size={24} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Quero Delivery</span>
+                          {deliveryType === 'delivery' && (
+                            <span style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', fontWeight: 700 }}>
+                              <Check size={14} /> Selecionado
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                          {isDeliveryAddressProvided 
+                            ? (deliveryFee === 0 ? '🎉 Frete Grátis no seu pedido!' : `Taxa: R$ ${deliveryFee.toFixed(2)}`)
+                            : 'Entregamos na sua casa em Montes Claros'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card Retirada no Balcão */}
+                    <div
+                      onClick={() => setDeliveryType('pickup')}
+                      style={{
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: deliveryType === 'pickup' ? '2px solid #eab308' : '1px solid var(--border-glass)',
+                        backgroundColor: deliveryType === 'pickup' ? 'rgba(234, 179, 8, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        position: 'relative'
+                      }}
+                    >
+                      <div style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        backgroundColor: deliveryType === 'pickup' ? '#eab308' : 'rgba(255, 255, 255, 0.08)',
+                        color: deliveryType === 'pickup' ? '#000' : '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Store size={24} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Vou Retirar</span>
+                          {deliveryType === 'pickup' && (
+                            <span style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', fontWeight: 700 }}>
+                              <Check size={14} /> Selecionado
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: '#4ade80', fontWeight: 600, margin: 0 }}>
+                          Sem taxa de entrega • Retirada no balcão
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Se for RETIRADA: Card explicativo com endereço da loja */}
+                  {deliveryType === 'pickup' && (
+                    <div style={{
+                      backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                      border: '1px solid rgba(34, 197, 94, 0.25)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }} className="animate-fade-in">
+                      <MapPin size={28} color="#4ade80" style={{ flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#fff', marginBottom: '2px' }}>
+                          Endereço para Retirada no Balcão:
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.85)' }}>
+                          <strong>Rua Agapanto, 264</strong> - Bairro Sagrada Família, Montes Claros/MG
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: '#4ade80', marginTop: '4px' }}>
+                          Assim que o pedido for concluído na chapa, avisaremos você para retirar quentinho!
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Se for DELIVERY: Formulário estruturado de endereço */}
                   {deliveryType === 'delivery' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }} className="animate-fade-in">
+                    <div style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem'
+                    }} className="animate-fade-in">
                       
                       {/* Campo de CEP Opcional para preenchimento rápido */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                            CEP <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
+                            CEP <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional para autocompletar)</span>
                           </label>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
@@ -2144,12 +2485,13 @@ export default function DeliveryView({
                             style={{
                               flex: 1,
                               minWidth: 0,
-                              padding: '8px 12px',
+                              padding: '10px 12px',
                               borderRadius: '8px',
                               border: '1px solid rgba(255,255,255,0.15)',
                               backgroundColor: 'rgba(0,0,0,0.4)',
                               color: '#fff',
-                              fontSize: '0.85rem'
+                              fontSize: '0.88rem',
+                              outline: 'none'
                             }}
                           />
                           <button
@@ -2161,42 +2503,42 @@ export default function DeliveryView({
                               color: '#000',
                               border: 'none',
                               borderRadius: '8px',
-                              padding: '8px 14px',
+                              padding: '10px 16px',
                               fontWeight: 700,
-                              fontSize: '0.8rem',
+                              fontSize: '0.82rem',
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '6px',
                               whiteSpace: 'nowrap',
                               flexShrink: 0
                             }}
                           >
-                            {cepLoading ? 'Buscando...' : <><Search size={13} /> Buscar CEP</>}
+                            {cepLoading ? 'Buscando...' : <><Search size={14} /> Buscar CEP</>}
                           </button>
                         </div>
 
                         {cepFeedback && (
                           <div style={{
-                            fontSize: '0.74rem',
+                            fontSize: '0.76rem',
                             marginTop: '2px',
                             color: cepFeedback.success ? '#4ade80' : '#f87171',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '4px'
                           }}>
-                            {cepFeedback.success ? <Check size={12} /> : <AlertCircle size={12} />}
+                            {cepFeedback.success ? <Check size={13} /> : <AlertCircle size={13} />}
                             <span>{cepFeedback.message}</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Campos Estruturados de Endereço: Rua/Av e Número */}
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {/* Rua / Avenida */}
-                        <div style={{ flex: '1 1 64%', minWidth: '170px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {/* Rua / Avenida e Número */}
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {/* Rua */}
+                        <div style={{ flex: '1 1 62%', minWidth: '170px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '0.82rem', color: formErrors.street ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                            Rua / Av. <span style={{ color: '#ef4444' }}>*</span>
+                            Rua / Avenida <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
                             ref={streetInputRef}
@@ -2208,67 +2550,66 @@ export default function DeliveryView({
                               if (formErrors.street) setFormErrors(prev => ({ ...prev, street: false }));
                             }}
                             style={{
-                              padding: '9px 12px',
+                              padding: '10px 12px',
                               borderRadius: '8px',
                               border: formErrors.street ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                               backgroundColor: formErrors.street ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.88rem',
+                              fontSize: '0.9rem',
                               outline: 'none',
                               boxShadow: formErrors.street ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                               transition: 'all 0.2s ease'
                             }}
                           />
                           {formErrors.street && (
-                            <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <AlertCircle size={11} /> Preencha a Rua/Av.
+                            <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={12} /> Preencha a Rua/Av.
                             </span>
                           )}
                         </div>
 
                         {/* Número */}
-                        <div style={{ flex: '1 1 28%', minWidth: '85px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ flex: '1 1 30%', minWidth: '90px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '0.82rem', color: formErrors.number ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
                             Número <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
                             ref={numberInputRef}
                             type="text"
-                            placeholder="Ex: 264 ou S/N"
+                            placeholder="Ex: 264"
                             value={addressNumber}
                             onChange={(e) => {
                               setAddressNumber(e.target.value);
                               if (formErrors.number) setFormErrors(prev => ({ ...prev, number: false }));
                             }}
                             style={{
-                              padding: '9px 12px',
+                              padding: '10px 12px',
                               borderRadius: '8px',
                               border: formErrors.number ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                               backgroundColor: formErrors.number ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.88rem',
+                              fontSize: '0.9rem',
                               outline: 'none',
                               boxShadow: formErrors.number ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                               transition: 'all 0.2s ease'
                             }}
                           />
                           {formErrors.number && (
-                            <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <AlertCircle size={11} /> Preencha o número
+                            <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={12} /> Preencha o número
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* Campos Estruturados de Endereço: Bairro e Complemento */}
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {/* Bairro (Montes Claros) */}
+                      {/* Bairro e Complemento */}
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {/* Bairro */}
                         <div style={{ flex: '1 1 54%', minWidth: '160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <label style={{ fontSize: '0.82rem', color: formErrors.neighborhood ? '#ef4444' : 'var(--text-secondary)', fontWeight: 600 }}>
-                              Bairro <span style={{ color: '#ef4444' }}>*</span>
+                              Bairro (Montes Claros) <span style={{ color: '#ef4444' }}>*</span>
                             </label>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Montes Claros</span>
                           </div>
                           <input
                             ref={neighborhoodInputRef}
@@ -2287,12 +2628,12 @@ export default function DeliveryView({
                               }
                             }}
                             style={{
-                              padding: '9px 12px',
+                              padding: '10px 12px',
                               borderRadius: '8px',
                               border: formErrors.neighborhood ? '2px solid #ef4444' : '1px solid var(--border-glass)',
                               backgroundColor: formErrors.neighborhood ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.88rem',
+                              fontSize: '0.9rem',
                               outline: 'none',
                               boxShadow: formErrors.neighborhood ? '0 0 0 3px rgba(239, 68, 68, 0.2)' : 'none',
                               transition: 'all 0.2s ease'
@@ -2306,16 +2647,16 @@ export default function DeliveryView({
                             ))}
                           </datalist>
                           {formErrors.neighborhood && (
-                            <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <AlertCircle size={11} /> Preencha o bairro
+                            <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <AlertCircle size={12} /> Preencha o bairro
                             </span>
                           )}
                         </div>
 
-                        {/* Complemento (Opcional) */}
+                        {/* Complemento */}
                         <div style={{ flex: '1 1 40%', minWidth: '140px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                            Complemento <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
+                            Complemento <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
                           </label>
                           <input
                             type="text"
@@ -2323,12 +2664,12 @@ export default function DeliveryView({
                             value={addressComplement}
                             onChange={(e) => setAddressComplement(e.target.value)}
                             style={{
-                              padding: '9px 12px',
+                              padding: '10px 12px',
                               borderRadius: '8px',
                               border: '1px solid var(--border-glass)',
                               backgroundColor: 'var(--bg-tertiary)',
                               color: '#fff',
-                              fontSize: '0.88rem',
+                              fontSize: '0.9rem',
                               outline: 'none',
                               transition: 'all 0.2s ease'
                             }}
@@ -2338,23 +2679,23 @@ export default function DeliveryView({
 
                       {/* Card da Taxa de Entrega Calculada */}
                       <div style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
+                        padding: '12px 14px',
+                        borderRadius: '10px',
                         backgroundColor: isDeliveryAddressProvided ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
                         border: isDeliveryAddressProvided ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-glass)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        fontSize: '0.82rem',
+                        fontSize: '0.85rem',
                         transition: 'all 0.3s ease'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Bike size={16} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Bike size={20} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
                           <div>
-                            <span style={{ color: '#fff', fontWeight: 600 }}>
+                            <span style={{ color: '#fff', fontWeight: 700 }}>
                               Taxa de Entrega:
                             </span>
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
                               {isDeliveryAddressProvided 
                                 ? (deliveryFeeResult?.isFree 
                                     ? '🎉 Frete Grátis no seu pedido!'
@@ -2365,7 +2706,7 @@ export default function DeliveryView({
                         </div>
                         <strong style={{ 
                           color: !isDeliveryAddressProvided ? 'var(--text-muted)' : (deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)'), 
-                          fontSize: isDeliveryAddressProvided ? '1rem' : '0.82rem', 
+                          fontSize: isDeliveryAddressProvided ? '1.1rem' : '0.88rem', 
                           fontWeight: 800 
                         }}>
                           {isDeliveryAddressProvided 
@@ -2375,112 +2716,183 @@ export default function DeliveryView({
                       </div>
                     </div>
                   )}
-                </div>
 
-                {/* COLUNA 2: FORMA DE PAGAMENTO, CUPOM E RESUMO FINANCEIRO */}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: '12px',
-                  padding: '1.25rem'
-                }}>
-                  {/* FORMA DE PAGAMENTO */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Forma de Pagamento</label>
-                    <select 
-                      value={paymentMethod} 
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      style={{ padding: '9px 12px', fontSize: '0.88rem' }}
+                  {/* Botões de Ação do Passo 2 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={handlePrevQuizStep}
+                      className="btn-secondary"
+                      style={{ padding: '12px 18px', fontSize: '0.92rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <option value="Pix">⚡ Pix (Aprovação imediata)</option>
-                      <option value="Cartão de Crédito">💳 Cartão de Crédito (na maquininha)</option>
-                      <option value="Cartão de Débito">💳 Cartão de Débito (na maquininha)</option>
-                      <option value="Dinheiro">💵 Dinheiro</option>
-                    </select>
+                      <ArrowLeft size={16} /> Voltar para Seus Dados
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextQuizStep}
+                      className="btn-primary"
+                      style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 800, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234, 179, 8, 0.25)' }}
+                    >
+                      Avançar para Pagamento <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                    {paymentMethod === 'Pix' && (
-                      <div style={{ 
-                        padding: '10px 12px', 
-                        background: 'rgba(234, 179, 8, 0.08)', 
-                        border: '1px solid rgba(234, 179, 8, 0.25)', 
-                        borderRadius: 'var(--radius-sm)', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: '6px' 
-                      }} className="animate-fade-in">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#eab308', fontWeight: 600 }}>Chave Pix Oficial:</span>
-                          <button 
-                            type="button" 
-                            onClick={handleCopyPix}
-                            style={{ 
-                              background: pixCopied ? 'var(--color-success)' : 'rgba(234, 179, 8, 0.25)', 
-                              color: '#fff', 
-                              border: 'none', 
-                              padding: '2px 8px', 
-                              borderRadius: '4px', 
-                              cursor: 'pointer', 
-                              fontSize: '0.74rem', 
-                              fontWeight: 600,
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px' 
-                            }}
-                          >
-                            {pixCopied ? <Check size={12} /> : <Copy size={12} />}
-                            {pixCopied ? 'Copiado!' : 'Copiar Chave'}
-                          </button>
-                        </div>
-                        <code style={{ fontSize: '0.82rem', color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '4px', letterSpacing: '0.5px' }}>
-                          {officialPixKey}
-                        </code>
-                      </div>
-                    )}
-
-                    {paymentMethod === 'Dinheiro' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }} className="animate-fade-in">
-                        <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                          Precisa de troco? Para quanto?
-                        </label>
-                        <input 
-                          type="text" 
-                          placeholder="Ex: R$ 50,00 ou Não preciso de troco"
-                          value={changeFor}
-                          onChange={(e) => setChangeFor(e.target.value)}
-                          style={{ padding: '8px 12px', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                    )}
+              {/* ETAPA 3: COMO VAI PAGAR? (PAGAMENTO, TROCO & CUPOM) */}
+              {quizStep === 3 && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fde047', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
+                      <Sparkles size={16} /> Etapa 3 • Pagamento
+                    </div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
+                      Como prefere pagar? 💳
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Selecione a forma de pagamento mais conveniente para você.
+                    </p>
                   </div>
 
-                  {/* CAMPO DE CUPOM DE DESCONTO */}
+                  {/* CARDS INTERATIVOS DE FORMAS DE PAGAMENTO */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                    {[
+                      { id: 'Pix', label: 'Pix', desc: 'Aprovação imediata', icon: '⚡' },
+                      { id: 'Cartão de Crédito', label: 'Cartão de Crédito', desc: 'Na maquininha', icon: '💳' },
+                      { id: 'Cartão de Débito', label: 'Cartão de Débito', desc: 'Na maquininha', icon: '💳' },
+                      { id: 'Dinheiro', label: 'Dinheiro', desc: 'Pagar em espécie', icon: '💵' }
+                    ].map(pm => {
+                      const isSelected = paymentMethod === pm.id;
+                      return (
+                        <div
+                          key={pm.id}
+                          onClick={() => setPaymentMethod(pm.id)}
+                          style={{
+                            padding: '14px 12px',
+                            borderRadius: '12px',
+                            border: isSelected ? '2px solid #eab308' : '1px solid var(--border-glass)',
+                            backgroundColor: isSelected ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '1.3rem' }}>{pm.icon}</span>
+                            {isSelected && <Check size={16} color="#eab308" strokeWidth={3} />}
+                          </div>
+                          <span style={{ fontWeight: 800, fontSize: '0.92rem', color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)' }}>
+                            {pm.label}
+                          </span>
+                          <span style={{ fontSize: '0.74rem', color: isSelected ? '#fde047' : 'var(--text-muted)' }}>
+                            {pm.desc}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* DETALHES ESPECÍFICOS DO MÉTODO DE PAGAMENTO SELECIONADO */}
+                  {paymentMethod === 'Pix' && (
+                    <div style={{ 
+                      padding: '14px 16px', 
+                      background: 'rgba(234, 179, 8, 0.08)', 
+                      border: '1px solid rgba(234, 179, 8, 0.25)', 
+                      borderRadius: '12px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '8px' 
+                    }} className="animate-fade-in">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#eab308', fontWeight: 700 }}>Chave Pix Oficial da Loja:</span>
+                        <button 
+                          type="button" 
+                          onClick={handleCopyPix}
+                          style={{ 
+                            background: pixCopied ? 'var(--color-success)' : 'rgba(234, 179, 8, 0.25)', 
+                            color: '#fff', 
+                            border: 'none', 
+                            padding: '4px 10px', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer', 
+                            fontSize: '0.78rem', 
+                            fontWeight: 700,
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '5px' 
+                          }}
+                        >
+                          {pixCopied ? <Check size={13} /> : <Copy size={13} />}
+                          {pixCopied ? 'Copiado!' : 'Copiar Chave'}
+                        </button>
+                      </div>
+                      <code style={{ fontSize: '0.85rem', color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '8px 12px', borderRadius: '6px', letterSpacing: '0.5px' }}>
+                        {officialPixKey}
+                      </code>
+                      <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.65)' }}>
+                        💡 Você pode realizar o Pix agora ou logo após confirmar o envio do pedido.
+                      </span>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'Dinheiro' && (
+                    <div style={{
+                      padding: '14px 16px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px'
+                    }} className="animate-fade-in">
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        Precisa de troco? Para quanto?
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="Ex: R$ 50,00 ou Não preciso de troco"
+                        value={changeFor}
+                        onChange={(e) => setChangeFor(e.target.value)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-glass)',
+                          backgroundColor: 'var(--bg-tertiary)',
+                          color: '#fff',
+                          fontSize: '0.88rem',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* CAMPO DE CUPOM DE DESCONTO & VOUCHER DE FIDELIDADE */}
                   <div style={{
-                    backgroundColor: 'rgba(255,255,255,0.03)',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255,255,255,0.02)',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
                     border: '1px solid var(--border-glass)'
                   }}>
                     {/* Banner de Voucher de Fidelidade Disponível */}
                     {activeFidelityVoucher && !appliedCoupon && (
                       <div style={{
-                        padding: '8px 10px',
-                        borderRadius: '6px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
                         background: 'linear-gradient(135deg, rgba(168, 35, 25, 0.35) 0%, rgba(237, 177, 67, 0.2) 100%)',
                         border: '1px solid rgba(237, 177, 67, 0.5)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '4px',
-                        marginBottom: '8px'
+                        gap: '5px',
+                        marginBottom: '10px'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-brand-yellow)', fontWeight: 800, fontSize: '0.78rem' }}>
-                          <Gift size={14} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-brand-yellow)', fontWeight: 800, fontSize: '0.82rem' }}>
+                          <Gift size={15} />
                           <span>🎉 1 LANCHE GRÁTIS DE FIDELIDADE!</span>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#fff' }}>
-                          Voucher do 10º pedido: <strong>{activeFidelityVoucher.code}</strong> (R$ 25 OFF)
+                        <div style={{ fontSize: '0.75rem', color: '#fff' }}>
+                          Voucher especial do 10º pedido: <strong>{activeFidelityVoucher.code}</strong> (R$ 25 OFF)
                         </div>
                         <button
                           type="button"
@@ -2493,18 +2905,18 @@ export default function DeliveryView({
                             }
                           }}
                           className="btn-primary"
-                          style={{ padding: '5px 10px', fontSize: '0.74rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '2px' }}
+                          style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '2px', borderRadius: '6px' }}
                         >
-                          <Check size={12} />
+                          <Check size={13} />
                           <span>Aplicar Meu Lanche Grátis</span>
                         </button>
                       </div>
                     )}
 
-                    <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                      Cupom de Desconto
+                    <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                      Tem um Cupom de Desconto?
                     </label>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       <input
                         type="text"
                         placeholder="Ex: NUU10"
@@ -2513,84 +2925,294 @@ export default function DeliveryView({
                         style={{
                           flex: 1,
                           textTransform: 'uppercase',
-                          padding: '7px 10px',
-                          borderRadius: '6px',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
                           border: '1px solid rgba(255,255,255,0.15)',
                           backgroundColor: 'rgba(0,0,0,0.4)',
                           color: '#fff',
-                          fontSize: '0.82rem'
+                          fontSize: '0.88rem',
+                          outline: 'none'
                         }}
                       />
                       <button
                         type="button"
                         onClick={handleApplyCoupon}
                         className="btn-secondary"
-                        style={{ padding: '7px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                        style={{ padding: '9px 16px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px' }}
                       >
                         Aplicar
                       </button>
                     </div>
                     {couponFeedback && (
                       <div style={{
-                        fontSize: '0.72rem',
-                        marginTop: '4px',
+                        fontSize: '0.76rem',
+                        marginTop: '6px',
                         color: couponFeedback.success ? '#4ade80' : '#f87171',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px'
                       }}>
-                        {couponFeedback.success ? <Check size={11} /> : <AlertCircle size={11} />}
+                        {couponFeedback.success ? <Check size={12} /> : <AlertCircle size={12} />}
                         <span>{couponFeedback.message}</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Resumo de Valores */}
-                  <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '0.85rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.88rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Itens do Carrinho:</span>
-                      <span>R$ {cartTotal.toFixed(2)}</span>
+                  {/* Botões de Ação do Passo 3 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={handlePrevQuizStep}
+                      className="btn-secondary"
+                      style={{ padding: '12px 18px', fontSize: '0.92rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <ArrowLeft size={16} /> Voltar para Entrega
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextQuizStep}
+                      className="btn-primary"
+                      style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 800, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234, 179, 8, 0.25)' }}
+                    >
+                      Revisar Pedido <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 4: REVISÃO & CONFIRMAÇÃO DO PEDIDO */}
+              {quizStep === 4 && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
+                      <CheckCircle2 size={16} /> Etapa 4 • Revisão Final
+                    </div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', margin: '2px 0 6px 0' }}>
+                      Tudo pronto! Vamos confirmar? 🔥
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Dê uma última conferida nos detalhes antes de enviarmos seu pedido para a chapa.
+                    </p>
+                  </div>
+
+                  {/* CARDS RESUMO DO QUIZ */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                    
+                    {/* Resumo do Cliente */}
+                    <div style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <User size={13} color="#eab308" /> Cliente
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuizStep(1)}
+                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}
+                        >
+                          <Edit2 size={11} /> Alterar
+                        </button>
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>
+                        {customerName || 'Não informado'}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        📱 {phone || 'Sem telefone'}
+                      </div>
+                    </div>
+
+                    {/* Resumo da Entrega */}
+                    <div style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          {deliveryType === 'delivery' ? <Bike size={13} color="#eab308" /> : <Store size={13} color="#eab308" />}
+                          {deliveryType === 'delivery' ? 'Entrega em Casa' : 'Retirada no Balcão'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuizStep(2)}
+                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}
+                        >
+                          <Edit2 size={11} /> Alterar
+                        </button>
+                      </div>
+                      {deliveryType === 'delivery' ? (
+                        <>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
+                            {addressStreet}, nº {addressNumber} {addressComplement ? `(${addressComplement})` : ''}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                            Bairro {addressNeighborhood} - Montes Claros/MG
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
+                            Balcão Nuu Prensado
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                            Rua Agapanto, 264 - Sagrada Família
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Resumo do Pagamento */}
+                    <div style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <CreditCard size={13} color="#eab308" /> Pagamento
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuizStep(3)}
+                          style={{ background: 'none', border: 'none', color: '#fde047', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}
+                        >
+                          <Edit2 size={11} /> Alterar
+                        </button>
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#fff' }}>
+                        {paymentMethod === 'Pix' && '⚡ Pix'}
+                        {paymentMethod === 'Cartão de Crédito' && '💳 Cartão de Crédito (na maquininha)'}
+                        {paymentMethod === 'Cartão de Débito' && '💳 Cartão de Débito (na maquininha)'}
+                        {paymentMethod === 'Dinheiro' && '💵 Dinheiro'}
+                      </div>
+                      {paymentMethod === 'Dinheiro' && changeFor && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          Troco para: <strong>{changeFor}</strong>
+                        </div>
+                      )}
+                      {appliedCoupon && (
+                        <div style={{ fontSize: '0.78rem', color: '#4ade80', fontWeight: 600 }}>
+                          Cupom {appliedCoupon.code} aplicado
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ITENS DO PEDIDO EM FORMATO RESUMIDO */}
+                  <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '12px',
+                    padding: '14px 16px'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>
+                      Itens do Pedido ({cart.length})
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                      {cart.map((item, index) => (
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', paddingBottom: '6px', borderBottom: index < cart.length - 1 ? '1px dashed rgba(255,255,255,0.06)' : 'none' }}>
+                          <div>
+                            <span style={{ fontWeight: 700, color: '#fff' }}>{item.quantity}x {item.name}</span>
+                            {item.selectedBread && (
+                              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block' }}>
+                                {item.selectedBread} • {item.selectedCreamy} • {item.selectedMelted}
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontWeight: 700, color: 'var(--color-brand-yellow)' }}>
+                            R$ {(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* RESUMO FINANCEIRO FINAL */}
+                  <div style={{
+                    backgroundColor: 'rgba(234, 179, 8, 0.05)',
+                    border: '1px solid rgba(234, 179, 8, 0.2)',
+                    borderRadius: '12px',
+                    padding: '16px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Subtotal dos Lanches:</span>
+                      <span style={{ color: '#fff', fontWeight: 600 }}>R$ {cartTotal.toFixed(2)}</span>
                     </div>
                     {deliveryType === 'delivery' && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.88rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega:</span>
                         <span>
-                          {isDeliveryAddressProvided 
-                            ? (deliveryFee === 0 ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Grátis</span> : `R$ ${deliveryFee.toFixed(2)}`)
-                            : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Calculada após endereço</span>}
+                          {deliveryFee === 0 
+                            ? <span style={{ color: '#4ade80', fontWeight: 700 }}>GRÁTIS</span> 
+                            : <span style={{ color: '#fff', fontWeight: 600 }}>R$ {deliveryFee.toFixed(2)}</span>}
                         </span>
                       </div>
                     )}
+                    {deliveryType === 'pickup' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega:</span>
+                        <span style={{ color: '#4ade80', fontWeight: 700 }}>GRÁTIS (Balcão)</span>
+                      </div>
+                    )}
                     {totalDiscount > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', color: '#4ade80', fontSize: '0.88rem' }}>
-                        <span>Desconto Total:</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#4ade80', fontSize: '0.88rem', fontWeight: 600 }}>
+                        <span>Desconto Aplicado:</span>
                         <span>- R$ {totalDiscount.toFixed(2)}</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-brand)', marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed var(--border-glass)' }}>
-                      <span>Total Geral:</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.35rem', fontWeight: 900, color: '#fde047', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
+                      <span>Total do Pedido:</span>
                       <span>R$ {grandTotal.toFixed(2)}</span>
                     </div>
                   </div>
 
-                  {/* Botão de Envio de Pedido */}
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
-                    style={{ 
-                      width: '100%', 
-                      justifyContent: 'center', 
-                      padding: '13px', 
-                      fontSize: '1rem', 
-                      fontWeight: 800,
-                      borderRadius: '10px',
-                      boxShadow: '0 4px 15px rgba(168, 35, 25, 0.4)'
-                    }}
-                  >
-                    Confirmar e Enviar Pedido
-                  </button>
+                  {/* BOTÕES DE AÇÃO DO PASSO 4 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={handlePrevQuizStep}
+                      className="btn-secondary"
+                      style={{ padding: '14px 20px', fontSize: '0.95rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <ArrowLeft size={16} /> Voltar para Pagamento
+                    </button>
+                    <button 
+                      type="submit" 
+                      className="btn-primary" 
+                      style={{ 
+                        flex: 1,
+                        justifyContent: 'center', 
+                        padding: '14px 24px', 
+                        fontSize: '1.05rem', 
+                        fontWeight: 900,
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(168, 35, 25, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <Sparkles size={18} /> Confirmar e Enviar Pedido
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
             </form>
           </div>
         </div>
@@ -3255,6 +3877,7 @@ export default function DeliveryView({
                 </p>
                 <button 
                   onClick={() => {
+                    setQuizStep(1);
                     setCheckoutStep('form');
                     setIsCartOpen(false);
                   }}

@@ -1411,37 +1411,13 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
 
               {/* 4. CONCLUÍDOS NO PERÍODO */}
               <div className="glass-panel" style={{ padding: '1.25rem', backgroundColor: 'rgba(0,0,0,0.3)', borderTop: '4px solid var(--color-success)' }}>
-                <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }}></span>
                     {getDeliveredColumnTitle()}
-                  </h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <select
-                      value={periodFilter}
-                      onChange={e => setPeriodFilter(e.target.value)}
-                      style={{
-                        backgroundColor: 'rgba(0,0,0,0.45)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        color: 'var(--text-secondary)',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        padding: '2px 6px',
-                        cursor: 'pointer',
-                        outline: 'none'
-                      }}
-                      title="Alterar período dos pedidos concluídos"
-                    >
-                      <option value="today">Hoje</option>
-                      <option value="shift">Turno Atual</option>
-                      <option value="yesterday">Ontem</option>
-                      <option value="7days">Últimos 7 dias</option>
-                      <option value="custom">Personalizado</option>
-                      <option value="all">Todos</option>
-                    </select>
-                    <span className="badge badge-success">{deliveredOrders.length}</span>
-                  </div>
-                </div>
+                  </span>
+                  <span className="badge badge-success">{deliveredOrders.length}</span>
+                </h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '550px', overflowY: 'auto' }}>
                   {deliveredOrders.map(order => {

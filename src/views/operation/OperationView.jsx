@@ -14,7 +14,7 @@ import {
   Phone, MapPin, CheckCircle2, AlertTriangle, Volume2, VolumeX, 
   LogOut, User, Lock, Store, ShoppingBag, ArrowRight, Shield, 
   RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Trash2, Database, Flame,
-  Pause, Play, Power, ChevronDown, AlertCircle, Calendar, Filter
+  Pause, Play, Power, ChevronDown, AlertCircle, Calendar, Filter, Ban, XCircle
 } from 'lucide-react';
 
 export default function OperationView({ onOpenAdmin, onGoDelivery }) {
@@ -23,6 +23,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     motoboys = [],
     assignOrderMotoboy, 
     updateOrderStatus, 
+    cancelOrder,
     deleteOrder,
     operators = [], 
     currentOperator, 
@@ -238,6 +239,30 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     }
     setPrevOrdersList(orders);
   }, [orders, isSoundEnabled, autoPrintEnabled, prevOrdersList]);
+
+  const handleCancelOrder = (order) => {
+    showConfirm(`Deseja realmente cancelar o pedido #${order.id}? O valor será estornado do faturamento, os insumos voltarão ao estoque e o cliente será notificado no acompanhamento.`, {
+      title: 'Cancelar Pedido',
+      badge: `PEDIDO #${order.id}`,
+      type: 'warning',
+      confirmText: 'Sim, Cancelar Pedido',
+      cancelText: 'Voltar',
+      confirmColor: '#f97316',
+      onConfirm: () => cancelOrder(order.id, 'Cancelado pela equipe de operações')
+    });
+  };
+
+  const handleDeleteOrder = (order) => {
+    showConfirm(`Deseja excluir permanentemente o pedido #${order.id}? Essa ação removerá o pedido e qualquer lançamento financeiro vinculado a ele.`, {
+      title: 'Excluir Pedido',
+      badge: `PEDIDO #${order.id}`,
+      type: 'error',
+      confirmText: 'Sim, Excluir',
+      cancelText: 'Cancelar',
+      confirmColor: '#ef4444',
+      onConfirm: () => deleteOrder(order.id)
+    });
+  };
 
   const handleSelectOperator = (op) => {
     setSelectedOperatorForLogin(op);
@@ -1159,19 +1184,16 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                           <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.1rem' }}>#{order.id}</span>
                           <OrderTimerBadge orderDate={order.date} />
                           <button 
-                            onClick={() => {
-                              showConfirm(`Deseja realmente excluir o pedido #${order.id}?`, {
-                                title: 'Excluir Pedido',
-                                badge: `PEDIDO #${order.id}`,
-                                type: 'error',
-                                confirmText: 'Sim, Excluir',
-                                cancelText: 'Cancelar',
-                                confirmColor: '#ef4444',
-                                onConfirm: () => deleteOrder(order.id)
-                              });
-                            }}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
-                            title="Excluir"
+                            onClick={() => handleCancelOrder(order)}
+                            style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Cancelar Pedido (Estorna faturamento e estoque)"
+                          >
+                            <Ban size={13} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteOrder(order)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Excluir Permanentemente"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -1275,6 +1297,20 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.1rem' }}>#{order.id}</span>
                           <OrderTimerBadge orderDate={order.date} />
+                          <button 
+                            onClick={() => handleCancelOrder(order)}
+                            style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Cancelar Pedido (Estorna faturamento e estoque)"
+                          >
+                            <Ban size={13} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteOrder(order)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Excluir Permanentemente"
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                         <button
                           onClick={() => setReceiptOrder(order)}
@@ -1364,8 +1400,24 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                   {shippingOrders.map(order => (
                     <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.1rem' }}>#{order.id}</span>
-                        <OrderTimerBadge orderDate={order.date} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.1rem' }}>#{order.id}</span>
+                          <OrderTimerBadge orderDate={order.date} />
+                          <button 
+                            onClick={() => handleCancelOrder(order)}
+                            style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Cancelar Pedido (Estorna faturamento e estoque)"
+                          >
+                            <Ban size={13} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteOrder(order)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="Excluir Permanentemente"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
 
                       <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{order.customerName}</div>
@@ -1474,13 +1526,29 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                             )}
                           </div>
                         </div>
-                        <button
-                          onClick={() => setReceiptOrder(order)}
-                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-                          title="Reimprimir Comanda"
-                        >
-                          <Printer size={15} />
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            onClick={() => setReceiptOrder(order)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                            title="Reimprimir Comanda"
+                          >
+                            <Printer size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleCancelOrder(order)}
+                            style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: '4px' }}
+                            title="Cancelar / Estornar Pedido"
+                          >
+                            <Ban size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOrder(order)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                            title="Excluir Permanentemente"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

@@ -406,9 +406,15 @@ const INITIAL_STORE_SETTINGS = {
     pix: 0,
     cash: 0
   },
-  loyalty: {
+    loyalty: {
     requiredOrders: 10,
     rewardValue: 20
+  },
+  mercadoPago: {
+    enabled: true,
+    sandbox: false,
+    accessToken: '',
+    publicKey: ''
   },
   // Experiência do Cardápio (Delivery)
   enableImmersiveView: false,
@@ -2248,6 +2254,7 @@ export const SystemProvider = ({ children }) => {
             const transactionId = 't-' + Date.now();
             const newTransaction = {
               id: transactionId,
+              orderId: String(order.id),
               date: new Date().toISOString(),
               type: 'income',
               category: 'Vendas',
@@ -2401,6 +2408,9 @@ export const SystemProvider = ({ children }) => {
                 });
               }
             }
+          } else if (order.status === 'delivered' && newStatus !== 'delivered') {
+            // Se saiu de entregue (ex: cancelado ou retornado à chapa): estorna e remove a receita do faturamento
+            setTransactions(prev => prev.filter(t => t.orderId !== String(order.id) && !t.description?.includes(`Pedido #${order.id}`)));
           }
           return updated;
         }
@@ -2432,18 +2442,163 @@ export const SystemProvider = ({ children }) => {
     } catch (e) {}
   };
 
-  const deleteOrder = (orderId) => {
+  // --- Cancelamento de Pedido com Estorno Financeiro e Estoque ---
+  const cancelOrder = (orderId, reason = 'Cancelado pela loja') => {
+    const targetOrder = orders.find(o => String(o.id) === String(orderId));
+
+    // 1. Atualizar status para 'canceled'
+    let nextOrders = [];
     setOrders(prev => {
-      const next = prev.filter(o => o.id !== orderId);
-      localStorage.setItem('hd_orders', JSON.stringify(next));
-      return next;
+      nextOrders = prev.map(order => {
+        if (String(order.id) === String(orderId)) {
+          return {
+            ...order,
+            status: 'canceled',
+            cancelReason: reason,
+            canceledAt: new Date().toISOString()
+          };
+        }
+        return order;
+      });
+      localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
+      return nextOrders;
     });
+
+    // 2. Estorno financeiro: remove qualquer transação de faturamento/receita deste pedido
+    setTransactions(prev => prev.filter(t => {
+      const isOrderTrans = t.orderId === String(orderId) || 
+        (t.description && t.description.includes(`Pedido #${orderId}`));
+      return !isOrderTrans;
+    }));
+
+    // 3. Estorno de estoque: devolve os insumos ao inventário se o pedido não estava cancelado
+    if (targetOrder && targetOrder.items && targetOrder.status !== 'canceled') {
+      setInventory(prevInv => {
+        const updated = [...prevInv];
+        if (targetOrder.type === 'delivery' && storeSettings.autoPackagingDeduction) {
+          const bag = updated.find(i => i.id === 103);
+          if (bag) bag.quantity += 1;
+        }
+        targetOrder.items.forEach(item => {
+          const prod = products.find(p => p.id === item.productId);
+          if (prod && prod.recipe) {
+            prod.recipe.forEach(recipeItem => {
+              const invItem = updated.find(i => i.id === recipeItem.ingredientId);
+              if (invItem) {
+                invItem.quantity += (recipeItem.quantity * item.quantity);
+              }
+            });
+          }
+        });
+        return updated;
+      });
+    }
+
+    // 4. Estorno de fidelidade se havia sido pontuado
+    if (targetOrder && targetOrder.status === 'delivered' && targetOrder.phone) {
+      const cleanPhone = targetOrder.phone.replace(/\D/g, '');
+      setCustomers(prev => prev.map(c => {
+        if (c.phone.replace(/\D/g, '') === cleanPhone) {
+          return {
+            ...c,
+            stampsCount: Math.max(0, (c.stampsCount || 0) - 1),
+            totalOrders: Math.max(0, (c.totalOrders || 1) - 1)
+          };
+        }
+        return c;
+      }));
+    }
+
+    // 5. Atualizar Firebase Firestore para notificar o cliente em tempo real
+    const firestoreDb = getFirestoreDb();
+    if (firestoreDb) {
+      try {
+        updateDoc(doc(firestoreDb, 'orders', String(orderId)), {
+          status: 'canceled',
+          cancelReason: reason,
+          canceledAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }).catch(() => {});
+      } catch (err) {}
+    }
+
+    // 6. BroadcastChannel
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ 
+          type: 'ORDERS_SYNC', 
+          orders: nextOrders, 
+          canceledOrderId: orderId,
+          cancelReason: reason 
+        });
+        ch.close();
+      }
+    } catch (e) {}
+  };
+
+  // --- Exclusão de Pedido com Estorno Financeiro e Notificação ---
+  const deleteOrder = (orderId) => {
+    const targetOrder = orders.find(o => String(o.id) === String(orderId));
+
+    // 1. Estorno financeiro imediato: remove receita faturada em transactions
+    setTransactions(prev => prev.filter(t => {
+      const isOrderTrans = t.orderId === String(orderId) || 
+        (t.description && t.description.includes(`Pedido #${orderId}`));
+      return !isOrderTrans;
+    }));
+
+    // 2. Estorno de estoque se não estava cancelado
+    if (targetOrder && targetOrder.items && targetOrder.status !== 'canceled') {
+      setInventory(prevInv => {
+        const updated = [...prevInv];
+        if (targetOrder.type === 'delivery' && storeSettings.autoPackagingDeduction) {
+          const bag = updated.find(i => i.id === 103);
+          if (bag) bag.quantity += 1;
+        }
+        targetOrder.items.forEach(item => {
+          const prod = products.find(p => p.id === item.productId);
+          if (prod && prod.recipe) {
+            prod.recipe.forEach(recipeItem => {
+              const invItem = updated.find(i => i.id === recipeItem.ingredientId);
+              if (invItem) {
+                invItem.quantity += (recipeItem.quantity * item.quantity);
+              }
+            });
+          }
+        });
+        return updated;
+      });
+    }
+
+    // 3. Remover de orders
+    let nextOrders = [];
+    setOrders(prev => {
+      nextOrders = prev.filter(o => String(o.id) !== String(orderId));
+      localStorage.setItem('hd_orders', JSON.stringify(nextOrders));
+      return nextOrders;
+    });
+
+    // 4. Firestore
     const firestoreDb = getFirestoreDb();
     if (firestoreDb) {
       try {
         deleteDoc(doc(firestoreDb, 'orders', String(orderId))).catch(() => {});
       } catch (err) {}
     }
+
+    // 5. BroadcastChannel notificando exclusão
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('nuu_system_channel');
+        ch.postMessage({ 
+          type: 'ORDERS_SYNC', 
+          orders: nextOrders, 
+          deletedOrderId: orderId 
+        });
+        ch.close();
+      }
+    } catch (e) {}
   };
 
   // --- Estoque e Entradas ---
@@ -2784,6 +2939,7 @@ export const SystemProvider = ({ children }) => {
       addShiftSupply,
       createOrder,
       updateOrderStatus,
+      cancelOrder,
       deleteOrder,
       adjustStock,
       manualStockInflow,

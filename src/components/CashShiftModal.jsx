@@ -32,9 +32,9 @@ export default function CashShiftModal({ onClose, initialMode }) {
   const [countedPix, setCountedPix] = useState('');
   const [closeNotes, setCloseNotes] = useState('');
 
-  // Cálculos do turno atual
+  // Cálculos do turno atual (exclui cancelados)
   const shiftOrders = currentShift 
-    ? orders.filter(o => o.shiftId === currentShift.id || (new Date(o.date) >= new Date(currentShift.openedAt)))
+    ? orders.filter(o => o.status !== 'canceled' && (o.shiftId === currentShift.id || (new Date(o.date) >= new Date(currentShift.openedAt))))
     : [];
 
   const cashSales = shiftOrders

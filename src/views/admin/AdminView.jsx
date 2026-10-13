@@ -19,7 +19,8 @@ import {
   Volume2, VolumeX, Upload, Image, Pause, Play,
   MapPin, CreditCard, Percent, ShieldCheck, Award, Sliders, Database, DollarSign, ArrowDownRight, ArrowUpRight, Tag,
   User, LayoutGrid, MonitorPlay, Flame, Navigation,
-  Calendar, Users, Star, Crown, Gift, Heart, MessageCircle, Trophy
+  Calendar, Users, Star, Crown, Gift, Heart, MessageCircle, Trophy,
+  Lock, AlertCircle
 } from 'lucide-react';
 
 export default function AdminView({ onLogout, onGoOperation }) {
@@ -669,18 +670,33 @@ export default function AdminView({ onLogout, onGoOperation }) {
     setIsQuotModalOpen(false);
   };
 
-  // Dashboard calculations
+  // Dashboard calculations - exclui transações de pedidos cancelados
+  const cancelledOrderIds = useMemo(() => new Set(orders.filter(o => o.status === 'canceled').map(o => String(o.id))), [orders]);
+
   const totalFaturamento = transactions
-    .filter(t => t.type === 'income')
-    .reduce((acc, t) => acc + t.value, 0);
+    .filter(t => {
+      if (t.type !== 'income') return false;
+      if (t.orderId && cancelledOrderIds.has(String(t.orderId))) return false;
+      if (t.description) {
+        const match = t.description.match(/pedido\s*#(\d+)/i);
+        if (match && cancelledOrderIds.has(match[1])) return false;
+      }
+      return true;
+    })
+    .reduce((acc, t) => acc + (Number(t.value) || 0), 0);
 
   const totalDespesas = transactions
     .filter(t => t.type === 'expense')
-    .reduce((acc, t) => acc + t.value, 0);
+    .reduce((acc, t) => acc + (Number(t.value) || 0), 0);
 
   const saldoLiquido = totalFaturamento - totalDespesas;
   
   const filteredTransactions = transactions.filter(t => {
+    if (t.orderId && cancelledOrderIds.has(String(t.orderId))) return false;
+    if (t.description) {
+      const match = t.description.match(/pedido\s*#(\d+)/i);
+      if (match && cancelledOrderIds.has(match[1])) return false;
+    }
     if (financeFilterType !== 'all' && t.type !== financeFilterType) return false;
     if (financeSearch) {
       const q = financeSearch.toLowerCase();
@@ -730,8 +746,13 @@ export default function AdminView({ onLogout, onGoOperation }) {
     return d >= dashStartBoundary && d <= dashEndBoundary;
   });
 
-  // Transações dentro do período selecionado
+  // Transações dentro do período selecionado (exclui cancelados)
   const dashFilteredTransactions = transactions.filter(t => {
+    if (t.orderId && cancelledOrderIds.has(String(t.orderId))) return false;
+    if (t.description) {
+      const match = t.description.match(/pedido\s*#(\d+)/i);
+      if (match && cancelledOrderIds.has(match[1])) return false;
+    }
     const d = getItemDate(t);
     if (!d) return false;
     return d >= dashStartBoundary && d <= dashEndBoundary;
@@ -3087,6 +3108,169 @@ export default function AdminView({ onLogout, onGoOperation }) {
                         )}
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloco: Configurações do Mercado Pago (Checkout White Label - Pix, Crédito e Débito) */}
+              <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CreditCard size={22} color="#eab308" /> Pagamentos Online Mercado Pago (Checkout White Label)
+                    </h3>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px', maxWidth: '750px', lineHeight: 1.4 }}>
+                      Permita pagamentos via <strong>Pix Dinâmico com verificação bancária automática instantânea</strong> e <strong>Cartão de Crédito e Débito direto na loja</strong>, com a cara do Nuu Prensado e sem redirecionar o cliente para fora.
+                    </p>
+                  </div>
+
+                  {/* Switch Ativar / Desativar Mercado Pago */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const mp = storeSettings?.mercadoPago || {};
+                        updateStoreSettings({
+                          mercadoPago: {
+                            ...mp,
+                            enabled: !(mp.enabled ?? true)
+                          }
+                        });
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.84rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: (storeSettings?.mercadoPago?.enabled ?? true) ? '#22c55e' : 'rgba(255,255,255,0.12)',
+                        color: '#fff',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {(storeSettings?.mercadoPago?.enabled ?? true) ? (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span>Mercado Pago Ativado</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle size={16} />
+                          <span>Mercado Pago Pausado</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid com campos de Access Token, Public Key e Modo Sandbox */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                  {/* Access Token */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Lock size={14} color="#eab308" /> Access Token (Produção ou Teste)
+                    </label>
+                    <input
+                      type="password"
+                      value={storeSettings?.mercadoPago?.accessToken || ''}
+                      onChange={(e) => {
+                        const mp = storeSettings?.mercadoPago || {};
+                        updateStoreSettings({
+                          mercadoPago: {
+                            ...mp,
+                            accessToken: e.target.value.trim()
+                          }
+                        });
+                      }}
+                      placeholder="Ex: APP_USR-xxxxxxxx ou TEST-xxxxxxxx"
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-glass)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        fontFamily: 'monospace'
+                      }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Obtenha em: <strong>Mercado Pago Developers &gt; Suas Aplicações &gt; Credenciais</strong>.
+                    </span>
+                  </div>
+
+                  {/* Public Key */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ShieldCheck size={14} color="#38bdf8" /> Public Key (Chave Pública)
+                    </label>
+                    <input
+                      type="text"
+                      value={storeSettings?.mercadoPago?.publicKey || ''}
+                      onChange={(e) => {
+                        const mp = storeSettings?.mercadoPago || {};
+                        updateStoreSettings({
+                          mercadoPago: {
+                            ...mp,
+                            publicKey: e.target.value.trim()
+                          }
+                        });
+                      }}
+                      placeholder="Ex: APP_USR-xxxxxxxx ou TEST-xxxxxxxx"
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-glass)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        fontFamily: 'monospace'
+                      }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Necessária para tokenização frontend de Cartões no checkout.
+                    </span>
+                  </div>
+
+                  {/* Modo Sandbox / Testes */}
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
+                    <label style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      Ambiente de Operação
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const mp = storeSettings?.mercadoPago || {};
+                          updateStoreSettings({
+                            mercadoPago: {
+                              ...mp,
+                              sandbox: !mp.sandbox
+                            }
+                          });
+                        }}
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-glass)',
+                          backgroundColor: storeSettings?.mercadoPago?.sandbox ? 'rgba(234, 179, 8, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                          color: storeSettings?.mercadoPago?.sandbox ? '#fde047' : '#4ade80',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {storeSettings?.mercadoPago?.sandbox ? '🧪 Modo Sandbox / Teste' : '🚀 Modo Produção Real'}
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      {storeSettings?.mercadoPago?.accessToken 
+                        ? '🟢 Chave configurada no sistema.' 
+                        : 'ℹ️ Sem chave informada: opera em modo demonstração seguro no delivery.'}
+                    </span>
                   </div>
                 </div>
               </div>

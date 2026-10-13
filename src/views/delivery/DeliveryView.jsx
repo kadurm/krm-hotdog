@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSystem } from '../../contexts/SystemContext';
 import LoyaltyCard from '../../components/LoyaltyCard';
+import MercadoPagoWhiteLabelCheckout from '../../components/MercadoPagoWhiteLabelCheckout';
 import { 
   ShoppingBag, Plus, Minus, Trash2, 
   Clock, Utensils, ChevronRight, X, Sparkles,
   ChevronUp, ChevronDown, CheckCircle,
   LayoutGrid, MonitorPlay, Copy, Check, Bike, Store, MessageCircle,
   Tag, Award, AlertCircle, MapPin, Search, Gift, Phone, Navigation, ZoomIn,
-  User, ArrowLeft, ArrowRight, Edit2, CreditCard, DollarSign, CheckCircle2
+  User, ArrowLeft, ArrowRight, Edit2, CreditCard, DollarSign, CheckCircle2,
+  ShieldCheck, Lock, Smartphone, XCircle, LogOut
 } from 'lucide-react';
 import { VIEW_CONFIG } from '../../config/viewConfig';
 
@@ -269,7 +271,7 @@ export default function DeliveryView({
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState(null);
   const [gpsSuccessMessage, setGpsSuccessMessage] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('Pix');
+  const [paymentMethod, setPaymentMethod] = useState('Pix (Mercado Pago)');
   const [changeFor, setChangeFor] = useState('');
   const [pixCopied, setPixCopied] = useState(false);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState(() => {
@@ -939,7 +941,7 @@ export default function DeliveryView({
   };
 
   // Envio do Pedido
-  const handleSubmitOrder = (e) => {
+  const handleSubmitOrder = (e, onlinePaymentData = null) => {
     if (e && e.preventDefault) e.preventDefault();
 
     if (!isStoreOpen) {
@@ -1041,9 +1043,12 @@ export default function DeliveryView({
       ? `${addressStreet.trim()}, nº ${addressNumber.trim()}${addressComplement.trim() ? `, ${addressComplement.trim()}` : ''}, Bairro ${addressNeighborhood.trim()} - Montes Claros/MG`
       : 'Retirada no Balcão';
 
-    const finalPayment = paymentMethod === 'Dinheiro' && changeFor 
-      ? `Dinheiro (Troco p/ R$ ${changeFor})` 
-      : paymentMethod;
+    const isOnlinePaid = Boolean(onlinePaymentData && onlinePaymentData.status === 'approved');
+    const finalPayment = isOnlinePaid
+      ? (onlinePaymentData.method || paymentMethod)
+      : (paymentMethod === 'Dinheiro' && changeFor 
+          ? `Dinheiro (Troco p/ R$ ${changeFor})` 
+          : paymentMethod);
 
     const created = createOrder({
       customerName: customerName.trim(), 
@@ -1053,6 +1058,11 @@ export default function DeliveryView({
       neighborhood: deliveryType === 'delivery' ? addressNeighborhood.trim() : null,
       distanceKm: deliveryType === 'delivery' ? selectedDistanceKm : null,
       paymentMethod: finalPayment,
+      paymentStatus: isOnlinePaid ? 'paid' : 'pending',
+      paymentProvider: isOnlinePaid ? 'mercadopago' : 'manual',
+      paymentId: onlinePaymentData?.paymentId || null,
+      paymentDetails: onlinePaymentData || null,
+      paidAt: isOnlinePaid ? new Date().toISOString() : null,
       changeFor: paymentMethod === 'Dinheiro' && changeFor ? changeFor : null,
       items: cart, 
       deliveryFee: parseFloat(Number(deliveryFee).toFixed(2)),
@@ -2751,12 +2761,14 @@ export default function DeliveryView({
                   </div>
 
                   {/* CARDS INTERATIVOS DE FORMAS DE PAGAMENTO */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                     {[
-                      { id: 'Pix', label: 'Pix', desc: 'Aprovação na hora', icon: '⚡' },
-                      { id: 'Cartão de Crédito', label: 'Crédito', desc: 'Na maquininha', icon: '💳' },
-                      { id: 'Cartão de Débito', label: 'Débito', desc: 'Na maquininha', icon: '💳' },
-                      { id: 'Dinheiro', label: 'Dinheiro', desc: 'Em espécie', icon: '💵' }
+                      { id: 'Pix (Mercado Pago)', label: 'Pix Online', desc: 'Aprovação instantânea', icon: '⚡', highlight: true },
+                      { id: 'Cartão de Crédito Online', label: 'Crédito Online', desc: 'No site (Mercado Pago)', icon: '💳', highlight: true },
+                      { id: 'Cartão de Débito Online', label: 'Débito Online', desc: 'No site (Mercado Pago)', icon: '💳', highlight: true },
+                      { id: 'Cartão na Entrega', label: 'Na Maquininha', desc: 'Crédito ou débito na entrega', icon: '🛵', highlight: false },
+                      { id: 'Dinheiro', label: 'Dinheiro', desc: 'Em espécie na entrega', icon: '💵', highlight: false },
+                      { id: 'Pix Manual', label: 'Pix Manual', desc: 'Chave oficial da loja', icon: '🔑', highlight: false }
                     ].map(pm => {
                       const isSelected = paymentMethod === pm.id;
                       return (
@@ -2767,22 +2779,27 @@ export default function DeliveryView({
                             padding: '10px 10px',
                             borderRadius: '10px',
                             border: isSelected ? '2px solid #eab308' : '1px solid var(--border-glass)',
-                            backgroundColor: isSelected ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                            backgroundColor: isSelected ? 'rgba(234, 179, 8, 0.12)' : 'rgba(255, 255, 255, 0.02)',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '2px'
+                            gap: '3px'
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '1.15rem' }}>{pm.icon}</span>
+                            <span style={{ fontSize: '1.2rem' }}>{pm.icon}</span>
                             {isSelected && <Check size={14} color="#eab308" strokeWidth={3} />}
+                            {!isSelected && pm.highlight && (
+                              <span style={{ fontSize: '0.62rem', background: 'rgba(234, 179, 8, 0.15)', color: '#fde047', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                Online
+                              </span>
+                            )}
                           </div>
-                          <span style={{ fontWeight: 800, fontSize: '0.86rem', color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.84rem', color: isSelected ? '#fff' : 'rgba(255,255,255,0.9)' }}>
                             {pm.label}
                           </span>
-                          <span style={{ fontSize: '0.68rem', color: isSelected ? '#fde047' : 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '0.66rem', color: isSelected ? '#fde047' : 'var(--text-muted)' }}>
                             {pm.desc}
                           </span>
                         </div>
@@ -2790,8 +2807,29 @@ export default function DeliveryView({
                     })}
                   </div>
 
-                  {/* DETALHES ESPECÍFICOS DO MÉTODO DE PAGAMENTO SELECIONADO */}
-                  {paymentMethod === 'Pix' && (
+                  {/* INFO BANNER SOBRE PAGAMENTO ONLINE MERCADO PAGO */}
+                  {['Pix (Mercado Pago)', 'Cartão de Crédito Online', 'Cartão de Débito Online'].includes(paymentMethod) && (
+                    <div style={{
+                      padding: '9px 12px',
+                      background: 'rgba(34, 197, 94, 0.08)',
+                      border: '1px solid rgba(34, 197, 94, 0.25)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }} className="animate-fade-in">
+                      <ShieldCheck size={18} color="#4ade80" />
+                      <div style={{ fontSize: '0.75rem', color: '#fff' }}>
+                        <strong style={{ color: '#4ade80' }}>Checkout White Label Seguro:</strong>{' '}
+                        {paymentMethod === 'Pix (Mercado Pago)' 
+                          ? 'O QR Code Pix e o Copia e Cola serão gerados no próximo passo com verificação bancária em tempo real.'
+                          : 'Você preencherá os dados do cartão de forma 100% segura e criptografada no próximo passo.'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CHAVE PIX MANUAL */}
+                  {paymentMethod === 'Pix Manual' && (
                     <div style={{ 
                       padding: '10px 12px', 
                       background: 'rgba(234, 179, 8, 0.08)', 
@@ -2830,6 +2868,7 @@ export default function DeliveryView({
                     </div>
                   )}
 
+                  {/* DINHEIRO COM TROCO */}
                   {paymentMethod === 'Dinheiro' && (
                     <div style={{
                       padding: '10px 12px',
@@ -3085,10 +3124,13 @@ export default function DeliveryView({
                         </button>
                       </div>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#fff' }}>
-                        {paymentMethod === 'Pix' && '⚡ Pix'}
-                        {paymentMethod === 'Cartão de Crédito' && '💳 Cartão de Crédito'}
-                        {paymentMethod === 'Cartão de Débito' && '💳 Cartão de Débito'}
+                        {paymentMethod === 'Pix (Mercado Pago)' && '⚡ Pix Online (Mercado Pago)'}
+                        {paymentMethod === 'Cartão de Crédito Online' && '💳 Cartão de Crédito Online'}
+                        {paymentMethod === 'Cartão de Débito Online' && '💳 Cartão de Débito Online'}
+                        {paymentMethod === 'Cartão na Entrega' && '🛵 Cartão na Entrega'}
                         {paymentMethod === 'Dinheiro' && '💵 Dinheiro'}
+                        {paymentMethod === 'Pix Manual' && '🔑 Pix Manual (Chave da Loja)'}
+                        {!['Pix (Mercado Pago)', 'Cartão de Crédito Online', 'Cartão de Débito Online', 'Cartão na Entrega', 'Dinheiro', 'Pix Manual'].includes(paymentMethod) && paymentMethod}
                       </div>
                       {paymentMethod === 'Dinheiro' && changeFor && (
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
@@ -3171,35 +3213,88 @@ export default function DeliveryView({
                     </div>
                   </div>
 
-                  {/* BOTÕES DE AÇÃO DO PASSO 4 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
-                    <button
-                      type="button"
-                      onClick={handlePrevQuizStep}
-                      className="btn-secondary"
-                      style={{ padding: '10px 14px', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
-                    >
-                      <ArrowLeft size={14} /> Voltar
-                    </button>
-                    <button 
-                      type="submit" 
-                      className="btn-primary" 
-                      style={{ 
-                        flex: 1,
-                        justifyContent: 'center', 
-                        padding: '11px 18px', 
-                        fontSize: '0.98rem', 
-                        fontWeight: 900,
-                        borderRadius: '8px',
-                        boxShadow: '0 3px 15px rgba(168, 35, 25, 0.4)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Sparkles size={16} /> Confirmar e Enviar
-                    </button>
-                  </div>
+                  {/* SELEÇÃO WHITE LABEL MERCADO PAGO OU CONFIRMAÇÃO PRESENCIAL */}
+                  {['Pix (Mercado Pago)', 'Cartão de Crédito Online', 'Cartão de Débito Online'].includes(paymentMethod) ? (
+                    <div style={{
+                      marginTop: '0.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem'
+                    }}>
+                      <MercadoPagoWhiteLabelCheckout
+                        mode={
+                          paymentMethod === 'Cartão de Crédito Online' ? 'credit' :
+                          paymentMethod === 'Cartão de Débito Online' ? 'debit' : 'pix'
+                        }
+                        amount={grandTotal}
+                        description={`Pedido Nuu Prensado - ${customerName || 'Cliente'}`}
+                        customerName={customerName}
+                        customerPhone={cleanPhone}
+                        storeSettings={storeSettings}
+                        onPaymentSuccess={(paymentInfo) => {
+                          handleSubmitOrder(null, paymentInfo);
+                        }}
+                        onPaymentError={(errMsg) => {
+                          showSiteAlert('Atenção no Pagamento', errMsg, 'warning');
+                        }}
+                      />
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={handlePrevQuizStep}
+                          className="btn-secondary"
+                          style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <ArrowLeft size={14} /> Voltar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuizStep(3)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            textDecoration: 'underline'
+                          }}
+                        >
+                          Mudar forma de pagamento
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* BOTÕES DE AÇÃO DO PASSO 4 PARA PAGAMENTOS NA ENTREGA / PRESENCIAL */
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+                      <button
+                        type="button"
+                        onClick={handlePrevQuizStep}
+                        className="btn-secondary"
+                        style={{ padding: '10px 14px', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        <ArrowLeft size={14} /> Voltar
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="btn-primary" 
+                        style={{ 
+                          flex: 1,
+                          justifyContent: 'center', 
+                          padding: '11px 18px', 
+                          fontSize: '0.98rem', 
+                          fontWeight: 900,
+                          borderRadius: '8px',
+                          boxShadow: '0 3px 15px rgba(168, 35, 25, 0.4)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Sparkles size={16} /> Confirmar e Enviar Pedido
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3301,8 +3396,32 @@ export default function DeliveryView({
                 </p>
               </div>
 
-              {/* Chave Pix se Pendente */}
-              {activeTrackingOrder.paymentMethod.includes('Pix') && activeTrackingOrder.status === 'pending' && (
+              {/* Status de Pagamento Online Aprovado */}
+              {activeTrackingOrder.paymentStatus === 'paid' && (
+                <div style={{
+                  padding: '0.85rem 1.1rem',
+                  background: 'rgba(34, 197, 94, 0.12)',
+                  border: '1px solid rgba(34, 197, 94, 0.35)',
+                  borderRadius: 'var(--radius-sm)',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <ShieldCheck size={22} color="#4ade80" />
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', color: '#4ade80', display: 'block' }}>
+                      Pagamento Confirmado no Mercado Pago!
+                    </strong>
+                    <span style={{ fontSize: '0.74rem', color: '#fff' }}>
+                      {activeTrackingOrder.paymentMethod} • ID: {activeTrackingOrder.paymentId || activeTrackingOrder.id}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Chave Pix se Pendente (Pix Manual ou aguardando) */}
+              {activeTrackingOrder.paymentStatus !== 'paid' && activeTrackingOrder.paymentMethod.includes('Pix') && activeTrackingOrder.status === 'pending' && (
                 <div style={{ 
                   padding: '1rem', 
                   background: 'rgba(234, 179, 8, 0.1)', 

@@ -274,6 +274,22 @@ export default function DeliveryView({
   const [paymentMethod, setPaymentMethod] = useState('Pix (Mercado Pago)');
   const [changeFor, setChangeFor] = useState('');
   const [pixCopied, setPixCopied] = useState(false);
+
+  // Sessão persistente do cliente (Login por WhatsApp)
+  const [loggedCustomer, setLoggedCustomer] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nuu_customer_session');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  });
+
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [customerModalTab, setCustomerModalTab] = useState('orders'); // 'orders' | 'login'
+  const [loginPhoneInput, setLoginPhoneInput] = useState('');
+  const [loginNameInput, setLoginNameInput] = useState('');
+  const [trackingBannerDismissed, setTrackingBannerDismissed] = useState(false);
+
   const [activeTrackingOrder, setActiveTrackingOrder] = useState(() => {
     try {
       const savedId = localStorage.getItem('nuu_customer_last_order_id');
@@ -341,15 +357,148 @@ export default function DeliveryView({
     );
   };
 
-  // Sincronização em tempo real do pedido de rastreamento com alterações do chapeiro/admin
+  // Efeito para sincronizar dados do cliente logado no formulário
   useEffect(() => {
-    if (activeTrackingOrder?.id && orders?.length > 0) {
+    if (loggedCustomer) {
+      if (!phone && loggedCustomer.phone) setPhone(loggedCustomer.phone);
+      if (!customerName && loggedCustomer.name) setCustomerName(loggedCustomer.name);
+      
+      const clean = (loggedCustomer.phone || '').replace(/\D/g, '');
+      if (clean && typeof lookupCustomer === 'function') {
+        const found = lookupCustomer(clean);
+        if (found) {
+          setIdentifiedCustomer(found);
+          if (found.name && !customerName) setCustomerName(found.name);
+          if (found.addressStreet && !addressStreet) setAddressStreet(found.addressStreet);
+          if (found.addressNumber && !addressNumber) setAddressNumber(found.addressNumber);
+          if (found.addressComplement && !addressComplement) setAddressComplement(found.addressComplement);
+          if (found.addressNeighborhood && !addressNeighborhood) {
+            setAddressNeighborhood(found.addressNeighborhood);
+            setSelectedNeighborhood(found.addressNeighborhood);
+          }
+        }
+      }
+    }
+  }, [loggedCustomer]);
+
+  // Sincronização em tempo real do pedido de rastreamento com alterações do chapeiro/admin (inclusive cancelamento e exclusão)
+  useEffect(() => {
+    if (!activeTrackingOrder?.id) return;
+
+    if (Array.isArray(orders) && orders.length > 0) {
       const liveOrder = orders.find(o => String(o.id) === String(activeTrackingOrder.id));
-      if (liveOrder && liveOrder.status !== activeTrackingOrder.status) {
-        setActiveTrackingOrder(liveOrder);
+      if (liveOrder) {
+        if (liveOrder.status !== activeTrackingOrder.status || liveOrder.cancelReason !== activeTrackingOrder.cancelReason) {
+          setActiveTrackingOrder(liveOrder);
+        }
+      } else {
+        // Pedido não encontrado na lista: foi cancelado/excluído da operação
+        if (activeTrackingOrder.status !== 'canceled') {
+          setActiveTrackingOrder(prev => ({
+            ...prev,
+            status: 'canceled',
+            cancelReason: prev.cancelReason || 'Este pedido foi cancelado ou removido pelo estabelecimento.'
+          }));
+        }
       }
     }
   }, [orders, activeTrackingOrder?.id, activeTrackingOrder?.status]);
+
+  // BroadcastChannel para sincronização instantânea inter-abas (notifica cliente na mesma hora em que chapeiro cancela/exclui)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.BroadcastChannel) return;
+    try {
+      const channel = new BroadcastChannel('nuu_orders_channel');
+      channel.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+
+        if (data.type === 'ORDER_CANCELED') {
+          if (activeTrackingOrder?.id && String(data.orderId) === String(activeTrackingOrder.id)) {
+            setActiveTrackingOrder(prev => ({
+              ...prev,
+              status: 'canceled',
+              cancelReason: data.reason || 'Este pedido foi cancelado pelo estabelecimento.'
+            }));
+          }
+        } else if (data.type === 'ORDER_DELETED') {
+          if (activeTrackingOrder?.id && String(data.orderId) === String(activeTrackingOrder.id)) {
+            setActiveTrackingOrder(prev => ({
+              ...prev,
+              status: 'canceled',
+              cancelReason: 'Este pedido foi cancelado e removido do sistema pela loja.'
+            }));
+          }
+        }
+      };
+      return () => channel.close();
+    } catch (e) {}
+  }, [activeTrackingOrder?.id]);
+
+  // Lista de todos os pedidos do cliente atual (para histórico / Meus Pedidos)
+  const customerOrdersList = useMemo(() => {
+    const rawClean = (loggedCustomer?.phone || phone || customerSearchPhone || '').replace(/\D/g, '');
+    if (!rawClean || !Array.isArray(orders)) return [];
+    return orders
+      .filter(o => o.phone && o.phone.replace(/\D/g, '') === rawClean)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }, [orders, loggedCustomer?.phone, phone, customerSearchPhone]);
+
+  // Handlers de Login e Logout do Cliente
+  const handleCustomerLogin = (e) => {
+    e?.preventDefault();
+    const clean = loginPhoneInput.replace(/\D/g, '');
+    if (clean.length < 10) {
+      showSiteAlert('Número Inválido', 'Digite seu WhatsApp com DDD (mínimo 10 dígitos).', 'warning');
+      return;
+    }
+    const found = typeof lookupCustomer === 'function' ? lookupCustomer(clean) : null;
+    const finalName = (found?.name || loginNameInput || '').trim();
+    const customerObj = {
+      phone: clean,
+      name: finalName || 'Cliente'
+    };
+    setLoggedCustomer(customerObj);
+    try {
+      localStorage.setItem('nuu_customer_session', JSON.stringify(customerObj));
+    } catch (err) {}
+    setPhone(clean);
+    if (finalName) setCustomerName(finalName);
+
+    if (found) {
+      setIdentifiedCustomer(found);
+      if (found.addressStreet) setAddressStreet(found.addressStreet);
+      if (found.addressNumber) setAddressNumber(found.addressNumber);
+      if (found.addressComplement) setAddressComplement(found.addressComplement);
+      if (found.addressNeighborhood) {
+        setAddressNeighborhood(found.addressNeighborhood);
+        setSelectedNeighborhood(found.addressNeighborhood);
+      }
+    }
+
+    // Se o cliente tem pedidos anteriores, localiza o último em andamento para tracking
+    const userOrders = (orders || []).filter(o => o.phone && o.phone.replace(/\D/g, '') === clean);
+    const pendingOrder = userOrders.find(o => ['pending', 'preparing', 'shipping'].includes(o.status)) || userOrders[0];
+    if (pendingOrder) {
+      setActiveTrackingOrder(pendingOrder);
+      try {
+        localStorage.setItem('nuu_customer_last_order_id', pendingOrder.id.toString());
+      } catch (err) {}
+    }
+    setCustomerModalTab('orders');
+    showSiteAlert('Login Concluído!', `Olá, ${finalName || 'cliente'}! Você agora está conectado.`, 'success');
+  };
+
+  const handleCustomerLogout = () => {
+    setLoggedCustomer(null);
+    try {
+      localStorage.removeItem('nuu_customer_session');
+    } catch (err) {}
+    setLoginPhoneInput('');
+    setLoginNameInput('');
+    setCustomerModalTab('login');
+    showSiteAlert('Desconectado', 'Sua sessão foi encerrada com sucesso.', 'info');
+  };
 
   // Lista consolidada de bairros para entrega (Montes Claros) com prioridade para taxas específicas e Grátis na Loja
   const availableNeighborhoods = React.useMemo(() => {
@@ -910,6 +1059,13 @@ export default function DeliveryView({
         }
       }
 
+      // Salva sessão conectada do cliente
+      const sessionObj = { phone: clean, name: (found.name || '').trim() || 'Cliente' };
+      setLoggedCustomer(sessionObj);
+      try {
+        localStorage.setItem('nuu_customer_session', JSON.stringify(sessionObj));
+      } catch (err) {}
+
       showSiteAlert(
         'Cliente Encontrado! 🎉',
         `Bem-vindo de volta, ${found.name || 'Cliente'}! Seus dados foram preenchidos automaticamente.`,
@@ -919,6 +1075,12 @@ export default function DeliveryView({
     } else {
       setPhone(clean);
       if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: false }));
+      const sessionObj = { phone: clean, name: (customerName || '').trim() || 'Cliente' };
+      setLoggedCustomer(sessionObj);
+      try {
+        localStorage.setItem('nuu_customer_session', JSON.stringify(sessionObj));
+      } catch (err) {}
+
       showSiteAlert(
         'Novo Cadastro! 🌭',
         'Telefone registrado com sucesso! Finalize seu primeiro pedido para acumular selos no Cartão Fidelidade Nuu Prensado.',
@@ -1083,10 +1245,18 @@ export default function DeliveryView({
       neighborhood: deliveryType === 'delivery' ? addressNeighborhood.trim() : (identifiedCustomer?.neighborhood || '')
     });
 
+    // Salva sessão persistente do cliente conectado
+    const sessionObj = { phone: cleanPhone, name: customerName.trim() };
+    setLoggedCustomer(sessionObj);
+    try {
+      localStorage.setItem('nuu_customer_session', JSON.stringify(sessionObj));
+    } catch (err) {}
+
     setCart([]);
     setAppliedCoupon(null);
     setLoyaltyDiscount(0);
     setActiveTrackingOrder(created);
+    setTrackingBannerDismissed(false);
     try {
       localStorage.setItem('nuu_customer_last_order_id', created.id.toString());
     } catch (e) {}
@@ -1330,26 +1500,78 @@ export default function DeliveryView({
               </div>
             </div>
             
-            {/* Controles da direita (Acompanhar, Grade e Carrinho) */}
-            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-              {activeTrackingOrder && activeTrackingOrder.status !== 'delivered' && (
+            {/* Controles da direita (Perfil/Login, Acompanhar Pedido, Grade e Carrinho) */}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {/* Botão de Perfil / Login / Meus Pedidos */}
+              <button 
+                onClick={() => {
+                  if (loggedCustomer) {
+                    setCustomerModalTab('orders');
+                  } else {
+                    setCustomerModalTab('login');
+                  }
+                  setIsCustomerModalOpen(true);
+                }}
+                style={{ 
+                  background: loggedCustomer ? 'rgba(234, 179, 8, 0.15)' : 'rgba(0,0,0,0.4)', 
+                  border: loggedCustomer ? '1px solid rgba(234, 179, 8, 0.45)' : '1px solid rgba(255,255,255,0.15)', 
+                  color: loggedCustomer ? '#facc15' : '#fff', 
+                  borderRadius: '99px', 
+                  padding: '6px 11px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '5px', 
+                  fontSize: '0.74rem', 
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(5px)'
+                }}
+                title={loggedCustomer ? `Conectado como ${loggedCustomer.name}` : "Entrar ou ver Meus Pedidos"}
+              >
+                <User size={14} color={loggedCustomer ? '#facc15' : '#fff'} />
+                <span style={{ maxWidth: '95px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {loggedCustomer ? (loggedCustomer.name?.split(' ')[0] || 'Conta') : 'Entrar'}
+                </span>
+              </button>
+
+              {/* Botão de Pedido em Acompanhamento */}
+              {activeTrackingOrder && (
                 <button 
                   onClick={() => setCheckoutStep('tracking')}
                   style={{ 
-                    background: 'rgba(234, 179, 8, 0.25)', 
-                    border: '1px solid #eab308', 
-                    color: '#eab308', 
+                    background: activeTrackingOrder.status === 'canceled'
+                      ? 'rgba(239, 68, 68, 0.25)'
+                      : activeTrackingOrder.status === 'delivered'
+                        ? 'rgba(34, 197, 94, 0.25)'
+                        : 'rgba(234, 179, 8, 0.25)', 
+                    border: activeTrackingOrder.status === 'canceled'
+                      ? '1px solid #ef4444'
+                      : activeTrackingOrder.status === 'delivered'
+                        ? '1px solid #22c55e'
+                        : '1px solid #eab308', 
+                    color: activeTrackingOrder.status === 'canceled'
+                      ? '#ef4444'
+                      : activeTrackingOrder.status === 'delivered'
+                        ? '#4ade80'
+                        : '#eab308', 
                     borderRadius: '99px', 
-                    padding: '6px 12px', 
+                    padding: '6px 10px', 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '6px', 
-                    fontSize: '0.75rem', 
+                    gap: '5px', 
+                    fontSize: '0.74rem', 
                     fontWeight: 700,
                     cursor: 'pointer' 
                   }}
+                  title={activeTrackingOrder.status === 'canceled' ? 'Pedido Cancelado' : 'Acompanhar Pedido ao Vivo'}
                 >
-                  <Clock size={13} />
+                  {activeTrackingOrder.status === 'canceled' ? (
+                    <XCircle size={13} color="#ef4444" />
+                  ) : activeTrackingOrder.status === 'delivered' ? (
+                    <CheckCircle2 size={13} color="#4ade80" />
+                  ) : (
+                    <Clock size={13} color="#eab308" />
+                  )}
                   <span>#{activeTrackingOrder.id}</span>
                 </button>
               )}
@@ -3325,214 +3547,335 @@ export default function DeliveryView({
 
         return (
           <div style={{ maxWidth: '620px', margin: 'clamp(2rem, 8vh, 5.5rem) auto 4rem auto', width: '100%', padding: '0 1.5rem' }} className="animate-fade-in">
-            <div className="glass-panel" style={{ padding: '2rem 1.75rem', textAlign: 'center' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'var(--color-brand-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
-                <Clock size={30} color="var(--color-brand)" />
-              </div>
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: '0.25rem' }}>Acompanhe seu Pedido</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                Código do Pedido: <strong style={{ color: '#eab308' }}>#{activeTrackingOrder.id}</strong> • Cliente: <strong>{activeTrackingOrder.customerName}</strong>
-              </p>
-
-              {/* Status Visual Tracker */}
-              <div className="status-tracker-container" style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', marginBottom: '2.5rem', padding: '0 10px' }}>
-                <div style={{ position: 'absolute', top: '15px', left: '10%', right: '10%', height: '3px', backgroundColor: 'var(--bg-tertiary)', zIndex: 1 }}></div>
-                
-                <div style={{ 
-                  position: 'absolute', 
-                  top: '15px', 
-                  left: '10%', 
-                  width: progressPercent, 
-                  height: '3px', 
-                  backgroundColor: 'var(--color-brand)', 
-                  transition: 'all 0.5s',
-                  zIndex: 2 
-                }}></div>
-
-                {trackingSteps.map(step => {
-                  const isActive = getStatusStepClass(activeTrackingOrder.status, step.key) === 'step-active';
-                  return (
-                    <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '70px' }}>
-                      <div style={{ 
-                        width: '32px', 
-                        height: '32px', 
-                        borderRadius: '50%', 
-                        backgroundColor: isActive ? 'var(--color-brand)' : 'var(--bg-tertiary)', 
-                        border: '3px solid var(--bg-secondary)', 
-                        color: isActive ? '#fff' : 'var(--text-muted)',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s'
-                      }}>
-                        {isActive ? <CheckCircle size={16} /> : ''}
-                      </div>
-                      <span style={{ fontSize: '0.75rem', marginTop: '8px', color: isActive ? '#fff' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}>
-                        {step.name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Mensagem descritiva do status atual */}
-              <div className="glass-panel" style={{ padding: '1.25rem', backgroundColor: 'rgba(255,255,255,0.03)', textAlign: 'left', marginBottom: '1.5rem', borderLeft: '4px solid var(--color-brand)' }}>
-                <h4 style={{ fontWeight: 700, color: '#fff', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem' }}>
-                  <Sparkles size={18} color="#eab308" /> 
-                  {activeTrackingOrder.status === 'pending' && 'Aguardando Confirmação da Cozinha'}
-                  {activeTrackingOrder.status === 'preparing' && 'Seu Prensado já está na Chapa! 🔥'}
-                  {activeTrackingOrder.status === 'shipping' && (isPickup ? '🏪 Pronto para Retirada no Balcão!' : '🛵 Saiu para Entrega!')}
-                  {activeTrackingOrder.status === 'delivered' && (isPickup ? '🎉 Pedido Retirado com Sucesso!' : '🎉 Pedido Entregue!')}
-                </h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                  {activeTrackingOrder.status === 'pending' && 'Seu pedido foi registrado no sistema e já está aguardando na fila da chapa.'}
-                  {activeTrackingOrder.status === 'preparing' && 'Nosso chapeiro está preparando e prensando seus lanches com todo o capricho.'}
-                  {activeTrackingOrder.status === 'shipping' && (isPickup 
-                    ? 'Seu lanche prensado está prontinho e quentinho no balcão! Você já pode vir retirar.' 
-                    : `O entregador já está a caminho do seu endereço: ${activeTrackingOrder.address}.`)}
-                  {activeTrackingOrder.status === 'delivered' && 'Agradecemos muito por escolher o Nuu Prensado! Esperamos que saboreie seu pedido.'}
-                </p>
-              </div>
-
-              {/* Status de Pagamento Online Aprovado */}
-              {activeTrackingOrder.paymentStatus === 'paid' && (
-                <div style={{
-                  padding: '0.85rem 1.1rem',
-                  background: 'rgba(34, 197, 94, 0.12)',
-                  border: '1px solid rgba(34, 197, 94, 0.35)',
-                  borderRadius: 'var(--radius-sm)',
-                  marginBottom: '1.25rem',
+            {/* Barra de Navegação Superior do Rastreamento */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', width: '100%', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setCheckoutStep('menu')}
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  color: '#fff',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
-                }}>
-                  <ShieldCheck size={22} color="#4ade80" />
-                  <div>
-                    <strong style={{ fontSize: '0.86rem', color: '#4ade80', display: 'block' }}>
-                      Pagamento Confirmado no Mercado Pago!
-                    </strong>
-                    <span style={{ fontSize: '0.74rem', color: '#fff' }}>
-                      {activeTrackingOrder.paymentMethod} • ID: {activeTrackingOrder.paymentId || activeTrackingOrder.id}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Chave Pix se Pendente (Pix Manual ou aguardando) */}
-              {activeTrackingOrder.paymentStatus !== 'paid' && activeTrackingOrder.paymentMethod.includes('Pix') && activeTrackingOrder.status === 'pending' && (
-                <div style={{ 
-                  padding: '1rem', 
-                  background: 'rgba(234, 179, 8, 0.1)', 
-                  border: '1px solid rgba(234, 179, 8, 0.35)', 
-                  borderRadius: 'var(--radius-sm)', 
-                  marginBottom: '1.5rem',
-                  textAlign: 'left'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '0.85rem', color: '#eab308' }}>⚡ Chave Pix para Pagamento:</strong>
-                    <button 
-                      type="button" 
-                      onClick={handleCopyPix}
-                      style={{ 
-                        background: pixCopied ? 'var(--color-success)' : '#eab308', 
-                        color: '#000', 
-                        border: 'none', 
-                        padding: '3px 8px', 
-                        borderRadius: '4px', 
-                        cursor: 'pointer', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 700,
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '4px' 
-                      }}
-                    >
-                      {pixCopied ? <Check size={12} /> : <Copy size={12} />}
-                      {pixCopied ? 'Copiado!' : 'Copiar'}
-                    </button>
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '6px 10px', borderRadius: '4px', fontFamily: 'monospace' }}>
-                    {officialPixKey}
-                  </div>
-                </div>
-              )}
-
-              {/* Resumo dos Itens */}
-              <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                <h5 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-                  Resumo dos Itens
-                </h5>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                  {activeTrackingOrder.items?.map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
-                      <span style={{ color: '#fff' }}><strong>{item.quantity}x</strong> {item.name}</span>
-                      <span style={{ color: 'var(--text-secondary)' }}>R$ {(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Modalidade:</span>
-                  <span style={{ fontWeight: 600, color: '#fff' }}>{isPickup ? '🏪 Retirada no Balcão' : '🛵 Delivery'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginTop: '4px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Pagamento:</span>
-                  <span style={{ fontWeight: 600, color: '#fff' }}>{activeTrackingOrder.paymentMethod}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-brand)', marginTop: '8px', borderTop: '1px solid var(--border-glass)', paddingTop: '8px' }}>
-                  <span>Total:</span>
-                  <span>R$ {activeTrackingOrder.total?.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Botões de Ação */}
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button 
-                  onClick={() => {
-                    try {
-                      localStorage.removeItem('nuu_customer_last_order_id');
-                    } catch(e) {}
-                    setActiveTrackingOrder(null);
-                    setCheckoutStep('menu');
-                  }} 
-                  className="btn-primary"
-                >
-                  Fazer Novo Pedido
-                </button>
-                <button 
-                  onClick={() => {
-                    const itemsSummary = activeTrackingOrder.items?.map(it => {
-                      let line = `• ${it.quantity}x ${it.name}`;
-                      if (it.notes) line += ` (Obs: ${it.notes})`;
-                      return line;
-                    }).join('\n') || '';
-
-                    const text = `*Olá, Nuu Prensado! Acabei de fazer um pedido pelo site!*\n\n` +
-                      `*Pedido:* #${activeTrackingOrder.id}\n` +
-                      `*Cliente:* ${activeTrackingOrder.customerName}\n` +
-                      `*Telefone:* ${activeTrackingOrder.phone || ''}\n` +
-                      `*Modalidade:* ${isPickup ? 'Retirada no Balcão' : 'Delivery'}\n` +
-                      (!isPickup && activeTrackingOrder.address ? `*Endereço:* ${activeTrackingOrder.address}${activeTrackingOrder.neighborhood ? ` (${activeTrackingOrder.neighborhood})` : ''}\n` : '') +
-                      `*Pagamento:* ${activeTrackingOrder.paymentMethod}\n\n` +
-                      `*Itens:*\n${itemsSummary}\n\n` +
-                      (activeTrackingOrder.deliveryFee > 0 ? `*Taxa de Entrega:* R$ ${activeTrackingOrder.deliveryFee.toFixed(2)}\n` : '') +
-                      (activeTrackingOrder.discount > 0 ? `*Desconto:* - R$ ${activeTrackingOrder.discount.toFixed(2)}\n` : '') +
-                      `*TOTAL:* R$ ${activeTrackingOrder.total?.toFixed(2)}\n\n` +
-                      `Poderiam confirmar se receberam meu pedido? Obrigado!`;
-
-                    const storeNumber = (storeSettings?.whatsapp || storeSettings?.phone || '31999999999').replace(/\D/g, '');
-                    const phoneWithDDI = storeNumber.startsWith('55') ? storeNumber : `55${storeNumber}`;
-                    window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
-                  }}
-                  className="btn-secondary" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <MessageCircle size={18} color="#25D366" />
-                  Confirmar no WhatsApp
-                </button>
-              </div>
+                  gap: '6px'
+                }}
+              >
+                <ArrowLeft size={16} /> Voltar ao Cardápio
+              </button>
+              <button
+                type="button"
+                onClick={() => setCheckoutStep('menu')}
+                style={{
+                  background: 'rgba(234, 179, 8, 0.15)',
+                  border: '1px solid rgba(234, 179, 8, 0.45)',
+                  color: '#facc15',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                🍔 Fazer Outro Pedido
+              </button>
             </div>
+
+            {/* CASO 1: PEDIDO CANCELADO OU EXCLUÍDO */}
+            {activeTrackingOrder.status === 'canceled' ? (
+              <div className="glass-panel" style={{ padding: '2rem 1.75rem', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.4)', backgroundColor: 'rgba(239, 68, 68, 0.06)' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
+                  <XCircle size={36} color="#ef4444" />
+                </div>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#ef4444', marginBottom: '0.25rem' }}>Pedido Cancelado</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem' }}>
+                  Código do Pedido: <strong style={{ color: '#fff' }}>#{activeTrackingOrder.id}</strong> • Cliente: <strong>{activeTrackingOrder.customerName}</strong>
+                </p>
+
+                {/* Motivo do Cancelamento */}
+                <div style={{
+                  padding: '1.25rem',
+                  backgroundColor: 'rgba(0,0,0,0.45)',
+                  borderLeft: '4px solid #ef4444',
+                  borderRadius: '8px',
+                  textAlign: 'left',
+                  marginBottom: '1.75rem'
+                }}>
+                  <h4 style={{ fontWeight: 700, color: '#fca5a5', marginBottom: '0.4rem', fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={18} color="#ef4444" /> Motivo do Cancelamento:
+                  </h4>
+                  <p style={{ fontSize: '0.9rem', color: '#fff', lineHeight: 1.5, margin: 0 }}>
+                    {activeTrackingOrder.cancelReason || 'Este pedido foi cancelado ou removido pelo estabelecimento.'}
+                  </p>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '8px', marginBottom: 0 }}>
+                    Caso você já tenha feito o pagamento via Pix ou queira tirar qualquer dúvida, entre em contato diretamente com nossa equipe pelo WhatsApp abaixo.
+                  </p>
+                </div>
+
+                {/* Resumo dos Itens do Pedido Cancelado */}
+                <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                  <h5 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                    Itens que estavam no Pedido
+                  </h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                    {activeTrackingOrder.items?.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}><strong>{item.quantity}x</strong> {item.name}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 700, color: 'var(--text-secondary)', borderTop: '1px solid var(--border-glass)', paddingTop: '8px' }}>
+                    <span>Valor:</span>
+                    <span>R$ {activeTrackingOrder.total?.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Botões de Ação para Pedido Cancelado */}
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setCheckoutStep('menu')} 
+                    className="btn-primary"
+                  >
+                    🍔 Fazer Outro Pedido
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const text = `*Olá, Nuu Prensado! Meu pedido #${activeTrackingOrder.id} apareceu como cancelado no site.*\n\n` +
+                        `*Cliente:* ${activeTrackingOrder.customerName}\n` +
+                        `*Telefone:* ${activeTrackingOrder.phone || ''}\n` +
+                        `*Motivo exibido:* ${activeTrackingOrder.cancelReason || 'Cancelado pelo estabelecimento'}\n\n` +
+                        `Gostaria de falar com vocês sobre esse cancelamento. Obrigado!`;
+
+                      const storeNumber = (storeSettings?.whatsapp || storeSettings?.phone || '31999999999').replace(/\D/g, '');
+                      const phoneWithDDI = storeNumber.startsWith('55') ? storeNumber : `55${storeNumber}`;
+                      window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
+                    }}
+                    className="btn-secondary" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <MessageCircle size={18} color="#25D366" />
+                    Falar com a Cozinha no WhatsApp
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* CASO 2: PEDIDO ATIVO NORMAL */
+              <div className="glass-panel" style={{ padding: '2rem 1.75rem', textAlign: 'center' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'var(--color-brand-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
+                  <Clock size={30} color="var(--color-brand)" />
+                </div>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: '0.25rem' }}>Acompanhe seu Pedido</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                  Código do Pedido: <strong style={{ color: '#eab308' }}>#{activeTrackingOrder.id}</strong> • Cliente: <strong>{activeTrackingOrder.customerName}</strong>
+                </p>
+
+                {/* Status Visual Tracker */}
+                <div className="status-tracker-container" style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', marginBottom: '2.5rem', padding: '0 10px' }}>
+                  <div style={{ position: 'absolute', top: '15px', left: '10%', right: '10%', height: '3px', backgroundColor: 'var(--bg-tertiary)', zIndex: 1 }}></div>
+                  
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '15px', 
+                    left: '10%', 
+                    width: progressPercent, 
+                    height: '3px', 
+                    backgroundColor: 'var(--color-brand)', 
+                    transition: 'all 0.5s',
+                    zIndex: 2 
+                  }}></div>
+
+                  {trackingSteps.map(step => {
+                    const isActive = getStatusStepClass(activeTrackingOrder.status, step.key) === 'step-active';
+                    return (
+                      <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '70px' }}>
+                        <div style={{ 
+                          width: '32px', 
+                          height: '32px', 
+                          borderRadius: '50%', 
+                          backgroundColor: isActive ? 'var(--color-brand)' : 'var(--bg-tertiary)', 
+                          border: '3px solid var(--bg-secondary)', 
+                          color: isActive ? '#fff' : 'var(--text-muted)',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold',
+                          transition: 'all 0.3s'
+                        }}>
+                          {isActive ? <CheckCircle size={16} /> : ''}
+                        </div>
+                        <span style={{ fontSize: '0.75rem', marginTop: '8px', color: isActive ? '#fff' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}>
+                          {step.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Mensagem descritiva do status atual */}
+                <div className="glass-panel" style={{ padding: '1.25rem', backgroundColor: 'rgba(255,255,255,0.03)', textAlign: 'left', marginBottom: '1.5rem', borderLeft: '4px solid var(--color-brand)' }}>
+                  <h4 style={{ fontWeight: 700, color: '#fff', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem' }}>
+                    <Sparkles size={18} color="#eab308" /> 
+                    {activeTrackingOrder.status === 'pending' && 'Aguardando Confirmação da Cozinha'}
+                    {activeTrackingOrder.status === 'preparing' && 'Seu Prensado já está na Chapa! 🔥'}
+                    {activeTrackingOrder.status === 'shipping' && (isPickup ? '🏪 Pronto para Retirada no Balcão!' : '🛵 Saiu para Entrega!')}
+                    {activeTrackingOrder.status === 'delivered' && (isPickup ? '🎉 Pedido Retirado com Sucesso!' : '🎉 Pedido Entregue!')}
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                    {activeTrackingOrder.status === 'pending' && 'Seu pedido foi registrado no sistema e já está aguardando na fila da chapa.'}
+                    {activeTrackingOrder.status === 'preparing' && 'Nosso chapeiro está preparando e prensando seus lanches com todo o capricho.'}
+                    {activeTrackingOrder.status === 'shipping' && (isPickup 
+                      ? 'Seu lanche prensado está prontinho e quentinho no balcão! Você já pode vir retirar.' 
+                      : `O entregador já está a caminho do seu endereço: ${activeTrackingOrder.address}.`)}
+                    {activeTrackingOrder.status === 'delivered' && 'Agradecemos muito por escolher o Nuu Prensado! Esperamos que saboreie seu pedido.'}
+                  </p>
+                </div>
+
+                {/* Status de Pagamento Online Aprovado */}
+                {activeTrackingOrder.paymentStatus === 'paid' && (
+                  <div style={{
+                    padding: '0.85rem 1.1rem',
+                    background: 'rgba(34, 197, 94, 0.12)',
+                    border: '1px solid rgba(34, 197, 94, 0.35)',
+                    borderRadius: 'var(--radius-sm)',
+                    marginBottom: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <ShieldCheck size={22} color="#4ade80" />
+                    <div>
+                      <strong style={{ fontSize: '0.86rem', color: '#4ade80', display: 'block' }}>
+                        Pagamento Confirmado no Mercado Pago!
+                      </strong>
+                      <span style={{ fontSize: '0.74rem', color: '#fff' }}>
+                        {activeTrackingOrder.paymentMethod} • ID: {activeTrackingOrder.paymentId || activeTrackingOrder.id}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Chave Pix se Pendente (Pix Manual ou aguardando) */}
+                {activeTrackingOrder.paymentStatus !== 'paid' && activeTrackingOrder.paymentMethod.includes('Pix') && activeTrackingOrder.status === 'pending' && (
+                  <div style={{ 
+                    padding: '1rem', 
+                    background: 'rgba(234, 179, 8, 0.1)', 
+                    border: '1px solid rgba(234, 179, 8, 0.35)', 
+                    borderRadius: 'var(--radius-sm)', 
+                    marginBottom: '1.5rem',
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '0.85rem', color: '#eab308' }}>⚡ Chave Pix para Pagamento:</strong>
+                      <button 
+                        type="button" 
+                        onClick={handleCopyPix}
+                        style={{ 
+                          background: pixCopied ? 'var(--color-success)' : '#eab308', 
+                          color: '#000', 
+                          border: 'none', 
+                          padding: '3px 8px', 
+                          borderRadius: '4px', 
+                          cursor: 'pointer', 
+                          fontSize: '0.75rem', 
+                          fontWeight: 700,
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '4px' 
+                        }}
+                      >
+                        {pixCopied ? <Check size={12} /> : <Copy size={12} />}
+                        {pixCopied ? 'Copiado!' : 'Copiar'}
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '6px 10px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                      {officialPixKey}
+                    </div>
+                  </div>
+                )}
+
+                {/* Resumo dos Itens */}
+                <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                  <h5 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                    Resumo dos Itens
+                  </h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                    {activeTrackingOrder.items?.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                        <span style={{ color: '#fff' }}><strong>{item.quantity}x</strong> {item.name}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Modalidade:</span>
+                    <span style={{ fontWeight: 600, color: '#fff' }}>{isPickup ? '🏪 Retirada no Balcão' : '🛵 Delivery'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginTop: '4px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Pagamento:</span>
+                    <span style={{ fontWeight: 600, color: '#fff' }}>{activeTrackingOrder.paymentMethod}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-brand)', marginTop: '8px', borderTop: '1px solid var(--border-glass)', paddingTop: '8px' }}>
+                    <span>Total:</span>
+                    <span>R$ {activeTrackingOrder.total?.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Botões de Ação para Pedido Normal */}
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setCheckoutStep('menu')} 
+                    className="btn-primary"
+                  >
+                    🍔 Fazer Outro Pedido
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const itemsSummary = activeTrackingOrder.items?.map(it => {
+                        let line = `• ${it.quantity}x ${it.name}`;
+                        if (it.notes) line += ` (Obs: ${it.notes})`;
+                        return line;
+                      }).join('\n') || '';
+
+                      const text = `*Olá, Nuu Prensado! Acabei de fazer um pedido pelo site!*\n\n` +
+                        `*Pedido:* #${activeTrackingOrder.id}\n` +
+                        `*Cliente:* ${activeTrackingOrder.customerName}\n` +
+                        `*Telefone:* ${activeTrackingOrder.phone || ''}\n` +
+                        `*Modalidade:* ${isPickup ? 'Retirada no Balcão' : 'Delivery'}\n` +
+                        (!isPickup && activeTrackingOrder.address ? `*Endereço:* ${activeTrackingOrder.address}${activeTrackingOrder.neighborhood ? ` (${activeTrackingOrder.neighborhood})` : ''}\n` : '') +
+                        `*Pagamento:* ${activeTrackingOrder.paymentMethod}\n\n` +
+                        `*Itens:*\n${itemsSummary}\n\n` +
+                        (activeTrackingOrder.deliveryFee > 0 ? `*Taxa de Entrega:* R$ ${activeTrackingOrder.deliveryFee.toFixed(2)}\n` : '') +
+                        (activeTrackingOrder.discount > 0 ? `*Desconto:* - R$ ${activeTrackingOrder.discount.toFixed(2)}\n` : '') +
+                        `*TOTAL:* R$ ${activeTrackingOrder.total?.toFixed(2)}\n\n` +
+                        `Poderiam confirmar se receberam meu pedido? Obrigado!`;
+
+                      const storeNumber = (storeSettings?.whatsapp || storeSettings?.phone || '31999999999').replace(/\D/g, '');
+                      const phoneWithDDI = storeNumber.startsWith('55') ? storeNumber : `55${storeNumber}`;
+                      window.open(`https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`, '_blank');
+                    }}
+                    className="btn-secondary" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <MessageCircle size={18} color="#25D366" />
+                    Confirmar no WhatsApp
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -4421,6 +4764,474 @@ export default function DeliveryView({
                 <MessageCircle size={15} />
                 <span>WhatsApp</span>
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BANNER FLUTUANTE DE PEDIDO ATIVO NO CARDÁPIO (SEM ATRAPALHAR NOVO PEDIDO) */}
+      {checkoutStep === 'menu' && activeTrackingOrder && !trackingBannerDismissed && (
+        <div 
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            bottom: cart.length > 0 ? '80px' : '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 90,
+            width: 'calc(100% - 32px)',
+            maxWidth: '520px',
+            backgroundColor: activeTrackingOrder.status === 'canceled' ? '#1c1012' : '#18181b',
+            border: activeTrackingOrder.status === 'canceled' 
+              ? '1px solid rgba(239, 68, 68, 0.5)' 
+              : activeTrackingOrder.status === 'delivered'
+                ? '1px solid rgba(34, 197, 94, 0.5)'
+                : '1px solid rgba(234, 179, 8, 0.5)',
+            borderRadius: '14px',
+            padding: '10px 14px',
+            boxShadow: '0 12px 35px rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+            <div style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              backgroundColor: activeTrackingOrder.status === 'canceled' 
+                ? 'rgba(239, 68, 68, 0.18)' 
+                : activeTrackingOrder.status === 'delivered'
+                  ? 'rgba(34, 197, 94, 0.18)'
+                  : 'rgba(234, 179, 8, 0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              {activeTrackingOrder.status === 'canceled' ? (
+                <XCircle size={18} color="#ef4444" />
+              ) : activeTrackingOrder.status === 'delivered' ? (
+                <CheckCircle2 size={18} color="#4ade80" />
+              ) : (
+                <Clock size={18} color="#eab308" />
+              )}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {activeTrackingOrder.status === 'canceled' ? (
+                  <span style={{ color: '#ef4444' }}>Pedido #{activeTrackingOrder.id} cancelado</span>
+                ) : activeTrackingOrder.status === 'delivered' ? (
+                  <span style={{ color: '#4ade80' }}>Pedido #{activeTrackingOrder.id} entregue!</span>
+                ) : (
+                  <span>Pedido #{activeTrackingOrder.id} em andamento</span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {activeTrackingOrder.status === 'pending' && 'Recebido • Aguardando cozinha'}
+                {activeTrackingOrder.status === 'preparing' && 'Na chapa quentinho 🔥'}
+                {activeTrackingOrder.status === 'shipping' && (activeTrackingOrder.type === 'pickup' ? 'Pronto para retirar no balcão 🏪' : 'Saiu para entrega com motoboy 🛵')}
+                {activeTrackingOrder.status === 'delivered' && 'Finalizado com sucesso'}
+                {activeTrackingOrder.status === 'canceled' && (activeTrackingOrder.cancelReason || 'Clique para ver o motivo')}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setCheckoutStep('tracking')}
+              style={{
+                background: activeTrackingOrder.status === 'canceled' ? '#ef4444' : '#eab308',
+                color: activeTrackingOrder.status === 'canceled' ? '#fff' : '#000',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Acompanhar
+            </button>
+            <button
+              type="button"
+              onClick={() => setTrackingBannerDismissed(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title="Ocultar aviso"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE MEUS PEDIDOS & LOGIN DE CLIENTE POR WHATSAPP */}
+      {isCustomerModalOpen && (
+        <div 
+          className="modal-overlay animate-fade-in"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+          onClick={() => setIsCustomerModalOpen(false)}
+        >
+          <div 
+            className="modal-content animate-fade-in custom-scrollbar"
+            style={{
+              backgroundColor: '#18181b',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '20px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.95)',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header do Modal */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#18181b',
+              zIndex: 10
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <User size={18} color="#eab308" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>
+                    {loggedCustomer ? 'Minha Conta & Pedidos' : 'Identificação por WhatsApp'}
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                    {loggedCustomer ? 'Acompanhe seus pedidos ao vivo' : 'Conecte-se para histórico e fidelidade'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCustomerModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Corpo do Modal */}
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Se o cliente NÃO está logado ou quer trocar de número */}
+              {!loggedCustomer || customerModalTab === 'login' ? (
+                <form onSubmit={handleCustomerLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{
+                    backgroundColor: 'rgba(234, 179, 8, 0.08)',
+                    border: '1px solid rgba(234, 179, 8, 0.25)',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
+                    fontSize: '0.84rem',
+                    color: 'rgba(255,255,255,0.85)',
+                    lineHeight: 1.5
+                  }}>
+                    ✨ <strong>Acompanhe tudo em tempo real!</strong> Conecte-se com seu WhatsApp para ver o andamento dos seus pedidos, histórico completo e pontos de fidelidade.
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>
+                      Seu WhatsApp (com DDD) *
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Phone size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                      <input 
+                        type="tel"
+                        value={loginPhoneInput}
+                        onChange={(e) => setLoginPhoneInput(e.target.value)}
+                        placeholder="(38) 99999-9999"
+                        autoFocus
+                        style={{
+                          width: '100%',
+                          padding: '12px 12px 12px 38px',
+                          backgroundColor: 'rgba(255,255,255,0.06)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '10px',
+                          color: '#fff',
+                          fontSize: '0.92rem'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>
+                      Seu Nome (opcional)
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <User size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                      <input 
+                        type="text"
+                        value={loginNameInput}
+                        onChange={(e) => setLoginNameInput(e.target.value)}
+                        placeholder="Como prefere ser chamado(a)"
+                        style={{
+                          width: '100%',
+                          padding: '12px 12px 12px 38px',
+                          backgroundColor: 'rgba(255,255,255,0.06)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '10px',
+                          color: '#fff',
+                          fontSize: '0.92rem'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      style={{ flex: 1, padding: '12px', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 700 }}
+                    >
+                      Acessar Meus Pedidos
+                    </button>
+                    {loggedCustomer && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomerModalTab('orders')}
+                        className="btn-secondary"
+                        style={{ padding: '12px 16px' }}
+                      >
+                        Voltar
+                      </button>
+                    )}
+                  </div>
+                </form>
+              ) : (
+                /* Cliente Conectado: Perfil, Fidelidade e Histórico de Pedidos */
+                <>
+                  {/* Card do Cliente Logado */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#fff' }}>
+                        {loggedCustomer.name || 'Cliente Nuu'}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        WhatsApp: <strong>{loggedCustomer.phone}</strong>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCustomerLogout}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: '#f87171',
+                        borderRadius: '8px',
+                        padding: '6px 10px',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Sair ou usar outro número"
+                    >
+                      <LogOut size={13} /> Sair
+                    </button>
+                  </div>
+
+                  {/* Cartão de Fidelidade do Cliente */}
+                  {identifiedCustomer && (
+                    <div style={{ marginTop: '2px' }}>
+                      <LoyaltyCard customer={identifiedCustomer} />
+                    </div>
+                  )}
+
+                  {/* Lista de Pedidos Realizados */}
+                  <div>
+                    <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fff', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Clock size={16} color="#eab308" /> Meus Pedidos ({customerOrdersList.length})
+                    </h4>
+
+                    {customerOrdersList.length === 0 ? (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '2rem 1rem',
+                        backgroundColor: 'rgba(255,255,255,0.02)',
+                        borderRadius: '12px',
+                        border: '1px dashed rgba(255,255,255,0.1)'
+                      }}>
+                        <ShoppingBag size={32} color="var(--text-muted)" style={{ margin: '0 auto 10px auto' }} />
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', margin: 0 }}>
+                          Você ainda não possui pedidos registrados com este WhatsApp.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomerModalOpen(false);
+                            setCheckoutStep('menu');
+                          }}
+                          className="btn-primary"
+                          style={{ marginTop: '12px', padding: '8px 16px', fontSize: '0.8rem' }}
+                        >
+                          Ver Cardápio e Pedir
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {customerOrdersList.map(order => {
+                          const isLive = ['pending', 'preparing', 'shipping'].includes(order.status);
+                          const isCanceled = order.status === 'canceled';
+                          const isDelivered = order.status === 'delivered';
+
+                          return (
+                            <div 
+                              key={order.id}
+                              style={{
+                                backgroundColor: isCanceled ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.03)',
+                                border: isCanceled 
+                                  ? '1px solid rgba(239, 68, 68, 0.3)' 
+                                  : isLive 
+                                    ? '1px solid rgba(234, 179, 8, 0.4)' 
+                                    : '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: '12px',
+                                padding: '12px 14px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <strong style={{ color: '#fff', fontSize: '0.88rem' }}>#{order.id}</strong>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                                  </span>
+                                </div>
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: isCanceled 
+                                    ? 'rgba(239, 68, 68, 0.2)' 
+                                    : isDelivered 
+                                      ? 'rgba(34, 197, 94, 0.2)' 
+                                      : 'rgba(234, 179, 8, 0.2)',
+                                  color: isCanceled 
+                                    ? '#f87171' 
+                                    : isDelivered 
+                                      ? '#4ade80' 
+                                      : '#facc15'
+                                }}>
+                                  {order.status === 'pending' && 'Recebido'}
+                                  {order.status === 'preparing' && 'Na Chapa 🔥'}
+                                  {order.status === 'shipping' && (order.type === 'pickup' ? 'No Balcão 🏪' : 'A Caminho 🛵')}
+                                  {order.status === 'delivered' && 'Entregue 🎉'}
+                                  {order.status === 'canceled' && 'Cancelado ❌'}
+                                </span>
+                              </div>
+
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                {order.items?.map(it => `${it.quantity}x ${it.name}`).join(', ')}
+                              </div>
+
+                              {isCanceled && order.cancelReason && (
+                                <div style={{ fontSize: '0.74rem', color: '#f87171', backgroundColor: 'rgba(239, 68, 68, 0.08)', padding: '6px 8px', borderRadius: '6px' }}>
+                                  Motivo: {order.cancelReason}
+                                </div>
+                              )}
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#eab308' }}>
+                                  R$ {Number(order.total || 0).toFixed(2)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveTrackingOrder(order);
+                                    setTrackingBannerDismissed(false);
+                                    try {
+                                      localStorage.setItem('nuu_customer_last_order_id', order.id.toString());
+                                    } catch (e) {}
+                                    setIsCustomerModalOpen(false);
+                                    setCheckoutStep('tracking');
+                                  }}
+                                  style={{
+                                    background: 'rgba(255,255,255,0.08)',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    color: '#fff',
+                                    borderRadius: '6px',
+                                    padding: '5px 10px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  Acompanhar Pedido <ChevronRight size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

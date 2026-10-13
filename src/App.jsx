@@ -324,32 +324,6 @@ function AppContent() {
                   Catálogo
                 </span>
               )}
-              {checkoutStep === 'menu' && (() => {
-                const savedId = typeof window !== 'undefined' ? localStorage.getItem('nuu_customer_last_order_id') : null;
-                const activeOrder = (savedId && Array.isArray(orders)) ? orders.find(o => o.id === parseInt(savedId) && o.status !== 'delivered') : null;
-                if (!activeOrder) return null;
-                return (
-                  <button 
-                    onClick={() => setCheckoutStep('tracking')}
-                    style={{ 
-                      background: 'rgba(234, 179, 8, 0.18)', 
-                      border: '1px solid #eab308', 
-                      color: '#eab308', 
-                      cursor: 'pointer', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '6px',
-                      padding: '7px 14px', 
-                      borderRadius: '99px', 
-                      fontWeight: 700,
-                      fontSize: '0.8rem'
-                    }}
-                  >
-                    <Clock size={15} />
-                    <span>Acompanhar Pedido #{activeOrder.id}</span>
-                  </button>
-                );
-              })()}
               {checkoutStep === 'menu' && isImmersiveEnabled && (
                 <button 
                   onClick={() => setViewMode(prev => prev === 'slider' ? 'grid' : 'slider')}

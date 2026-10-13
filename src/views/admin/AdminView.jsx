@@ -133,7 +133,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
 
   // Estados para Bairros de Entrega
   const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
-  const [newNeighborhoodFee, setNewNeighborhoodFee] = useState('7.00');
+  const [newNeighborhoodFee, setNewNeighborhoodFee] = useState('0.00');
 
   // Estados para Faixas de Raio (Km)
   const [newRadiusKm, setNewRadiusKm] = useState('5');
@@ -3376,32 +3376,38 @@ export default function AdminView({ onLogout, onGoOperation }) {
                     {(() => {
                       // Consolidar lista de bairros com taxa personalizada
                       const entriesMap = new Map();
-                      // Padrão obrigatório da Loja: Sagrada Família R$ 0,00
-                      entriesMap.set('sagrada família', { name: 'Sagrada Família', fee: 0, isStore: true });
 
-                      if (storeSettings?.deliveryFeesByNeighborhood) {
-                        Object.entries(storeSettings.deliveryFeesByNeighborhood).forEach(([name, fee]) => {
-                          const isStore = name.toLowerCase().includes('sagrada');
-                          entriesMap.set(name.toLowerCase(), { 
-                            name, 
-                            fee: isStore ? 0 : (Number(fee) || 0), 
+                      // Padrão inicial da Loja (Sagrada Família)
+                      entriesMap.set('sagrada família', { 
+                        name: 'Sagrada Família', 
+                        fee: 0, 
+                        isStore: true 
+                      });
+
+                      if (deliveryNeighborhoods && Array.isArray(deliveryNeighborhoods)) {
+                        deliveryNeighborhoods.forEach(n => {
+                          const key = n.name.trim().toLowerCase();
+                          const isStore = key.includes('sagrada');
+                          entriesMap.set(key, { 
+                            name: n.name, 
+                            fee: Number(n.fee) || 0, 
+                            id: n.id,
                             isStore 
                           });
                         });
                       }
 
-                      if (deliveryNeighborhoods && Array.isArray(deliveryNeighborhoods)) {
-                        deliveryNeighborhoods.forEach(n => {
-                          const key = n.name.toLowerCase();
+                      if (storeSettings?.deliveryFeesByNeighborhood) {
+                        Object.entries(storeSettings.deliveryFeesByNeighborhood).forEach(([name, fee]) => {
+                          const key = name.trim().toLowerCase();
                           const isStore = key.includes('sagrada');
-                          if (!entriesMap.has(key)) {
-                            entriesMap.set(key, { 
-                              name: n.name, 
-                              fee: isStore ? 0 : (Number(n.fee) || 0), 
-                              id: n.id,
-                              isStore 
-                            });
-                          }
+                          const existing = entriesMap.get(key);
+                          entriesMap.set(key, { 
+                            name: existing ? existing.name : name, 
+                            fee: Number(fee) || 0, 
+                            id: existing?.id,
+                            isStore 
+                          });
                         });
                       }
 
@@ -3432,34 +3438,40 @@ export default function AdminView({ onLogout, onGoOperation }) {
                               </span>
                             )}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {item.fee === 0 ? (
                               <span style={{ fontWeight: 700, color: '#4ade80', fontSize: '0.85rem' }}>GRÁTIS (R$ 0,00)</span>
                             ) : (
                               <span style={{ fontWeight: 700, color: 'var(--color-brand)', fontSize: '0.85rem' }}>R$ {Number(item.fee).toFixed(2)}</span>
                             )}
-                            {!item.isStore ? (
-                              <button
-                                onClick={() => {
-                                  const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
-                                  delete fees[item.name];
-                                  Object.keys(fees).forEach(k => {
-                                    if (k.toLowerCase() === item.name.toLowerCase()) delete fees[k];
-                                  });
-                                  updateStoreSettings({ deliveryFeesByNeighborhood: fees });
-                                  const foundNb = (deliveryNeighborhoods || []).find(n => n.name.toLowerCase() === item.name.toLowerCase());
-                                  if (foundNb) {
-                                    deleteNeighborhood(foundNb.id);
-                                  }
-                                }}
-                                style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px' }}
-                                title="Remover Taxa Específica"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            ) : (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Fixo</span>
-                            )}
+                            <button
+                              onClick={() => {
+                                setNewNeighborhoodName(item.name);
+                                setNewNeighborhoodFee(Number(item.fee).toFixed(2));
+                              }}
+                              style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)', color: '#38bdf8', cursor: 'pointer', padding: '4px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.72rem' }}
+                              title="Editar taxa deste bairro"
+                            >
+                              <Edit size={12} /> Editar
+                            </button>
+                            <button
+                              onClick={() => {
+                                const fees = { ...(storeSettings?.deliveryFeesByNeighborhood || {}) };
+                                delete fees[item.name];
+                                Object.keys(fees).forEach(k => {
+                                  if (k.toLowerCase() === item.name.toLowerCase()) delete fees[k];
+                                });
+                                updateStoreSettings({ deliveryFeesByNeighborhood: fees });
+                                const foundNb = (deliveryNeighborhoods || []).find(n => n.name.toLowerCase() === item.name.toLowerCase());
+                                if (foundNb) {
+                                  deleteNeighborhood(foundNb.id);
+                                }
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '3px' }}
+                              title={item.isStore ? "Resetar taxa da loja" : "Remover taxa específica"}
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
                       ));

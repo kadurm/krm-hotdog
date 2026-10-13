@@ -377,12 +377,9 @@ export default function DeliveryView({
       });
     }
 
-    // 3. Garantir que Sagrada Família (bairro da loja) tenha fee = 0
+    // 3. Sagrada Família (bairro da loja): se ainda não configurado, inicia como 0.00 (Grátis)
     const sagradaKey = 'sagrada família';
-    if (map.has(sagradaKey)) {
-      const cur = map.get(sagradaKey);
-      map.set(sagradaKey, { ...cur, fee: 0 });
-    } else {
+    if (!map.has(sagradaKey)) {
       map.set(sagradaKey, { name: 'Sagrada Família', fee: 0, distanceKm: 0.5 });
     }
 

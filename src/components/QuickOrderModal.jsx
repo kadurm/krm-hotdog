@@ -108,9 +108,8 @@ export default function QuickOrderModal({ onClose, onOrderCreated }) {
       });
     }
     const sagradaKey = 'sagrada família';
-    if (map.has(sagradaKey)) {
-      const cur = map.get(sagradaKey);
-      map.set(sagradaKey, { ...cur, fee: 0 });
+    if (!map.has(sagradaKey)) {
+      map.set(sagradaKey, { name: 'Sagrada Família', fee: 0 });
     }
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [deliveryNeighborhoods, storeSettings?.deliveryFeesByNeighborhood]);

@@ -1000,7 +1000,7 @@ export default function DeliveryView({
 
   return (
     <div 
-      className="app-container"
+      className={`app-container ${viewMode === 'slider' ? 'is-slider-mode' : 'is-grid-mode'}`}
       ref={mainContainerRef}
       style={{ 
         backgroundColor: backgroundColor,
@@ -1073,15 +1073,18 @@ export default function DeliveryView({
           style={{ 
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '12px', 
-            padding: '12px 16px',
-            backgroundColor: viewMode === 'grid' ? 'rgba(18, 18, 18, 0.92)' : 'transparent',
+            gap: viewMode === 'grid' ? '8px' : '12px', 
+            padding: viewMode === 'grid' ? '10px 16px 8px 16px' : '12px 16px',
+            backgroundColor: viewMode === 'grid' ? 'rgba(18, 18, 18, 0.95)' : 'transparent',
             backdropFilter: viewMode === 'grid' ? 'blur(12px)' : 'none',
-            borderBottom: viewMode === 'grid' ? '1px solid rgba(255, 255, 255, 0.06)' : 'none',
+            borderBottom: viewMode === 'grid' ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
             transition: 'background-color 0.3s ease, border-color 0.3s ease'
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div 
+            className="mobile-header-top-row"
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}
+          >
             {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <img 
@@ -1502,10 +1505,10 @@ export default function DeliveryView({
             maxWidth: '1240px',
             margin: '0 auto',
             width: '100%',
-            padding: '9.5rem 1.5rem 6rem 1.5rem',
+            padding: '1.25rem 1.5rem 6rem 1.5rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '3rem'
+            gap: '2.5rem'
           }}
         >
           {gridCategorySections.length === 0 ? (

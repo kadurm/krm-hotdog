@@ -846,7 +846,7 @@ input:focus, select:focus, textarea:focus {
   /* AJUSTES DA VISUALIZAÇÃO EM GRADE (MOBILE) */
   /* ========================================= */
   .grid-view-container {
-    padding: 9.5rem 1rem 3rem 1rem !important; /* Espaçamento harmônico para desviar das categorias e cabeçalho */
+    padding: 0.85rem 1rem 3rem 1rem !important; /* Espaçamento harmônico e sem vazio excessivo */
     display: flex !important;
     flex-direction: column !important; /* Força 1 item por linha no celular */
     gap: 1.5rem !important;
@@ -890,22 +890,36 @@ input:focus, select:focus, textarea:focus {
 /* Cabeçalho Flutuante e Barra de Categorias               */
 /* ======================================================== */
 .mobile-floating-header {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
   width: 100%;
   z-index: 100;
+  pointer-events: auto;
+}
+
+/* No modo slider, ele flutua sobre a tela */
+.is-slider-mode .mobile-floating-header {
+  position: absolute;
   pointer-events: none;
 }
 
-@media (min-width: 769px) {
-  .mobile-floating-header {
-    display: none !important;
-  }
+.is-slider-mode .mobile-floating-header > div,
+.is-slider-mode .mobile-floating-header > button,
+.is-slider-mode .mobile-floating-header button {
+  pointer-events: auto;
 }
 
-.mobile-floating-header > div,
-.mobile-floating-header > button,
-.mobile-floating-header button {
-  pointer-events: auto;
+/* No Desktop: oculta apenas a primeira linha duplicada (logo + status + carrinho) que já existe no .app-header oficial */
+@media (min-width: 769px) {
+  .mobile-header-top-row {
+    display: none !important;
+  }
+  .mobile-floating-header {
+    top: 68px; /* Posiciona logo abaixo da barra oficial .app-header */
+    z-index: 45;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    pointer-events: auto;
+  }
 }

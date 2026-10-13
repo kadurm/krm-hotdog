@@ -78,7 +78,7 @@ const INITIAL_PRODUCTS = [
     id: 2, 
     name: 'Prensado de Frango', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de frango desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
-    price: 22.00, 
+    price: 23.00, 
     image: '/images/lanches/prensado de frango.png',
     active: true, 
     category: 'prensados', 
@@ -102,7 +102,7 @@ const INITIAL_PRODUCTS = [
     id: 4, 
     name: 'Prensado Pernil', 
     description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de pernil desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
-    price: 22.00, 
+    price: 23.00, 
     image: '/images/lanches/prensado de pernil.png',
     active: true, 
     category: 'prensados', 
@@ -126,7 +126,7 @@ const INITIAL_PRODUCTS = [
     id: 3, 
     name: 'Prensado de Costela', 
     description: 'Pão, 2 salsichas, molho de tomate artesanal, Catupiry / Requeijão / Creme Cheese, 150g de costela desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
-    price: 25.00, 
+    price: 28.00, 
     image: '/images/lanches/prensado de costela.png',
     active: true, 
     category: 'prensados', 
@@ -136,6 +136,30 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 9, quantity: 1 },  // 150g Costela desfiada
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
+      { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
+      { ingredientId: 3, quantity: 1 },  // Bacon
+      { ingredientId: 14, quantity: 1 }, // Batata
+      { ingredientId: 13, quantity: 1 }, // Milho
+      { ingredientId: 16, quantity: 1 }, // Molhos da casa
+      { ingredientId: 101, quantity: 1 }, // Embalagem Térmica
+      { ingredientId: 102, quantity: 2 }  // Guardanapos
+    ]
+  },
+  { 
+    id: 15, 
+    name: 'Prensado de Fraldinha', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de fraldinha desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    price: 25.00, 
+    image: '/images/lanches/prensado de fraldinha.jfif',
+    active: true, 
+    category: 'prensados', 
+    hasCustomOptions: true,
+    recipe: [
+      { ingredientId: 1, quantity: 1 },  // Pão
+      { ingredientId: 2, quantity: 2 },  // 2 Salsichas
+      { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
+      { ingredientId: 22, quantity: 1 }, // 150g Fraldinha desfiada
       { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
@@ -262,8 +286,8 @@ const INITIAL_PRODUCTS = [
 // 2. COMPLEMENTOS E ADICIONAIS
 const INITIAL_COMPLEMENTS = [
   // --- Opções Inclusas de Tipo de Pão (Escolha 1) ---
-  { id: 'bread-3-queijos', name: 'Pão 3 Queijos', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true },
-  { id: 'bread-parmesao', name: 'Pão Queijo Parmesão', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true },
+  { id: 'bread-tradicional', name: 'Pão tradicional', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true },
+  { id: 'bread-3-queijos', name: 'Pão 3 queijos', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true },
 
   // --- Opções Inclusas de Queijo Cremoso (Escolha 1) ---
   { id: 'creamy-catupiry', name: 'Catupiry Original', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
@@ -281,6 +305,7 @@ const INITIAL_COMPLEMENTS = [
   { id: 'extra-bacon', name: 'Bacon', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
   { id: 'extra-frango', name: 'Frango', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
   { id: 'extra-costela', name: 'Costela', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 6.00, active: true },
+  { id: 'extra-fraldinha', name: 'Fraldinha', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 6.00, active: true },
   { id: 'extra-pernil', name: 'Pernil', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 4.00, active: true },
   { id: 'extra-maionese-bacon', name: 'Maionese Bacon', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 2.50, active: true },
   { id: 'extra-maionese-temperada', name: 'Maionese Temperada', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 1.50, active: true },
@@ -293,13 +318,14 @@ const INITIAL_COMPLEMENTS = [
 // 3. ESTOQUE & EMBALAGENS (Ficha Técnica e Insumos)
 const INITIAL_INVENTORY = [
   // --- Insumos Base de Lanches ---
-  { id: 1, name: 'Pão 3 Queijos', quantity: 60, minQuantity: 20, unit: 'un', unitCost: 1.00 },
-  { id: 21, name: 'Pão Queijo Parmesão', quantity: 60, minQuantity: 20, unit: 'un', unitCost: 1.00 },
+  { id: 1, name: 'Pão Tradicional', quantity: 60, minQuantity: 20, unit: 'un', unitCost: 1.00 },
+  { id: 21, name: 'Pão 3 Queijos', quantity: 60, minQuantity: 20, unit: 'un', unitCost: 1.00 },
   { id: 2, name: 'Salsicha Premium', quantity: 150, minQuantity: 30, unit: 'un', unitCost: 0.60 },
   { id: 3, name: 'Bacon Fatiado / Crocante', quantity: 50, minQuantity: 15, unit: 'porção', unitCost: 1.50 },
   { id: 7, name: 'Frango Desfiado Temperado (150g)', quantity: 30, minQuantity: 10, unit: 'porção (150g)', unitCost: 3.50 },
   { id: 8, name: 'Pernil Desfiado Especial (150g)', quantity: 30, minQuantity: 10, unit: 'porção (150g)', unitCost: 4.50 },
   { id: 9, name: 'Costela Desfiada Suculenta (150g)', quantity: 30, minQuantity: 10, unit: 'porção (150g)', unitCost: 6.00 },
+  { id: 22, name: 'Fraldinha Desfiada Suculenta (150g)', quantity: 30, minQuantity: 10, unit: 'porção (150g)', unitCost: 6.00 },
   { id: 10, name: 'Queijo Mussarela Fatiado', quantity: 80, minQuantity: 20, unit: 'porção', unitCost: 1.20 },
   { id: 11, name: 'Catupiry / Requeijão Cremoso', quantity: 60, minQuantity: 15, unit: 'porção', unitCost: 1.00 },
   { id: 12, name: 'Queijo Cheddar Cremoso/Fatiado', quantity: 60, minQuantity: 15, unit: 'porção', unitCost: 1.00 },

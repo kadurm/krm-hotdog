@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSystem, playNotificationChime } from '../../contexts/SystemContext';
 import OrderTimerBadge from '../../components/OrderTimerBadge';
 import ThermalPrintReceipt from '../../components/ThermalPrintReceipt';
@@ -69,6 +69,15 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     const timer = setInterval(() => setClockTick(t => t + 1), 5000);
     return () => clearInterval(timer);
   }, []);
+
+  // Abre o modal de controle de turno automaticamente assim que o operador entra na seção de operações se o caixa estiver fechado
+  const hasPromptedShiftOnEntry = useRef(false);
+  useEffect(() => {
+    if (currentOperator && !activeShift && !currentShift && !hasPromptedShiftOnEntry.current) {
+      hasPromptedShiftOnEntry.current = true;
+      setIsCashModalOpen(true);
+    }
+  }, [currentOperator, activeShift, currentShift]);
 
   const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
   const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
@@ -245,6 +254,10 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
       setSelectedOperatorForLogin(null);
       setLoginPin('');
       setLoginError('');
+      if (!activeShift && !currentShift) {
+        hasPromptedShiftOnEntry.current = true;
+        setIsCashModalOpen(true);
+      }
     } else {
       setLoginError('Senha incorreta! Verifique ou solicite ao administrador.');
     }
@@ -867,7 +880,19 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
           {/* Botão Novo Pedido Balcão */}
           <button
             type="button"
-            onClick={() => setIsQuickOrderOpen(true)}
+            onClick={() => {
+              if (!activeShift && !currentShift) {
+                if (typeof showAlert === 'function') {
+                  showAlert('Por favor, abra o turno de caixa antes de registrar pedidos!', {
+                    title: 'Caixa Fechado',
+                    type: 'warning'
+                  });
+                }
+                setIsCashModalOpen(true);
+                return;
+              }
+              setIsQuickOrderOpen(true);
+            }}
             className="btn-primary"
             style={{
               padding: '7px 14px',

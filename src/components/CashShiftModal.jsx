@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useSystem } from '../contexts/SystemContext';
 
-export default function CashShiftModal({ onClose }) {
+export default function CashShiftModal({ onClose, initialMode }) {
   const { 
     currentShift, 
     shiftHistory, 
@@ -17,7 +17,7 @@ export default function CashShiftModal({ onClose }) {
     showAlert 
   } = useSystem();
 
-  const [mode, setMode] = useState('summary'); // 'summary' | 'open' | 'bleed' | 'supply' | 'close' | 'history'
+  const [mode, setMode] = useState(() => initialMode || (currentShift ? 'summary' : 'open'));
 
   // Form states
   const [initialFloat, setInitialFloat] = useState('100.00');

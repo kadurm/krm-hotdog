@@ -60,7 +60,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 1, 
     name: 'Prensadinho', 
-    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, mussarela, bacon, milho, batata e molhos da casa.', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, mussarela, bacon, milho, batata e molhos da casa.', 
     price: 17.50, 
     image: '/images/lanches/Prensadinho.jpg',
     active: true, 
@@ -70,7 +70,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 1, quantity: 1 },  // Pão
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar Cremoso / Cream Cheese
       { ingredientId: 10, quantity: 1 }, // Mussarela
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 13, quantity: 1 }, // Milho
@@ -83,7 +83,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 2, 
     name: 'Prensado de Frango', 
-    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de frango desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de frango desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 23.00, 
     image: '/images/lanches/prensado de frango.png',
     active: true, 
@@ -94,7 +94,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 7, quantity: 1 },  // 150g Frango desfiado
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar Cremoso / Cream Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 14, quantity: 1 }, // Batata
@@ -107,7 +107,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 4, 
     name: 'Prensado Pernil', 
-    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de pernil desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de pernil desfiado, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 23.00, 
     image: '/images/lanches/prensado de pernil.png',
     active: true, 
@@ -118,7 +118,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 8, quantity: 1 },  // 150g Pernil desfiado
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar Cremoso / Cream Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 14, quantity: 1 }, // Batata
@@ -131,7 +131,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 3, 
     name: 'Prensado de Costela', 
-    description: 'Pão, 2 salsichas, molho de tomate artesanal, Catupiry / Requeijão / Creme Cheese, 150g de costela desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    description: 'Pão, 2 salsichas, molho de tomate artesanal, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de costela desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 28.00, 
     image: '/images/lanches/prensado de costela.png',
     active: true, 
@@ -142,7 +142,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 9, quantity: 1 },  // 150g Costela desfiada
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar Cremoso / Cream Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 14, quantity: 1 }, // Batata
@@ -155,7 +155,7 @@ const INITIAL_PRODUCTS = [
   { 
     id: 15, 
     name: 'Prensado de Fraldinha', 
-    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Requeijão / Creme Cheese, 150g de fraldinha desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
+    description: 'Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de fraldinha desfiada, queijo / cheddar, bacon, batata, milho e molhos da casa.', 
     price: 25.00, 
     image: '/images/lanches/prensado de fraldinha.jfif',
     active: true, 
@@ -166,7 +166,7 @@ const INITIAL_PRODUCTS = [
       { ingredientId: 2, quantity: 2 },  // 2 Salsichas
       { ingredientId: 15, quantity: 1 }, // Molho de tomate artesanal
       { ingredientId: 22, quantity: 1 }, // 150g Fraldinha desfiada
-      { ingredientId: 11, quantity: 1 }, // Catupiry / Requeijão / Creme Cheese
+      { ingredientId: 11, quantity: 1 }, // Catupiry / Cheddar Cremoso / Cream Cheese
       { ingredientId: 10, quantity: 1 }, // Queijo / cheddar
       { ingredientId: 3, quantity: 1 },  // Bacon
       { ingredientId: 14, quantity: 1 }, // Batata
@@ -297,7 +297,7 @@ const INITIAL_COMPLEMENTS = [
 
   // --- Opções Inclusas de Queijo Cremoso (Escolha 1) ---
   { id: 'creamy-catupiry', name: 'Catupiry Original', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
-  { id: 'creamy-requeijao', name: 'Requeijão Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
+  { id: 'creamy-cheddar', name: 'Cheddar Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
   { id: 'creamy-creamcheese', name: 'Cream Cheese', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true },
 
   // --- Opções Inclusas de Queijo Fatiado (Escolha 1) ---
@@ -756,28 +756,34 @@ export const SystemProvider = ({ children }) => {
   });
 
   const [complements, setComplements] = useState(() => {
-    const saved = localStorage.getItem('nuu_complements_v7');
+    const saved = localStorage.getItem('nuu_complements_v8');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch (e) {}
     }
-    const oldV6 = localStorage.getItem('nuu_complements_v6') || localStorage.getItem('nuu_complements_v5');
-    if (oldV6) {
+    const oldV7 = localStorage.getItem('nuu_complements_v7') || localStorage.getItem('nuu_complements_v6') || localStorage.getItem('nuu_complements_v5');
+    if (oldV7) {
       try {
-        const parsed = JSON.parse(oldV6);
+        const parsed = JSON.parse(oldV7);
         let filtered = parsed.filter(c => c.id !== 'bread-parmesao' && !c.name?.toLowerCase().includes('parmes'));
         filtered = filtered.map(c => {
           if (c.id === 'bread-3-queijos') return { ...c, name: 'Pão 3 queijos' };
+          if (c.id === 'creamy-requeijao' || c.name?.toLowerCase().includes('requeijão')) {
+            return { ...c, id: 'creamy-cheddar', name: 'Cheddar Cremoso', group: 'creamy', groupName: 'Queijo Cremoso' };
+          }
           return c;
         });
         if (!filtered.some(c => c.id === 'bread-tradicional')) {
           filtered.unshift({ id: 'bread-tradicional', name: 'Pão tradicional', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true });
         }
+        if (!filtered.some(c => c.id === 'creamy-cheddar' || c.name === 'Cheddar Cremoso')) {
+          filtered.push({ id: 'creamy-cheddar', name: 'Cheddar Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true });
+        }
         if (!filtered.some(c => c.id === 'extra-fraldinha')) {
           filtered.push({ id: 'extra-fraldinha', name: 'Fraldinha', category: 'extra', group: 'extras', groupName: 'Adicionais Extras', price: 6.00, active: true });
         }
-        localStorage.setItem('nuu_complements_v7', JSON.stringify(filtered));
+        localStorage.setItem('nuu_complements_v8', JSON.stringify(filtered));
         return filtered;
       } catch (e) {}
     }
@@ -1383,9 +1389,16 @@ export const SystemProvider = ({ children }) => {
           if (remoteMap.has('bread-parmesao')) {
             deleteDoc(doc(db, 'complements', 'bread-parmesao')).catch(() => {});
           }
+          if (remoteMap.has('creamy-requeijao')) {
+            deleteDoc(doc(db, 'complements', 'creamy-requeijao')).catch(() => {});
+          }
           const tradBread = INITIAL_COMPLEMENTS.find(c => c.id === 'bread-tradicional');
           if (tradBread && !remoteMap.has('bread-tradicional')) {
             syncComplementToRemote(tradBread);
+          }
+          const cheddarCreamy = INITIAL_COMPLEMENTS.find(c => c.id === 'creamy-cheddar');
+          if (cheddarCreamy && !remoteMap.has('creamy-cheddar')) {
+            syncComplementToRemote(cheddarCreamy);
           }
           const fraldinhaExtra = INITIAL_COMPLEMENTS.find(c => c.id === 'extra-fraldinha');
           if (fraldinhaExtra && !remoteMap.has('extra-fraldinha')) {
@@ -1395,8 +1408,19 @@ export const SystemProvider = ({ children }) => {
           setComplements(prev => {
             let changed = false;
             let filtered = prev.filter(c => c.id !== 'bread-parmesao' && !c.name?.toLowerCase().includes('parmes'));
+            filtered = filtered.map(c => {
+              if (c.id === 'creamy-requeijao' || c.name?.toLowerCase().includes('requeijão')) {
+                changed = true;
+                return { ...c, id: 'creamy-cheddar', name: 'Cheddar Cremoso', group: 'creamy', groupName: 'Queijo Cremoso' };
+              }
+              return c;
+            });
             if (!filtered.some(c => c.id === 'bread-tradicional')) {
               filtered.unshift({ id: 'bread-tradicional', name: 'Pão tradicional', category: 'complement', group: 'bread', groupName: 'Tipo de Pão', price: 0, active: true });
+              changed = true;
+            }
+            if (!filtered.some(c => c.id === 'creamy-cheddar' || c.name === 'Cheddar Cremoso')) {
+              filtered.push({ id: 'creamy-cheddar', name: 'Cheddar Cremoso', category: 'complement', group: 'creamy', groupName: 'Queijo Cremoso', price: 0, active: true });
               changed = true;
             }
             if (!filtered.some(c => c.id === 'extra-fraldinha')) {
@@ -1411,6 +1435,7 @@ export const SystemProvider = ({ children }) => {
               let newName = rem.name || c.name;
               if (c.id === 'bread-3-queijos') newName = 'Pão 3 queijos';
               if (c.id === 'bread-tradicional') newName = 'Pão tradicional';
+              if (c.id === 'creamy-cheddar') newName = 'Cheddar Cremoso';
               if (c.active !== newActive || c.price !== newPrice || c.name !== newName) {
                 changed = true;
               }

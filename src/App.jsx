@@ -289,12 +289,7 @@ function AppContent() {
                   {pauseStatus.isPaused 
                     ? `Pausada • Volta em ~${pauseStatus.remainingMinutes} min` 
                     : isStoreOpen 
-                      ? (() => {
-                          const rawTime = (storeSettings?.estimatedTime || '35 a 50 min').trim();
-                          const cleanTime = rawTime.replace(/^~/, '').trim();
-                          const etaText = /entrega/i.test(cleanTime) ? cleanTime : `Entrega em ~${cleanTime}`;
-                          return `Aberto • ${etaText}`;
-                        })() 
+                      ? 'Aberto' 
                       : (() => {
                           const openDays = storeSettings?.openDays || ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
                           const now = new Date();

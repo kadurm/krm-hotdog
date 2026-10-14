@@ -80,6 +80,7 @@ export default function DeliveryView({
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [previewImageModal, setPreviewImageModal] = useState(null); // { url, title }
   const [siteModal, setSiteModal] = useState(null); // { title, message, type: 'info' | 'success' | 'warning', badge?: string }
+  const [addedItemToast, setAddedItemToast] = useState(null); // { name, qty }
   const [productQty, setProductQty] = useState(1);
   const [itemNotes, setItemNotes] = useState('');
   const [closedNoticeDismissed, setClosedNoticeDismissed] = useState(false);
@@ -966,10 +967,21 @@ export default function DeliveryView({
         notes: itemNotes.trim() || null
       }]);
     }
-    
+
+    const addedProductName = selectedProduct.name;
+    const addedProductQty = productQty;
+
     setSelectedProduct(null);
     setItemNotes('');
-    setIsCartOpen(true);
+    
+    // Feedback amigável para o cliente continuar explorando o cardápio normalmente
+    setAddedItemToast({
+      name: addedProductName,
+      qty: addedProductQty
+    });
+    setTimeout(() => {
+      setAddedItemToast(null);
+    }, 3200);
   };
 
   const updateCartQty = (index, amount) => {
@@ -4703,6 +4715,74 @@ export default function DeliveryView({
           <ShoppingBag size={20} />
           <span>{cart.reduce((a, b) => a + b.quantity, 0)} itens • R$ {grandTotal.toFixed(2)}</span>
         </button>
+      )}
+
+      {/* Toast Notificação de Item Adicionado (Permite continuar comprando ou ir ao carrinho) */}
+      {addedItemToast && (
+        <div 
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            bottom: '84px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(18, 18, 18, 0.96)',
+            color: '#fff',
+            padding: '10px 18px',
+            borderRadius: '99px',
+            border: '1.5px solid rgba(234, 179, 8, 0.5)',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            zIndex: 1000,
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            backdropFilter: 'blur(10px)',
+            maxWidth: '92vw'
+          }}
+        >
+          <span style={{ 
+            backgroundColor: '#22c55e', 
+            color: '#fff', 
+            width: '20px', 
+            height: '20px', 
+            borderRadius: '50%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            fontSize: '0.75rem',
+            fontWeight: 800,
+            flexShrink: 0
+          }}>
+            ✓
+          </span>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <strong>{addedItemToast.qty}x {addedItemToast.name}</strong> adicionado!
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setIsCartOpen(true);
+              setAddedItemToast(null);
+            }}
+            style={{
+              background: 'var(--color-brand)',
+              border: 'none',
+              color: '#fff',
+              padding: '5px 12px',
+              borderRadius: '99px',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(184, 38, 27, 0.4)',
+              flexShrink: 0
+            }}
+          >
+            Ver Carrinho
+          </button>
+        </div>
       )}
 
       {/* AVISO SUTIL VITRIFICADO DE LOJA FECHADA / PAUSADA (CENTRALIZADO NO CENTRO DA TELA) */}

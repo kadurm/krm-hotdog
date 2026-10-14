@@ -1364,7 +1364,7 @@ export default function DeliveryView({
         position: (checkoutStep === 'menu' && viewMode === 'slider') ? 'fixed' : 'relative',
         top: 0,
         left: 0,
-        zIndex: (isCartOpen || selectedProduct || previewImageModal || siteModal) ? 99999 : 1,
+        zIndex: (isCartOpen || selectedProduct || previewImageModal || siteModal || (!isStoreOpen && !closedNoticeDismissed)) ? 99999 : 1,
         overflowY: (checkoutStep === 'menu' && viewMode === 'slider') ? 'hidden' : 'visible', 
         overflowX: 'hidden'
       }}
@@ -4827,14 +4827,14 @@ export default function DeliveryView({
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 90,
+            zIndex: 99999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             padding: '16px',
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(5px)',
-            WebkitBackdropFilter: 'blur(5px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
             cursor: 'pointer'
           }}
         >

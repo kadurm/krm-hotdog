@@ -506,7 +506,7 @@ function AppContent() {
       )}
 
       {/* Main Content Render */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: isCartOpen ? 99999 : 'auto' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: (isCartOpen || !isStoreOpen) ? 99999 : 1 }}>
         {currentMode === 'operacao' ? (
           <OperationView 
             onOpenAdmin={handleOpenAdmin}

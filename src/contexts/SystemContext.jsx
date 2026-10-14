@@ -365,7 +365,7 @@ const INITIAL_STORE_SETTINGS = {
   autoSchedule: false,
   pausedUntil: null,
   pauseReason: null,
-  openTime: '18:00',
+  openTime: '19:00',
   closeTime: '23:30',
   openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
   estimatedTime: '35 a 50 min',
@@ -799,7 +799,7 @@ export const SystemProvider = ({ children }) => {
             ...parsed,
             deliveryFeesByNeighborhood: fees,
             closeTime: (parsed.closeTime === '23:59' || parsed.closeTime === '00:00') ? '23:30' : (parsed.closeTime || '23:30'),
-            openTime: parsed.openTime || '18:00'
+            openTime: (!parsed.openTime || parsed.openTime === '18:00') ? '19:00' : parsed.openTime
           };
           return normalized;
         }
@@ -818,7 +818,7 @@ export const SystemProvider = ({ children }) => {
             ...INITIAL_STORE_SETTINGS,
             ...parsed,
             deliveryFeesByNeighborhood: fees,
-            openTime: '18:00',
+            openTime: '19:00',
             closeTime: '23:30',
             openDays: ['ter', 'qua', 'qui', 'sex', 'sab', 'dom']
           };
@@ -1219,6 +1219,17 @@ export const SystemProvider = ({ children }) => {
     }
   };
 
+  // Garante migração automática do horário de abertura para 19:00 caso venha com 18:00
+  useEffect(() => {
+    if (storeSettings?.openTime === '18:00' || !storeSettings?.openTime) {
+      setStoreSettings(prev => {
+        const updated = { ...prev, openTime: '19:00' };
+        syncStoreSettingsToRemote(updated);
+        return updated;
+      });
+    }
+  }, [storeSettings?.openTime]);
+
   // Sincronização em tempo real de PEDIDOS com Cloud Firestore (Firebase)
   useEffect(() => {
     const db = getFirestoreDb();
@@ -1442,7 +1453,7 @@ export const SystemProvider = ({ children }) => {
               isOpen: d.isOpen !== undefined ? Boolean(d.isOpen) : prev.isOpen,
               autoSchedule: d.autoSchedule !== undefined ? Boolean(d.autoSchedule) : prev.autoSchedule,
               openDays: d.openDays || prev.openDays,
-              openTime: d.openTime || prev.openTime || '18:00',
+              openTime: (d.openTime === '18:00' || !d.openTime) ? '19:00' : (d.openTime || prev.openTime || '19:00'),
               closeTime: (d.closeTime === '23:59' || d.closeTime === '00:00') ? '23:30' : (d.closeTime || prev.closeTime || '23:30'),
               deliveryFeeMode: d.deliveryFeeMode || prev.deliveryFeeMode,
               fixedDeliveryFee: d.fixedDeliveryFee !== undefined ? Number(d.fixedDeliveryFee) : prev.fixedDeliveryFee,
@@ -1682,7 +1693,7 @@ export const SystemProvider = ({ children }) => {
       const currentDay = days[now.getDay()];
       const yesterday = days[(now.getDay() + 6) % 7];
 
-      const [openHour, openMin] = (storeSettings.openTime || '18:00').split(':').map(Number);
+      const [openHour, openMin] = (storeSettings.openTime || '19:00').split(':').map(Number);
       const [closeHour, closeMin] = (storeSettings.closeTime || '23:30').split(':').map(Number);
 
       const nowMinutes = now.getHours() * 60 + now.getMinutes();

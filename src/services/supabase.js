@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS store_settings (
   id TEXT PRIMARY KEY DEFAULT 'current',
   is_open BOOLEAN DEFAULT true,
   auto_schedule BOOLEAN DEFAULT true,
-  open_time TEXT DEFAULT '18:00',
+  open_time TEXT DEFAULT '19:00',
   close_time TEXT DEFAULT '23:30',
   open_days TEXT[] DEFAULT ARRAY['ter', 'qua', 'qui', 'sex', 'sab', 'dom'],
   estimated_time TEXT DEFAULT '35 a 50 min',

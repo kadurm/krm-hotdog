@@ -295,20 +295,20 @@ function AppContent() {
                           const now = new Date();
                           const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
                           const currentDay = days[now.getDay()];
-                          const [openH, openM] = (storeSettings?.openTime || '18:00').split(':').map(Number);
+                          const [openH, openM] = (storeSettings?.openTime || '19:00').split(':').map(Number);
                           const nowMins = now.getHours() * 60 + now.getMinutes();
                           const openMins = openH * 60 + (openM || 0);
 
                           if (openDays.includes(currentDay) && nowMins < openMins) {
-                            return `Fechado • Abre às ${storeSettings?.openTime || '18:00'}`;
+                            return `Fechado • Abre às ${storeSettings?.openTime || '19:00'}`;
                           }
                           if (currentDay === 'seg') {
-                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '18:00'}`;
+                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '19:00'}`;
                           }
                           if (currentDay === 'dom' && nowMins >= openMins) {
-                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '18:00'}`;
+                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '19:00'}`;
                           }
-                          return `Fechado • Abre amanhã às ${storeSettings?.openTime || '18:00'}`;
+                          return `Fechado • Abre amanhã às ${storeSettings?.openTime || '19:00'}`;
                         })()}
                 </span>
               </div>

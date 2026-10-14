@@ -54,7 +54,7 @@ export default function DeliveryView({
 
   const pauseStatus = typeof getStorePauseStatus === 'function' ? getStorePauseStatus() : { isPaused: false };
   const isStoreOpen = typeof isStoreOpenNow === 'function' ? isStoreOpenNow() : (storeSettings?.isOpen ?? true);
-  const displayOpenTime = storeSettings?.openTime || '18:00';
+  const displayOpenTime = (!storeSettings?.openTime || storeSettings?.openTime === '18:00') ? '19:00' : storeSettings.openTime;
   const displayCloseTime = (storeSettings?.closeTime === '23:59' || storeSettings?.closeTime === '00:00' || !storeSettings?.closeTime) ? '23:30' : storeSettings.closeTime;
 
   const [activeSlide, setActiveSlide] = useState(0);
@@ -1538,20 +1538,20 @@ export default function DeliveryView({
                           const now = new Date();
                           const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
                           const currentDay = days[now.getDay()];
-                          const [openH, openM] = (storeSettings?.openTime || '18:00').split(':').map(Number);
+                          const [openH, openM] = displayOpenTime.split(':').map(Number);
                           const nowMins = now.getHours() * 60 + now.getMinutes();
                           const openMins = openH * 60 + (openM || 0);
 
                           if (openDays.includes(currentDay) && nowMins < openMins) {
-                            return `Fechado • Abre às ${storeSettings?.openTime || '18:00'}`;
+                            return `Fechado • Abre às ${displayOpenTime}`;
                           }
                           if (currentDay === 'seg') {
-                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '18:00'}`;
+                            return `Fechado • Abre Terça às ${displayOpenTime}`;
                           }
                           if (currentDay === 'dom' && nowMins >= openMins) {
-                            return `Fechado • Abre Terça às ${storeSettings?.openTime || '18:00'}`;
+                            return `Fechado • Abre Terça às ${displayOpenTime}`;
                           }
-                          return `Fechado • Abre amanhã às ${storeSettings?.openTime || '18:00'}`;
+                          return `Fechado • Abre amanhã às ${displayOpenTime}`;
                         })()}
                 </span>
               </div>
@@ -4387,7 +4387,7 @@ export default function DeliveryView({
                   ? `Adicionar • R$ ${currentTotalPrice.toFixed(2)}` 
                   : pauseStatus.isPaused 
                     ? `Cozinha Pausada (~${pauseStatus.remainingMinutes}m)` 
-                    : `Fechado • Abre às ${storeSettings?.openTime || '18:00'}`}
+                    : `Fechado • Abre às ${displayOpenTime}`}
               </button>
             </div>
           </div>
@@ -4881,7 +4881,7 @@ export default function DeliveryView({
                   <span style={{ fontSize: '0.76rem', color: '#fbbf24', fontWeight: 700 }}>
                     {pauseStatus.isPaused 
                       ? `Retomamos em aproximadamente ~${pauseStatus.remainingMinutes} min` 
-                      : `Abrimos às ${storeSettings?.openTime || '18:00'} (Terça a Domingo)`}
+                      : `Abrimos às ${displayOpenTime} (Terça a Domingo)`}
                   </span>
                 </div>
               </div>

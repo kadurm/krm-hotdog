@@ -3019,7 +3019,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
                         <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Horário de Abertura</span>
                         <input
                           type="time"
-                          value={storeSettings?.openTime || '18:00'}
+                          value={storeSettings?.openTime || '19:00'}
                           onChange={(e) => updateStoreSettings({ openTime: e.target.value })}
                           style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}
                         />
@@ -3102,7 +3102,7 @@ export default function AdminView({ onLogout, onGoOperation }) {
 
                       <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
                         {storeSettings?.autoSchedule ? (
-                          <span>💡 <strong>Agendamento Automático Ativo:</strong> A loja abre às <strong>{storeSettings?.openTime || '18:00'}</strong> e fecha às <strong>{(storeSettings?.closeTime === '23:59' || storeSettings?.closeTime === '00:00' || !storeSettings?.closeTime) ? '23:30' : storeSettings.closeTime}</strong> nos dias marcados.</span>
+                          <span>💡 <strong>Agendamento Automático Ativo:</strong> A loja abre às <strong>{storeSettings?.openTime || '19:00'}</strong> e fecha às <strong>{(storeSettings?.closeTime === '23:59' || storeSettings?.closeTime === '00:00' || !storeSettings?.closeTime) ? '23:30' : storeSettings.closeTime}</strong> nos dias marcados.</span>
                         ) : (
                           <span>💡 <strong>Controle Manual Ativo:</strong> Você pode abrir ou fechar a loja a qualquer momento com 1 clique no botão superior.</span>
                         )}

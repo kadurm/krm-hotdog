@@ -427,31 +427,95 @@ const INITIAL_STORE_SETTINGS = {
   defaultViewMode: 'grid'
 };
 
-// 5. BAIRROS DE ENTREGA (Montes Claros)
-const INITIAL_NEIGHBORHOODS = [
-  { id: 'nb-1', name: 'Sagrada Família', fee: 0.00, distanceKm: 1, active: true },
-  { id: 'nb-2', name: 'Centro', fee: 5.00, distanceKm: 2.5, active: true },
-  { id: 'nb-3', name: 'Cândida Câmara', fee: 5.00, distanceKm: 2, active: true },
-  { id: 'nb-4', name: 'Todos os Santos', fee: 5.00, distanceKm: 2.5, active: true },
-  { id: 'nb-5', name: 'Santa Rita', fee: 5.00, distanceKm: 2, active: true },
-  { id: 'nb-6', name: 'Alice Maia', fee: 7.50, distanceKm: 3.5, active: true },
-  { id: 'nb-7', name: 'Morada do Sol', fee: 7.50, distanceKm: 4, active: true },
-  { id: 'nb-8', name: 'Major Prates', fee: 7.50, distanceKm: 4.5, active: true },
-  { id: 'nb-9', name: 'Ibituruna', fee: 8.00, distanceKm: 5, active: true },
-  { id: 'nb-10', name: 'São Luiz', fee: 7.50, distanceKm: 4, active: true },
-  { id: 'nb-11', name: 'Maracanã', fee: 10.00, distanceKm: 6, active: true },
-  { id: 'nb-12', name: 'Independência', fee: 10.00, distanceKm: 6.5, active: true },
-  { id: 'nb-13', name: 'Renascença', fee: 10.00, distanceKm: 7, active: true },
-  { id: 'nb-14', name: 'Delfino Magalhães', fee: 12.00, distanceKm: 8, active: true },
-  { id: 'nb-15', name: 'Village do Lago', fee: 12.00, distanceKm: 9, active: true }
+// 5. BAIRROS DE ENTREGA CONSOLIDADOS (Montes Claros - Distâncias da Rua Agapanto, 264)
+export const MONTES_CLAROS_NEIGHBORHOODS = [
+  // Raio 1: até 3 km (Zona da Loja / Centro / Imediações)
+  { id: 'nb-1', name: 'Sagrada Família', distanceKm: 0.5, fee: 0.00, active: true },
+  { id: 'nb-2', name: 'Cândida Câmara', distanceKm: 1.8, active: true },
+  { id: 'nb-3', name: 'Jardim Panorama', distanceKm: 2.0, active: true },
+  { id: 'nb-4', name: 'Todos os Santos', distanceKm: 2.2, active: true },
+  { id: 'nb-5', name: 'Funcionários', distanceKm: 2.3, active: true },
+  { id: 'nb-6', name: 'Vila Brasília', distanceKm: 2.4, active: true },
+  { id: 'nb-7', name: 'Santa Rita', distanceKm: 2.5, active: true },
+  { id: 'nb-8', name: 'Centro', distanceKm: 2.6, active: true },
+  { id: 'nb-9', name: 'Vila Regina', distanceKm: 2.7, active: true },
+  { id: 'nb-10', name: 'São José', distanceKm: 2.8, active: true },
+  { id: 'nb-11', name: 'Melo', distanceKm: 2.8, active: true },
+  { id: 'nb-12', name: 'Edgar Pereira', distanceKm: 2.9, active: true },
+  { id: 'nb-13', name: 'Sumaré', distanceKm: 3.0, active: true },
+  { id: 'nb-14', name: 'Cidade Santa Maria', distanceKm: 3.0, active: true },
+
+  // Raio 2: 3 km a 5 km
+  { id: 'nb-15', name: 'Jardim São Luiz', distanceKm: 3.2, active: true },
+  { id: 'nb-16', name: 'São Luiz', distanceKm: 3.2, active: true },
+  { id: 'nb-17', name: 'Alice Maia', distanceKm: 3.4, active: true },
+  { id: 'nb-18', name: 'Roxo Verde', distanceKm: 3.5, active: true },
+  { id: 'nb-19', name: 'Vera Cruz', distanceKm: 3.5, active: true },
+  { id: 'nb-20', name: 'Morrinhos', distanceKm: 3.6, active: true },
+  { id: 'nb-21', name: 'Morada do Sol', distanceKm: 3.8, active: true },
+  { id: 'nb-22', name: 'Vila Oliveira', distanceKm: 3.8, active: true },
+  { id: 'nb-23', name: 'Santo Expedito', distanceKm: 4.0, active: true },
+  { id: 'nb-24', name: 'Santos Reis', distanceKm: 4.1, active: true },
+  { id: 'nb-25', name: 'Canelas', distanceKm: 4.2, active: true },
+  { id: 'nb-26', name: 'Alto São João', distanceKm: 4.3, active: true },
+  { id: 'nb-27', name: 'Ibituruna', distanceKm: 4.5, active: true },
+  { id: 'nb-28', name: 'Major Prates', distanceKm: 4.5, active: true },
+  { id: 'nb-29', name: 'Morada do Parque', distanceKm: 4.7, active: true },
+  { id: 'nb-30', name: 'Vila Guilhermina', distanceKm: 4.8, active: true },
+  { id: 'nb-31', name: 'Vila Áurea', distanceKm: 4.8, active: true },
+  { id: 'nb-32', name: 'Vargem Grande', distanceKm: 4.9, active: true },
+  { id: 'nb-33', name: 'Barcelona', distanceKm: 5.0, active: true },
+
+  // Raio 3: 5 km a 8 km
+  { id: 'nb-34', name: 'Clarindo Lopes', distanceKm: 5.2, active: true },
+  { id: 'nb-35', name: 'Maracanã', distanceKm: 5.3, active: true },
+  { id: 'nb-36', name: 'Augusta Mota', distanceKm: 5.4, active: true },
+  { id: 'nb-37', name: 'Alto da Boa Vista', distanceKm: 5.5, active: true },
+  { id: 'nb-38', name: 'Esplanada', distanceKm: 5.6, active: true },
+  { id: 'nb-39', name: 'Interlagos', distanceKm: 5.8, active: true },
+  { id: 'nb-40', name: 'Planalto', distanceKm: 6.0, active: true },
+  { id: 'nb-41', name: 'Independência', distanceKm: 6.2, active: true },
+  { id: 'nb-42', name: 'Alcides Rabelo', distanceKm: 6.3, active: true },
+  { id: 'nb-43', name: 'Santa Lúcia', distanceKm: 6.5, active: true },
+  { id: 'nb-44', name: 'Renascença', distanceKm: 6.7, active: true },
+  { id: 'nb-45', name: 'Cristo Rei', distanceKm: 6.8, active: true },
+  { id: 'nb-46', name: 'Monte Alegre', distanceKm: 7.0, active: true },
+  { id: 'nb-47', name: 'Santo Inácio', distanceKm: 7.0, active: true },
+  { id: 'nb-48', name: 'Chiquinho Guimarães', distanceKm: 7.2, active: true },
+  { id: 'nb-49', name: 'São Geraldo', distanceKm: 7.4, active: true },
+  { id: 'nb-50', name: 'Bela Vista', distanceKm: 7.5, active: true },
+  { id: 'nb-51', name: 'Delfino Magalhães', distanceKm: 7.6, active: true },
+  { id: 'nb-52', name: 'Eldorado', distanceKm: 7.8, active: true },
+  { id: 'nb-53', name: 'Vila Telma', distanceKm: 7.9, active: true },
+  { id: 'nb-54', name: 'Conjunto Habitacional JK', distanceKm: 8.0, active: true },
+
+  // Raio 4: 8 km a 12 km
+  { id: 'nb-55', name: 'Village do Lago', distanceKm: 8.3, active: true },
+  { id: 'nb-56', name: 'Vila Luiza', distanceKm: 8.5, active: true },
+  { id: 'nb-57', name: 'Conjunto Cidade Industrial', distanceKm: 8.8, active: true },
+  { id: 'nb-58', name: 'Novo Delfino', distanceKm: 9.0, active: true },
+  { id: 'nb-59', name: 'Monte Carmelo', distanceKm: 9.2, active: true },
+  { id: 'nb-60', name: 'Santa Rafaela', distanceKm: 9.4, active: true },
+  { id: 'nb-61', name: 'Carmelo', distanceKm: 9.5, active: true },
+  { id: 'nb-62', name: 'Residencial Minas Gerais', distanceKm: 9.8, active: true },
+  { id: 'nb-63', name: 'Santa Laura', distanceKm: 10.0, active: true },
+  { id: 'nb-64', name: 'Recanto das Águas', distanceKm: 10.2, active: true },
+  { id: 'nb-65', name: 'Distrito Industrial', distanceKm: 10.5, active: true },
+  { id: 'nb-66', name: 'Nova Suíça', distanceKm: 11.0, active: true },
+  { id: 'nb-67', name: 'Vila Anália', distanceKm: 11.2, active: true },
+  { id: 'nb-68', name: 'Sapucaia', distanceKm: 11.5, active: true },
+  { id: 'nb-69', name: 'Jardim Liberdade', distanceKm: 11.8, active: true },
+  { id: 'nb-70', name: 'Universitário', distanceKm: 12.0, active: true }
 ];
 
+const INITIAL_NEIGHBORHOODS = MONTES_CLAROS_NEIGHBORHOODS;
+
 // 6. ZONAS DE RAIO POR QUILOMETRAGEM (KM)
-const INITIAL_RADIUSES = [
-  { id: 'rad-1', maxKm: 3, fee: 5.00, description: 'Até 3 km (Sagrada Família, Centro, Cândida Câmara...)', active: true },
-  { id: 'rad-2', maxKm: 5, fee: 7.50, description: '3 km a 5 km (Major Prates, Morada do Sol, Ibituruna, Alice Maia...)', active: true },
-  { id: 'rad-3', maxKm: 8, fee: 10.00, description: '5 km a 8 km (Renascença, Maracanã, Independência, Delfino...)', active: true },
-  { id: 'rad-4', maxKm: 12, fee: 14.00, description: '8 km a 12 km (Outras regiões de Montes Claros)', active: true }
+export const INITIAL_RADIUSES = [
+  { id: 'rad-1', maxKm: 3, fee: 5.00, description: 'Até 3 km (Sagrada Família, Centro, Cândida Câmara, Todos os Santos...)', active: true },
+  { id: 'rad-2', maxKm: 5, fee: 7.50, description: '3 km a 5 km (Major Prates, Morada do Sol, Ibituruna, Alice Maia, São Luiz...)', active: true },
+  { id: 'rad-3', maxKm: 8, fee: 10.00, description: '5 km a 8 km (Maracanã, Independência, Renascença, Clarindo Lopes, Augusta Mota...)', active: true },
+  { id: 'rad-4', maxKm: 12, fee: 14.00, description: '8 km a 12 km (Village do Lago, Delfino Magalhães, Monte Carmelo, regiões distantes...)', active: true }
 ];
 
 // 7. CUPONS DE DESCONTO
@@ -1675,20 +1739,22 @@ export const SystemProvider = ({ children }) => {
     const radiusesList = (deliveryRadiuses && deliveryRadiuses.length > 0)
       ? deliveryRadiuses
       : (storeSettings?.deliveryRadius || INITIAL_RADIUSES);
-    const sortedRadiuses = [...radiusesList].sort((a, b) => a.maxKm - b.maxKm);
+    const sortedRadiuses = [...radiusesList]
+      .filter(r => r.active !== false)
+      .sort((a, b) => a.maxKm - b.maxKm);
+
+    const cleanName = (neighborhoodName || '').trim().toLowerCase();
 
     // 2. SOBREPOSIÇÃO PRIORITÁRIA DE BAIRRO:
-    // Qualquer taxa cadastrada especificamente em Bairros sobressai e prevalece sobre a regra de KM.
-    if (neighborhoodName) {
-      const cleanName = (neighborhoodName || '').trim().toLowerCase();
-
-      // Checagem em storeSettings.deliveryFeesByNeighborhood (usado no Admin)
-      if (storeSettings?.deliveryFeesByNeighborhood) {
-        const matchKey = Object.keys(storeSettings.deliveryFeesByNeighborhood).find(
-          k => k.trim().toLowerCase() === cleanName
-        );
-        if (matchKey !== undefined) {
-          const customFee = Number(storeSettings.deliveryFeesByNeighborhood[matchKey]) || 0;
+    // Qualquer taxa cadastrada especificamente em storeSettings.deliveryFeesByNeighborhood
+    // sobressai e prevalece sobre a regra de KM.
+    if (cleanName && storeSettings?.deliveryFeesByNeighborhood) {
+      const matchKey = Object.keys(storeSettings.deliveryFeesByNeighborhood).find(
+        k => k.trim().toLowerCase() === cleanName
+      );
+      if (matchKey !== undefined) {
+        const customFee = Number(storeSettings.deliveryFeesByNeighborhood[matchKey]);
+        if (!isNaN(customFee)) {
           const isStoreNeighborhood = cleanName.includes('sagrada') || cleanName.includes('família') || cleanName.includes('familia');
           return {
             fee: customFee,
@@ -1700,39 +1766,49 @@ export const SystemProvider = ({ children }) => {
           };
         }
       }
+    }
 
-      // Checagem na lista deliveryNeighborhoods
-      const foundInList = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.active !== false);
-      if (foundInList && foundInList.fee !== undefined) {
-        const customFee = Number(foundInList.fee) || 0;
-        const isStoreNeighborhood = cleanName.includes('sagrada') || cleanName.includes('família') || cleanName.includes('familia');
-        return {
-          fee: customFee,
-          isFree: customFee === 0,
-          distanceKm: foundInList.distanceKm || distanceKm || null,
-          reason: customFee === 0 
-            ? (isStoreNeighborhood ? 'Frete Grátis (Bairro da Loja)' : `Frete Grátis no bairro ${foundInList.name}`)
-            : `Taxa Específica do Bairro ${foundInList.name}`
-        };
+    // 2.1 Bairro da loja (Sagrada Família): se não houver taxa específica cadastrada, padrão R$ 0,00
+    if (cleanName && (cleanName.includes('sagrada') || cleanName.includes('família') || cleanName.includes('familia'))) {
+      return { fee: 0, isFree: true, distanceKm: 0.5, reason: 'Frete Grátis (Bairro da Loja)' };
+    }
+
+    // 3. DETERMINAÇÃO DA DISTÂNCIA EM KM:
+    let finalDistanceKm = (distanceKm !== null && distanceKm !== undefined && !isNaN(distanceKm)) 
+      ? Number(distanceKm) 
+      : null;
+
+    if (finalDistanceKm === null && cleanName) {
+      // 3.1 Procura na base consolidada de Montes Claros
+      const foundInMoc = MONTES_CLAROS_NEIGHBORHOODS.find(n => 
+        n.name.toLowerCase() === cleanName || 
+        cleanName.includes(n.name.toLowerCase()) ||
+        n.name.toLowerCase().includes(cleanName)
+      );
+      if (foundInMoc && foundInMoc.distanceKm) {
+        finalDistanceKm = foundInMoc.distanceKm;
       }
 
-      // Regra de segurança para o bairro da loja (Sagrada Família): sempre R$ 0,00
-      if (cleanName.includes('sagrada') || cleanName.includes('família') || cleanName.includes('familia')) {
-        return { fee: 0, isFree: true, reason: 'Frete Grátis (Bairro da Loja)' };
+      // 3.2 Se ainda não achou, procura em deliveryNeighborhoods
+      if (finalDistanceKm === null && deliveryNeighborhoods) {
+        const foundInList = deliveryNeighborhoods.find(n => 
+          (n.name || '').trim().toLowerCase() === cleanName && n.distanceKm
+        );
+        if (foundInList && foundInList.distanceKm) {
+          finalDistanceKm = foundInList.distanceKm;
+        }
       }
     }
 
-    // 3. CÁLCULO PADRÃO POR QUILOMETRAGEM / RAIO (KM):
-    // Utilizado como padrão para todos os bairros/endereços sem valor específico cadastrado.
-    if (distanceKm !== null && distanceKm !== undefined && !isNaN(distanceKm)) {
-      const numKm = Number(distanceKm);
-      const match = sortedRadiuses.find(r => numKm <= r.maxKm && r.active !== false);
+    // 4. CÁLCULO PADRÃO POR QUILOMETRAGEM / RAIO (KM):
+    if (finalDistanceKm !== null && sortedRadiuses.length > 0) {
+      const match = sortedRadiuses.find(r => finalDistanceKm <= r.maxKm);
       if (match) {
         return { 
           fee: Number(match.fee) || 0, 
           isFree: Number(match.fee) === 0, 
-          distanceKm: numKm,
-          reason: `Raio até ${match.maxKm} km (${match.description || 'Montes Claros'})` 
+          distanceKm: finalDistanceKm,
+          reason: `Raio até ${match.maxKm} km (${match.description || `~${finalDistanceKm.toFixed(1)} km da loja`})` 
         };
       }
       const maxBand = sortedRadiuses[sortedRadiuses.length - 1];
@@ -1740,30 +1816,13 @@ export const SystemProvider = ({ children }) => {
         return { 
           fee: Number(maxBand.fee) || 14.00, 
           isFree: false, 
-          distanceKm: numKm,
-          reason: `Acima de ${maxBand.maxKm} km (~${numKm.toFixed(1)} km da loja)` 
+          distanceKm: finalDistanceKm,
+          reason: `Acima de ${maxBand.maxKm} km (~${finalDistanceKm.toFixed(1)} km da loja)` 
         };
       }
     }
 
-    // Se o bairro possui distância mapeada em Montes Claros (sem taxa fixa sobrescrita):
-    if (neighborhoodName) {
-      const cleanName = (neighborhoodName || '').trim().toLowerCase();
-      const foundWithDistance = (deliveryNeighborhoods || []).find(n => (n.name || '').trim().toLowerCase() === cleanName && n.distanceKm);
-      if (foundWithDistance) {
-        const matchRadius = sortedRadiuses.find(r => foundWithDistance.distanceKm <= r.maxKm && r.active !== false);
-        if (matchRadius) {
-          return { 
-            fee: Number(matchRadius.fee) || 0, 
-            isFree: Number(matchRadius.fee) === 0, 
-            distanceKm: foundWithDistance.distanceKm,
-            reason: `Raio até ${matchRadius.maxKm} km (~${foundWithDistance.distanceKm} km da loja)` 
-          };
-        }
-      }
-    }
-
-    // 4. TAXA PADRÃO BASE (Primeira faixa de raio ou R$ 5,00)
+    // 5. TAXA PADRÃO BASE (Primeira faixa de raio cadastrada)
     const baseRadius = sortedRadiuses[0];
     const defaultFee = baseRadius ? Number(baseRadius.fee) : 5.00;
     return { fee: defaultFee, isFree: defaultFee === 0, reason: 'Taxa Padrão por Faixa de KM' };
@@ -3054,6 +3113,7 @@ export const SystemProvider = ({ children }) => {
       complements,
       storeSettings,
       deliveryNeighborhoods,
+      montesClarosNeighborhoods: MONTES_CLAROS_NEIGHBORHOODS,
       deliveryRadiuses,
       coupons,
       motoboys,

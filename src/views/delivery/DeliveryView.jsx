@@ -35,6 +35,7 @@ export default function DeliveryView({
     complements = [],
     storeSettings,
     deliveryNeighborhoods = [],
+    montesClarosNeighborhoods = [],
     deliveryRadiuses = [],
     coupons = [],
     validateCoupon,
@@ -344,21 +345,19 @@ export default function DeliveryView({
       (pos) => {
         setGpsLoading(false);
         const distance = calculateHaversineKm(storeLat, storeLng, pos.coords.latitude, pos.coords.longitude);
-        setSelectedDistanceKm(distance);
+        const roundedKm = Math.round(distance * 10) / 10;
+        setSelectedDistanceKm(roundedKm);
         setDeliverySelectionMode('radius');
         
         const radiusesList = (deliveryRadiuses && deliveryRadiuses.length > 0)
           ? deliveryRadiuses
           : (storeSettings?.deliveryRadius || []);
         const sorted = [...radiusesList].sort((a, b) => a.maxKm - b.maxKm);
-        const match = sorted.find(r => distance <= r.maxKm);
+        const match = sorted.find(r => roundedKm <= r.maxKm);
         if (match) {
           setSelectedRadiusId(match.id);
-          setSelectedNeighborhood(`Raio até ${match.maxKm} km (${match.description || 'Montes Claros'})`);
-        } else {
-          setSelectedNeighborhood(`Acima de 12 km (~${distance} km)`);
         }
-        setGpsSuccessMessage(`📍 GPS Detectado: você está a ~${distance} km da loja (Rua Agapanto, 264)`);
+        setGpsSuccessMessage(`📍 GPS Detectado: você está a ~${roundedKm} km da loja (Rua Agapanto, 264)`);
       },
       (err) => {
         setGpsLoading(false);
@@ -514,43 +513,6 @@ export default function DeliveryView({
     showSiteAlert('Desconectado', 'Sua sessão foi encerrada com sucesso.', 'info');
   };
 
-  // Lista consolidada de bairros para entrega (Montes Claros) com prioridade para taxas específicas e Grátis na Loja
-  const availableNeighborhoods = React.useMemo(() => {
-    const map = new Map();
-
-    // 1. Iniciar com deliveryNeighborhoods
-    if (deliveryNeighborhoods && Array.isArray(deliveryNeighborhoods)) {
-      deliveryNeighborhoods.filter(n => n.active !== false).forEach(n => {
-        map.set(n.name.trim().toLowerCase(), { 
-          name: n.name, 
-          fee: Number(n.fee) || 0,
-          distanceKm: n.distanceKm || null
-        });
-      });
-    }
-
-    // 2. Sobrepor / adicionar com storeSettings.deliveryFeesByNeighborhood
-    if (storeSettings?.deliveryFeesByNeighborhood) {
-      Object.entries(storeSettings.deliveryFeesByNeighborhood).forEach(([name, fee]) => {
-        const key = name.trim().toLowerCase();
-        const existing = map.get(key);
-        map.set(key, {
-          name: existing ? existing.name : name,
-          fee: Number(fee) || 0,
-          distanceKm: existing ? existing.distanceKm : null
-        });
-      });
-    }
-
-    // 3. Sagrada Família (bairro da loja): se ainda não configurado, inicia como 0.00 (Grátis)
-    const sagradaKey = 'sagrada família';
-    if (!map.has(sagradaKey)) {
-      map.set(sagradaKey, { name: 'Sagrada Família', fee: 0, distanceKm: 0.5 });
-    }
-
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [deliveryNeighborhoods, storeSettings?.deliveryFeesByNeighborhood]);
-
   // Lista consolidada de faixas de raio por quilometragem (KM)
   const availableRadiuses = React.useMemo(() => {
     const list = (deliveryRadiuses && deliveryRadiuses.length > 0)
@@ -558,6 +520,60 @@ export default function DeliveryView({
       : (storeSettings?.deliveryRadius || []);
     return list.filter(r => r.active !== false).sort((a, b) => a.maxKm - b.maxKm);
   }, [deliveryRadiuses, storeSettings?.deliveryRadius]);
+
+  // Lista consolidada de bairros para entrega (Montes Claros) com prioridade para taxas específicas e cálculo por raio
+  const availableNeighborhoods = React.useMemo(() => {
+    const map = new Map();
+
+    const baseList = (montesClarosNeighborhoods && montesClarosNeighborhoods.length > 0)
+      ? montesClarosNeighborhoods
+      : (deliveryNeighborhoods || []);
+
+    // 1. Iniciar com a base de bairros de Montes Claros
+    baseList.forEach(n => {
+      const key = (n.name || '').trim().toLowerCase();
+      if (!key) return;
+
+      // Calcula taxa baseada na faixa de raio daquele bairro
+      let calcFee = 5.00;
+      if (n.distanceKm && availableRadiuses.length > 0) {
+        const match = availableRadiuses.find(r => n.distanceKm <= r.maxKm);
+        if (match) {
+          calcFee = Number(match.fee) || 0;
+        } else {
+          calcFee = Number(availableRadiuses[availableRadiuses.length - 1]?.fee) || 14.00;
+        }
+      }
+
+      map.set(key, { 
+        name: n.name, 
+        fee: n.fee !== undefined ? Number(n.fee) : calcFee,
+        distanceKm: n.distanceKm || null
+      });
+    });
+
+    // 2. Sobrepor / adicionar com storeSettings.deliveryFeesByNeighborhood (valores específicos que sobressaem)
+    if (storeSettings?.deliveryFeesByNeighborhood) {
+      Object.entries(storeSettings.deliveryFeesByNeighborhood).forEach(([name, fee]) => {
+        const key = name.trim().toLowerCase();
+        const existing = map.get(key);
+        map.set(key, {
+          name: existing ? existing.name : name,
+          fee: Number(fee) || 0,
+          distanceKm: existing ? existing.distanceKm : null,
+          hasCustomFee: true
+        });
+      });
+    }
+
+    // 3. Sagrada Família (bairro da loja): se ainda não configurado, taxa 0.00 (Grátis)
+    const sagradaKey = 'sagrada família';
+    if (!map.has(sagradaKey)) {
+      map.set(sagradaKey, { name: 'Sagrada Família', fee: 0, distanceKm: 0.5 });
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [montesClarosNeighborhoods, deliveryNeighborhoods, storeSettings?.deliveryFeesByNeighborhood, availableRadiuses]);
 
   // Busca e preenchimento automático de endereço via CEP (ViaCEP)
   const handleLookupCep = async (inputCep) => {
@@ -976,7 +992,7 @@ export default function DeliveryView({
   const deliveryFeeResult = deliveryType === 'delivery' 
     ? (isDeliveryAddressProvided
         ? calculateDeliveryFee({ 
-            neighborhoodName: selectedNeighborhood || addressNeighborhood, 
+            neighborhoodName: addressNeighborhood || selectedNeighborhood, 
             distanceKm: selectedDistanceKm,
             subtotal: cartTotal 
           })
@@ -2723,76 +2739,118 @@ export default function DeliveryView({
                       gap: '0.75rem'
                     }} className="animate-fade-in">
                       
-                      {/* Campo de CEP Opcional para preenchimento rápido */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                            CEP <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional para autocompletar)</span>
-                          </label>
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', width: '100%', alignItems: 'center' }}>
-                          <input
-                            type="text"
-                            placeholder="Ex: 39401-022"
-                            value={cep}
-                            maxLength={9}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCep(val);
-                              const clean = val.replace(/\D/g, '');
-                              if (clean.length === 8) {
-                                handleLookupCep(clean);
-                              }
-                            }}
-                            style={{
-                              flex: 1,
-                              minWidth: 0,
-                              padding: '8px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(255,255,255,0.15)',
-                              backgroundColor: 'rgba(0,0,0,0.4)',
-                              color: '#fff',
-                              fontSize: '0.84rem',
-                              outline: 'none'
-                            }}
-                          />
+                      {/* Localização Rápida: GPS e CEP */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* Botão de Detecção por GPS */}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <button
                             type="button"
-                            onClick={() => handleLookupCep(cep)}
-                            disabled={cepLoading}
+                            onClick={handleDetectGPS}
+                            disabled={gpsLoading}
                             style={{
-                              backgroundColor: '#eab308',
-                              color: '#000',
-                              border: 'none',
-                              borderRadius: '6px',
+                              flex: 1,
+                              backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                              border: '1px solid rgba(56, 189, 248, 0.35)',
+                              color: '#38bdf8',
+                              borderRadius: '7px',
                               padding: '8px 12px',
                               fontWeight: 700,
-                              fontSize: '0.78rem',
+                              fontSize: '0.8rem',
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
-                              whiteSpace: 'nowrap',
-                              flexShrink: 0
+                              justifyContent: 'center',
+                              gap: '6px',
+                              transition: 'all 0.2s ease'
                             }}
                           >
-                            {cepLoading ? '...' : <><Search size={12} /> Buscar CEP</>}
+                            <MapPin size={15} />
+                            {gpsLoading ? 'Calculando raio pelo GPS...' : '📍 Usar Minha Localização (GPS Automático)'}
                           </button>
                         </div>
 
-                        {cepFeedback && (
-                          <div style={{
-                            fontSize: '0.72rem',
-                            marginTop: '2px',
-                            color: cepFeedback.success ? '#4ade80' : '#f87171',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            {cepFeedback.success ? <Check size={11} /> : <AlertCircle size={11} />}
-                            <span>{cepFeedback.message}</span>
+                        {gpsSuccessMessage && (
+                          <div style={{ fontSize: '0.74rem', color: '#4ade80', backgroundColor: 'rgba(34, 197, 94, 0.08)', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <Check size={12} /> {gpsSuccessMessage}
                           </div>
                         )}
+                        {gpsError && (
+                          <div style={{ fontSize: '0.74rem', color: '#f87171', backgroundColor: 'rgba(239, 68, 68, 0.08)', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <AlertCircle size={12} /> {gpsError}
+                          </div>
+                        )}
+
+                        {/* Campo de CEP Opcional para preenchimento rápido */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                              Ou busque pelo CEP <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Opcional)</span>
+                            </label>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', width: '100%', alignItems: 'center' }}>
+                            <input
+                              type="text"
+                              placeholder="Ex: 39401-022"
+                              value={cep}
+                              maxLength={9}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCep(val);
+                                const clean = val.replace(/\D/g, '');
+                                if (clean.length === 8) {
+                                  handleLookupCep(clean);
+                                }
+                              }}
+                              style={{
+                                flex: 1,
+                                minWidth: 0,
+                                padding: '8px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(255,255,255,0.15)',
+                                backgroundColor: 'rgba(0,0,0,0.4)',
+                                color: '#fff',
+                                fontSize: '0.84rem',
+                                outline: 'none'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleLookupCep(cep)}
+                              disabled={cepLoading}
+                              style={{
+                                backgroundColor: '#eab308',
+                                color: '#000',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '8px 12px',
+                                fontWeight: 700,
+                                fontSize: '0.78rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0
+                              }}
+                            >
+                              {cepLoading ? '...' : <><Search size={12} /> Buscar CEP</>}
+                            </button>
+                          </div>
+
+                          {cepFeedback && (
+                            <div style={{
+                              fontSize: '0.72rem',
+                              marginTop: '2px',
+                              color: cepFeedback.success ? '#4ade80' : '#f87171',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              {cepFeedback.success ? <Check size={11} /> : <AlertCircle size={11} />}
+                              <span>{cepFeedback.message}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Rua / Avenida e Número */}
@@ -2877,16 +2935,22 @@ export default function DeliveryView({
                             ref={neighborhoodInputRef}
                             type="text"
                             list="delivery-neighborhoods-list"
-                            placeholder="Ex: Sagrada Família, Centro..."
+                            placeholder="Ex: Sagrada Família, Centro, Major Prates..."
                             value={addressNeighborhood}
                             onChange={(e) => {
                               const val = e.target.value;
                               setAddressNeighborhood(val);
                               setSelectedNeighborhood(val);
                               if (formErrors.neighborhood) setFormErrors(prev => ({ ...prev, neighborhood: false }));
-                              const match = availableNeighborhoods.find(n => n.name.toLowerCase() === val.trim().toLowerCase());
-                              if (match && match.distanceKm) {
-                                setSelectedDistanceKm(match.distanceKm);
+                              const clean = val.trim().toLowerCase();
+                              if (clean) {
+                                const match = availableNeighborhoods.find(n => {
+                                  const nLow = n.name.toLowerCase();
+                                  return nLow === clean || clean.includes(nLow) || nLow.includes(clean);
+                                });
+                                if (match && match.distanceKm) {
+                                  setSelectedDistanceKm(match.distanceKm);
+                                }
                               }
                             }}
                             style={{
@@ -2904,7 +2968,7 @@ export default function DeliveryView({
                           <datalist id="delivery-neighborhoods-list">
                             {availableNeighborhoods.map((n, i) => (
                               <option key={i} value={n.name}>
-                                {n.fee === 0 ? 'Frete Grátis' : `Taxa: R$ ${Number(n.fee).toFixed(2)}`}
+                                {n.fee === 0 ? 'Frete Grátis' : `Taxa: R$ ${Number(n.fee).toFixed(2)}${n.distanceKm ? ` (~${n.distanceKm} km)` : ''}`}
                               </option>
                             ))}
                           </datalist>
@@ -2941,7 +3005,7 @@ export default function DeliveryView({
 
                       {/* Card da Taxa de Entrega Calculada */}
                       <div style={{
-                        padding: '9px 12px',
+                        padding: '10px 14px',
                         borderRadius: '8px',
                         backgroundColor: isDeliveryAddressProvided ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
                         border: isDeliveryAddressProvided ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-glass)',
@@ -2951,24 +3015,22 @@ export default function DeliveryView({
                         fontSize: '0.82rem',
                         transition: 'all 0.3s ease'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Bike size={16} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Bike size={18} color={isDeliveryAddressProvided ? '#4ade80' : 'var(--text-muted)'} />
                           <div>
-                            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>
+                            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.84rem' }}>
                               Taxa de Entrega:
                             </span>
-                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)' }}>
-                                {isDeliveryAddressProvided 
-                                ? (deliveryFeeResult?.isFree 
-                                    ? '🎉 Frete Grátis no seu pedido!'
-                                    : `Bairro ${addressNeighborhood.trim()}`)
-                                : 'Informe seu endereço para calcular'}
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>
+                              {isDeliveryAddressProvided 
+                                ? (deliveryFeeResult?.reason || (deliveryFee === 0 ? '🎉 Frete Grátis no seu pedido!' : `Bairro ${addressNeighborhood.trim()}`))
+                                : 'Preencha Rua, Número e Bairro para calcular'}
                             </div>
                           </div>
                         </div>
                         <strong style={{ 
                           color: !isDeliveryAddressProvided ? 'var(--text-muted)' : (deliveryFee === 0 ? '#4ade80' : 'var(--color-brand)'), 
-                          fontSize: isDeliveryAddressProvided ? '0.98rem' : '0.82rem', 
+                          fontSize: isDeliveryAddressProvided ? '1.05rem' : '0.82rem', 
                           fontWeight: 800 
                         }}>
                           {isDeliveryAddressProvided 

@@ -2147,22 +2147,25 @@ export default function DeliveryView({
                     alignItems: 'stretch'
                   }}
                 >
-                  {section.products.map(product => {
+                  {section.products.map((product, pIndex) => {
+                    const BRAND_LOGO_PALETTE = ['#eab308', '#f97316', '#dc2626'];
                     const themes = {
-                      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] },
-                      2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] },
-                      3: { color: '#b91c1c', floaties: ['🥩', '🔥', '🥓'] },
-                      4: { color: '#84cc16', floaties: ['🍖', '🌿', '🔥'] },
-                      5: { color: '#a16207', floaties: ['🥩', '🧀', '🔥'] },
-                      6: { color: '#dc2626', floaties: ['🥤', '🧊', '✨'] },
-                      7: { color: '#16a34a', floaties: ['🥤', '🌿', '✨'] },
-                      8: { color: '#b91c1c', floaties: ['🥤', '🧊', '✨'] },
-                      9: { color: '#eab308', floaties: ['🍊', '🥤', '🧊'] },
-                      10: { color: '#2563eb', floaties: ['💧', '🧊', '✨'] },
-                      11: { color: '#ca8a04', floaties: ['🍟', '🔥', '🧂'] },
+                      1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] }, // Amarelo (Logo Nuu)
+                      2: { color: '#f97316', floaties: ['🍗', '🧀', '🔥'] }, // Laranja (Logo Nuu)
+                      3: { color: '#dc2626', floaties: ['🥩', '🔥', '🥓'] }, // Vermelho (Logo Nuu)
+                      4: { color: '#eab308', floaties: ['🍖', '🌿', '🔥'] }, // Amarelo (Logo Nuu)
+                      5: { color: '#f97316', floaties: ['🥩', '🧀', '🔥'] }, // Laranja (Logo Nuu)
+                      6: { color: '#dc2626', floaties: ['🥤', '🧊', '✨'] }, // Vermelho (Logo Nuu)
+                      7: { color: '#eab308', floaties: ['🥤', '🌿', '✨'] },
+                      8: { color: '#f97316', floaties: ['🥤', '🧊', '✨'] },
+                      9: { color: '#dc2626', floaties: ['🍊', '🥤', '🧊'] },
+                      10: { color: '#eab308', floaties: ['💧', '🧊', '✨'] },
+                      11: { color: '#f97316', floaties: ['🍟', '🔥', '🧂'] },
                     };
-                    const theme = themes[product.id] || { color: section.accentColor, floaties: ['✨', section.icon, '🍔'] };
+                    const fallbackColor = BRAND_LOGO_PALETTE[pIndex % BRAND_LOGO_PALETTE.length];
+                    const theme = themes[product.id] || { color: fallbackColor, floaties: ['✨', section.icon, '🍔'] };
                     const isPaused = !product.active;
+                    const cardBorderColor = isPaused ? '#6b7280' : (theme.color || fallbackColor);
 
                     return (
                       <div 
@@ -2171,7 +2174,9 @@ export default function DeliveryView({
                         style={{ 
                           background: 'rgba(255,255,255,0.03)', 
                           border: `1px solid rgba(255,255,255,0.1)`, 
-                          borderTop: `4px solid ${isPaused ? '#6b7280' : theme.color}`,
+                          borderTop: `4px solid ${cardBorderColor}`,
+                          borderLeft: `4px solid ${cardBorderColor}`,
+                          '--card-border-color': cardBorderColor,
                           borderRadius: '16px', 
                           padding: '1.5rem', 
                           display: 'flex', 

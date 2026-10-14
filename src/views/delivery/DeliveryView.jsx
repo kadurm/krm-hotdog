@@ -4730,43 +4730,49 @@ export default function DeliveryView({
           className="animate-fade-in"
           style={{
             position: 'fixed',
-            bottom: '84px',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            bottom: '88px',
+            left: '16px',
+            right: '16px',
+            margin: '0 auto',
+            width: 'calc(100% - 32px)',
+            maxWidth: '390px',
+            boxSizing: 'border-box',
             backgroundColor: 'rgba(18, 18, 18, 0.96)',
             color: '#fff',
-            padding: '10px 18px',
+            padding: '10px 14px',
             borderRadius: '99px',
             border: '1.5px solid rgba(234, 179, 8, 0.5)',
             boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            zIndex: 1000,
-            fontSize: '0.85rem',
+            justifyContent: 'space-between',
+            gap: '8px',
+            zIndex: 9999,
+            fontSize: '0.82rem',
             fontWeight: 600,
-            backdropFilter: 'blur(10px)',
-            maxWidth: '92vw'
+            backdropFilter: 'blur(10px)'
           }}
         >
-          <span style={{ 
-            backgroundColor: '#22c55e', 
-            color: '#fff', 
-            width: '20px', 
-            height: '20px', 
-            borderRadius: '50%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            fontSize: '0.75rem',
-            fontWeight: 800,
-            flexShrink: 0
-          }}>
-            ✓
-          </span>
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <strong>{addedItemToast.qty}x {addedItemToast.name}</strong> adicionado!
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            <span style={{ 
+              backgroundColor: '#22c55e', 
+              color: '#fff', 
+              width: '18px', 
+              height: '18px', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              flexShrink: 0
+            }}>
+              ✓
+            </span>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+              <strong>{addedItemToast.qty}x {addedItemToast.name}</strong> adicionado!
+            </span>
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -4777,7 +4783,7 @@ export default function DeliveryView({
               background: 'var(--color-brand)',
               border: 'none',
               color: '#fff',
-              padding: '5px 12px',
+              padding: '6px 12px',
               borderRadius: '99px',
               fontSize: '0.75rem',
               fontWeight: 800,

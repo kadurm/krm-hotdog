@@ -94,7 +94,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
   // Controle de campainha de novos pedidos e auto-impressão de comandas
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(() => {
-    return localStorage.getItem('nuu_auto_print_thermal') === 'true';
+    return localStorage.getItem('nuu_auto_print_thermal') !== 'false';
   });
 
   // Helper para formatar data local no padrão YYYY-MM-DD para inputs de calendário
@@ -219,25 +219,41 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     }
   };
 
-  const [prevOrdersList, setPrevOrdersList] = useState(orders);
+  const knownOrderIdsRef = useRef(new Set());
+  const initialLoadDoneRef = useRef(false);
+
   useEffect(() => {
-    // Detecta se houve novos pedidos adicionados
-    if (orders.length > prevOrdersList.length) {
-      const prevIds = new Set(prevOrdersList.map(o => String(o.id)));
-      const brandNewOrders = orders.filter(o => !prevIds.has(String(o.id)));
-      
-      if (brandNewOrders.length > 0) {
-        if (isSoundEnabled) {
-          playNotificationChime();
-        }
-        if (autoPrintEnabled) {
-          // Abre o último pedido para impressão automática imediata
-          setReceiptOrder(brandNewOrders[brandNewOrders.length - 1]);
-        }
-      }
+    if (!orders || orders.length === 0) return;
+
+    // Na primeira carga na montagem do componente, registra os pedidos existentes para não reimprimir histórico
+    if (!initialLoadDoneRef.current) {
+      orders.forEach(o => knownOrderIdsRef.current.add(String(o.id)));
+      initialLoadDoneRef.current = true;
+      return;
     }
-    setPrevOrdersList(orders);
-  }, [orders, isSoundEnabled, autoPrintEnabled, prevOrdersList]);
+
+    // Identifica pedidos realmente novos que acabaram de entrar no sistema
+    const brandNewOrders = orders.filter(o => 
+      !knownOrderIdsRef.current.has(String(o.id)) && 
+      (o.status === 'pending' || o.status === 'preparing')
+    );
+
+    if (brandNewOrders.length > 0) {
+      // Registra os novos IDs
+      brandNewOrders.forEach(o => knownOrderIdsRef.current.add(String(o.id)));
+
+      if (isSoundEnabled) {
+        playNotificationChime();
+      }
+      if (autoPrintEnabled) {
+        // Abre imediatamente a comanda térmica de 2 vias para impressão automática
+        setReceiptOrder(brandNewOrders[brandNewOrders.length - 1]);
+      }
+    } else {
+      // Mantém todos os IDs conhecidos atualizados
+      orders.forEach(o => knownOrderIdsRef.current.add(String(o.id)));
+    }
+  }, [orders, isSoundEnabled, autoPrintEnabled]);
 
   const handleCancelOrder = (order) => {
     showConfirm(`Deseja realmente cancelar o pedido #${order.id}? O valor será estornado do faturamento, os insumos voltarão ao estoque e o cliente será notificado no acompanhamento.`, {
@@ -862,7 +878,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
             {isSoundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
           </button>
 
-          {/* Toggle de Auto-Impressão de Comanda Térmica (Epson TM-T20 80mm) */}
+          {/* Toggle de Auto-Impressão de Comanda Térmica (2 Vias: Motoboy + Caixa) */}
           <button
             type="button"
             onClick={() => {
@@ -871,22 +887,23 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
               localStorage.setItem('nuu_auto_print_thermal', String(next));
             }}
             style={{
-              background: autoPrintEnabled ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${autoPrintEnabled ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.15)'}`,
-              color: autoPrintEnabled ? '#60a5fa' : 'var(--text-muted)',
-              padding: '6px 12px',
+              background: autoPrintEnabled ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${autoPrintEnabled ? 'rgba(16, 185, 129, 0.6)' : 'rgba(255, 255, 255, 0.15)'}`,
+              color: autoPrintEnabled ? '#34d399' : 'var(--text-muted)',
+              padding: '6px 14px',
               borderRadius: '99px',
               fontSize: '0.82rem',
-              fontWeight: 700,
+              fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.2s ease'
             }}
-            title={autoPrintEnabled ? 'Impressão Automática ATIVA (Epson 80mm)' : 'Ativar Impressão Automática (Epson 80mm)'}
+            title={autoPrintEnabled ? 'Impressão Automática ATIVA (2 Vias: Motoboy + Caixa)' : 'Ativar Impressão Automática de 2 Vias'}
           >
             <Printer size={14} />
-            <span>{autoPrintEnabled ? 'Auto-Imprimir: LIGADO' : 'Auto-Imprimir: DESLIGADO'}</span>
+            <span>{autoPrintEnabled ? 'Auto-Imprimir: LIGADO (2 Vias)' : 'Auto-Imprimir: DESLIGADO'}</span>
           </button>
 
           {/* Botão Novo Pedido Balcão */}

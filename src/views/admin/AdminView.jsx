@@ -2919,12 +2919,12 @@ export default function AdminView({ onLogout, onGoOperation }) {
 
                   {/* Tempo Estimado e Frete Grátis */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Tempo Médio de Espera</label>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Tempo Estimado de Entrega (Exibido no Cabeçalho)</label>
                     <input
                       type="text"
-                      value={storeSettings?.estimatedTime || '30 - 50 min'}
+                      value={storeSettings?.estimatedTime || '35 a 50 min'}
                       onChange={(e) => updateStoreSettings({ estimatedTime: e.target.value })}
-                      placeholder="Ex: 35 - 50 min"
+                      placeholder="Ex: 35 a 50 min"
                       style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', backgroundColor: 'var(--bg-tertiary)', color: '#fff', fontSize: '0.85rem' }}
                     />
                   </div>

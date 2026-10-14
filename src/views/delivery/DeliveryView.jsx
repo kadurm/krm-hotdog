@@ -800,6 +800,9 @@ export default function DeliveryView({
 
     if (viewMode === 'grid') {
       if (catId === 'todos') {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         mainContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         const targetEl = document.getElementById(`secao-categoria-${catId}`);

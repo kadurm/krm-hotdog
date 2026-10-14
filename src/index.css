@@ -57,6 +57,9 @@ body, html {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -748,13 +751,20 @@ input:focus, select:focus, textarea:focus {
     display: none !important;
   }
 
-  /* 2. O container principal toma 100% da tela real */
-  .app-container {
+  /* 2. No mobile, apenas o Slider Imersivo fixa a tela; a grade e checkout rolam naturalmente */
+  .app-container.is-slider-mode {
     height: 100dvh !important; /* 100dvh evita a barra do Safari */
-    position: fixed; /* Trava a rolagem da página inteira */
+    position: fixed; /* Trava a rolagem da página inteira apenas no slider */
     top: 0;
     left: 0;
     width: 100vw;
+  }
+  .app-container.is-grid-mode {
+    height: auto !important;
+    min-height: 100vh;
+    position: relative !important;
+    overflow-y: visible !important;
+    width: 100%;
   }
 
   /* 3. O Slider ocupa tudo e posiciona os itens ao centro */
@@ -846,7 +856,7 @@ input:focus, select:focus, textarea:focus {
   /* AJUSTES DA VISUALIZAÇÃO EM GRADE (MOBILE) */
   /* ========================================= */
   .grid-view-container {
-    padding: 0.5rem 0.65rem 4rem 0.65rem !important;
+    padding: 0.5rem 0.65rem calc(6rem + env(safe-area-inset-bottom, 0px)) 0.65rem !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 0.75rem !important;

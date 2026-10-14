@@ -2188,8 +2188,8 @@ export default function DeliveryView({
                         <div 
                           className="grid-card-image"
                           onClick={() => {
-                            if (product.image) {
-                              setPreviewImageModal({ url: product.image, title: product.name });
+                            if (!isPaused) {
+                              handleOpenProduct(product);
                             }
                           }}
                           style={{ 
@@ -2202,9 +2202,9 @@ export default function DeliveryView({
                             backgroundColor: 'transparent',
                             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
                             border: '1px solid rgba(255,255,255,0.08)',
-                            cursor: product.image ? 'pointer' : 'default'
+                            cursor: isPaused ? 'not-allowed' : 'pointer'
                           }}
-                          title={product.image ? 'Clique para ampliar a foto' : ''}
+                          title={isPaused ? 'Item esgotado' : 'Clique para personalizar e pedir'}
                         >
                           {product.image ? (
                             <>
@@ -2229,23 +2229,25 @@ export default function DeliveryView({
                                   transition: 'transform 0.4s ease'
                                 }} 
                               />
-                              <div style={{
-                                position: 'absolute',
-                                bottom: '8px',
-                                right: '8px',
-                                background: 'rgba(0,0,0,0.6)',
-                                backdropFilter: 'blur(4px)',
-                                color: '#fff',
-                                borderRadius: '50%',
-                                width: '28px',
-                                height: '28px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                opacity: 0.85
-                              }} title="Ampliar foto">
-                                <ZoomIn size={14} />
-                              </div>
+                              {!isPaused && (
+                                <div style={{
+                                  position: 'absolute',
+                                  bottom: '6px',
+                                  right: '6px',
+                                  background: 'rgba(0,0,0,0.6)',
+                                  backdropFilter: 'blur(4px)',
+                                  color: '#fff',
+                                  borderRadius: '50%',
+                                  width: '26px',
+                                  height: '26px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  opacity: 0.85
+                                }} title="Clique para personalizar e pedir">
+                                  <ZoomIn size={13} />
+                                </div>
+                              )}
                             </>
                           ) : (
                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>

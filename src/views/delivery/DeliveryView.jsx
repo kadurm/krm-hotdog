@@ -2316,16 +2316,13 @@ export default function DeliveryView({
                           <p 
                             className="grid-card-desc"
                             style={{ 
-                              fontSize: '0.85rem', 
-                              color: 'rgba(255,255,255,0.7)', 
-                              lineHeight: '1.4', 
-                              marginBottom: '1rem', 
+                              fontSize: '0.88rem', 
+                              color: 'rgba(255,255,255,0.78)', 
+                              lineHeight: '1.45', 
+                              marginBottom: '1.25rem', 
                               flex: 1,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
+                              display: 'block',
+                              textAlign: 'center'
                             }}
                           >
                             {product.description}

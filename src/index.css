@@ -49,17 +49,17 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--bg-tertiary) var(--bg-primary);
 }
 
-body, html {
+html, body {
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  width: 100%;
+  min-height: 100%;
+}
+
+html {
   scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
 }
 
 body {
@@ -720,11 +720,11 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 0.4rem; 
 }
 .grid-card p { 
-  opacity: 0.75; 
+  opacity: 0.8; 
   font-size: 0.88rem; 
   margin-bottom: 1.25rem; 
-  line-height: 1.45; 
-  min-height: 44px; 
+  line-height: 1.5; 
+  min-height: 52px; 
 }
 .grid-price { 
   font-size: 1.4rem; 

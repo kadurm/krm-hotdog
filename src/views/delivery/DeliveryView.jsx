@@ -2017,6 +2017,20 @@ export default function DeliveryView({
             gap: '2.5rem'
           }}
         >
+          {/* Título Principal Semântico para SEO e Indexadores */}
+          <h1 className="sr-only" style={{
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            padding: 0,
+            margin: '-1px',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: 0
+          }}>
+            Cardápio Nuu Prensado - O Melhor Cachorro-Quente Prensado de Montes Claros
+          </h1>
           {gridCategorySections.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#fff', padding: '3rem' }}>
               <span style={{ fontSize: '3rem' }}>🔍</span>

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /#admin*
+Disallow: /#operacao*
+Disallow: /#caixa*
+Disallow: /#pdv*
+Disallow: /#kds*
+
+Sitemap: https://nuuprensado.com.br/sitemap.xml

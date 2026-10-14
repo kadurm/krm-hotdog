@@ -2171,6 +2171,11 @@ export default function DeliveryView({
                       <div 
                         key={product.id} 
                         className="grid-card"
+                        onClick={() => {
+                          if (!isPaused) {
+                            handleOpenProduct(product);
+                          }
+                        }}
                         style={{ 
                           background: 'rgba(255,255,255,0.03)', 
                           border: `1px solid rgba(255,255,255,0.1)`, 
@@ -2186,7 +2191,8 @@ export default function DeliveryView({
                           color: '#fff',
                           opacity: isPaused ? 0.65 : 1,
                           transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                          position: 'relative'
+                          position: 'relative',
+                          cursor: isPaused ? 'not-allowed' : 'pointer'
                         }}
                       >
                         {/* Foto Real do Produto na Grade */}

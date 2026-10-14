@@ -909,48 +909,77 @@ input:focus, select:focus, textarea:focus {
     margin-top: 2px !important;
   }
 
-  /* Grid de Cards Compacto (Para caber pelo menos 3 lanches na tela) */
+  /* Grid de Cards Compacto em Linha (Padrão Delivery para caber pelo menos 3 lanches na tela sem esmagar as fotos) */
   .category-products-grid {
-    gap: 0.55rem !important;
+    gap: 0.65rem !important;
     display: flex !important;
     flex-direction: column !important;
   }
 
   .grid-card {
-    padding: 0.55rem 0.7rem !important;
-    border-radius: 12px !important;
-    border-top-width: 3px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 0.65rem 0.75rem !important;
+    border-radius: 14px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-left: 4px solid var(--color-brand) !important;
+    gap: 12px !important;
     text-align: left !important;
-    align-items: stretch !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
   }
 
   .grid-card-image {
-    height: 105px !important;
-    border-radius: 8px !important;
-    margin-bottom: 0.35rem !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+    width: 110px !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+    height: 82px !important;
+    aspect-ratio: 4 / 3 !important;
+    border-radius: 10px !important;
+    margin-bottom: 0 !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .grid-card-image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border-radius: 10px !important;
+  }
+
+  .grid-card-info {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    min-height: 82px !important;
   }
 
   .grid-icon { 
     font-size: 1.8rem !important; 
-    margin-bottom: 0.3rem !important; 
+    margin-bottom: 0 !important; 
   }
 
   .grid-card h3,
   .grid-card-title { 
     font-size: 0.98rem !important; 
-    margin-bottom: 0.15rem !important; 
+    margin: 0 0 2px 0 !important; 
     line-height: 1.2 !important;
     text-align: left !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    color: #fff !important;
   }
 
   .grid-card p,
   .grid-card-desc { 
     font-size: 0.73rem !important; 
-    margin-bottom: 0.35rem !important; 
+    margin: 0 0 6px 0 !important; 
     line-height: 1.25 !important;
     min-height: unset !important;
     text-align: left !important;
@@ -960,7 +989,7 @@ input:focus, select:focus, textarea:focus {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     flex: unset !important;
-    opacity: 0.8 !important;
+    color: rgba(255, 255, 255, 0.72) !important;
   }
 
   .grid-card-footer {
@@ -969,8 +998,8 @@ input:focus, select:focus, textarea:focus {
     align-items: center !important;
     justify-content: space-between !important;
     width: 100% !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-    padding-top: 0.35rem !important;
+    border-top: none !important;
+    padding-top: 0 !important;
     gap: 8px !important;
     margin-top: auto !important;
   }
@@ -987,7 +1016,7 @@ input:focus, select:focus, textarea:focus {
   .grid-card button,
   .grid-card-button { 
     width: auto !important;
-    min-width: 80px !important;
+    min-width: 76px !important;
     padding: 6px 14px !important; 
     font-size: 0.8rem !important; 
     font-weight: 700 !important;

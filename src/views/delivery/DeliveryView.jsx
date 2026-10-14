@@ -2262,82 +2262,84 @@ export default function DeliveryView({
                           )}
                         </div>
 
-                        <h3 
-                          className="grid-card-title"
-                          style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}
-                        >
-                          {product.name}
-                        </h3>
-                        
-                        <p 
-                          className="grid-card-desc"
-                          style={{ 
-                            fontSize: '0.85rem', 
-                            color: 'rgba(255,255,255,0.7)', 
-                            lineHeight: '1.4', 
-                            marginBottom: '1rem', 
-                            flex: 1,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                        >
-                          {product.description}
-                        </p>
-
-                        <div 
-                          className="grid-card-footer"
-                          style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            width: '100%', 
-                            borderTop: '1px solid rgba(255,255,255,0.08)', 
-                            paddingTop: '1rem',
-                            gap: '0.75rem',
-                            marginTop: 'auto'
-                          }}
-                        >
-                          <span 
-                            className="grid-card-price"
-                            style={{ 
-                              fontSize: '1.5rem', 
-                              fontWeight: 800, 
-                              color: 'var(--color-brand)',
-                              textAlign: 'center'
-                            }}
+                        <div className="grid-card-info" style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, width: '100%' }}>
+                          <h3 
+                            className="grid-card-title"
+                            style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}
                           >
-                            R$ {product.price.toFixed(2)}
-                          </span>
+                            {product.name}
+                          </h3>
                           
-                          <button 
-                            onClick={() => handleOpenProduct(product)}
-                            disabled={isPaused}
-                            className="btn-primary grid-card-button"
+                          <p 
+                            className="grid-card-desc"
                             style={{ 
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              textAlign: 'center',
-                              padding: '10px 18px', 
-                              fontSize: '0.95rem',
-                              fontWeight: 700,
-                              borderRadius: '8px',
-                              cursor: isPaused ? 'not-allowed' : 'pointer',
-                              opacity: isPaused ? 0.5 : 1,
-                              backgroundColor: (!isStoreOpen && !isPaused) ? 'rgba(255, 255, 255, 0.12)' : undefined,
-                              border: (!isStoreOpen && !isPaused) ? '1px solid rgba(255, 255, 255, 0.25)' : undefined,
-                              color: (!isStoreOpen && !isPaused) ? '#f8fafc' : undefined,
-                              backdropFilter: (!isStoreOpen && !isPaused) ? 'blur(8px)' : undefined,
-                              WebkitBackdropFilter: (!isStoreOpen && !isPaused) ? 'blur(8px)' : undefined
+                              fontSize: '0.85rem', 
+                              color: 'rgba(255,255,255,0.7)', 
+                              lineHeight: '1.4', 
+                              marginBottom: '1rem', 
+                              flex: 1,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
                             }}
                           >
-                            {isPaused ? 'Esgotado' : isStoreOpen ? 'Pedir' : pauseStatus.isPaused ? `Ver Detalhes (~${pauseStatus.remainingMinutes}m)` : 'Ver Detalhes'}
-                          </button>
+                            {product.description}
+                          </p>
+
+                          <div 
+                            className="grid-card-footer"
+                            style={{ 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              width: '100%', 
+                              borderTop: '1px solid rgba(255,255,255,0.08)', 
+                              paddingTop: '1rem',
+                              gap: '0.75rem',
+                              marginTop: 'auto'
+                            }}
+                          >
+                            <span 
+                              className="grid-card-price"
+                              style={{ 
+                                fontSize: '1.5rem', 
+                                fontWeight: 800, 
+                                color: 'var(--color-brand)',
+                                textAlign: 'center'
+                              }}
+                            >
+                              R$ {product.price.toFixed(2)}
+                            </span>
+                            
+                            <button 
+                              onClick={() => handleOpenProduct(product)}
+                              disabled={isPaused}
+                              className="btn-primary grid-card-button"
+                              style={{ 
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textAlign: 'center',
+                                padding: '10px 18px', 
+                                fontSize: '0.95rem',
+                                fontWeight: 700,
+                                borderRadius: '8px',
+                                cursor: isPaused ? 'not-allowed' : 'pointer',
+                                opacity: isPaused ? 0.5 : 1,
+                                backgroundColor: (!isStoreOpen && !isPaused) ? 'rgba(255, 255, 255, 0.12)' : undefined,
+                                border: (!isStoreOpen && !isPaused) ? '1px solid rgba(255, 255, 255, 0.25)' : undefined,
+                                color: (!isStoreOpen && !isPaused) ? '#f8fafc' : undefined,
+                                backdropFilter: (!isStoreOpen && !isPaused) ? 'blur(8px)' : undefined,
+                                WebkitBackdropFilter: (!isStoreOpen && !isPaused) ? 'blur(8px)' : undefined
+                              }}
+                            >
+                              {isPaused ? 'Esgotado' : isStoreOpen ? 'Pedir' : pauseStatus.isPaused ? `Ver Detalhes (~${pauseStatus.remainingMinutes}m)` : 'Ver Detalhes'}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

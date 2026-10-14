@@ -2022,6 +2022,7 @@ export default function DeliveryView({
               <section 
                 key={section.id} 
                 id={`secao-categoria-${section.id}`}
+                className="category-section"
                 style={{ 
                   scrollMarginTop: '120px',
                   display: 'flex',
@@ -2030,52 +2031,85 @@ export default function DeliveryView({
                 }}
               >
                 {/* Cabeçalho da Categoria na Grade */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  padding: '1rem 1.5rem',
-                  borderRadius: '16px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderLeft: `5px solid ${section.accentColor}`,
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div style={{
-                      fontSize: '1.8rem',
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '12px',
-                      backgroundColor: `${section.accentColor}20`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: `1px solid ${section.accentColor}40`
-                    }}>
+                <div 
+                  className="category-section-header"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    padding: '1rem 1.5rem',
+                    borderRadius: '16px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderLeft: `5px solid ${section.accentColor}`,
+                    backdropFilter: 'blur(10px)',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                  }}
+                >
+                  <div className="category-section-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
+                    <div 
+                      className="category-section-icon"
+                      style={{
+                        fontSize: '1.8rem',
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '12px',
+                        backgroundColor: `${section.accentColor}20`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: `1px solid ${section.accentColor}40`,
+                        flexShrink: 0
+                      }}
+                    >
                       {section.icon}
                     </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="category-section-title-row" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'nowrap' }}>
+                        <h2 
+                          className="category-section-title"
+                          style={{ 
+                            fontSize: '1.4rem', 
+                            fontWeight: 800, 
+                            color: '#fff', 
+                            margin: 0,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
                           {section.label}
                         </h2>
-                        <span style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          color: section.accentColor,
-                          backgroundColor: `${section.accentColor}20`,
-                          padding: '3px 10px',
-                          borderRadius: '99px',
-                          border: `1px solid ${section.accentColor}40`
-                        }}>
+                        <span 
+                          className="category-section-badge"
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            color: section.accentColor,
+                            backgroundColor: `${section.accentColor}20`,
+                            padding: '3px 10px',
+                            borderRadius: '99px',
+                            border: `1px solid ${section.accentColor}40`,
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0
+                          }}
+                        >
                           {section.products.length} {section.products.length === 1 ? 'opção' : 'opções'}
                         </span>
                       </div>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.65)' }}>
+                      <p 
+                        className="category-section-desc"
+                        style={{ 
+                          margin: '4px 0 0 0', 
+                          fontSize: '0.85rem', 
+                          color: 'rgba(255, 255, 255, 0.65)',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.3
+                        }}
+                      >
                         {section.description}
                       </p>
                     </div>
@@ -2083,7 +2117,7 @@ export default function DeliveryView({
                   {selectedCategory !== 'todos' && (
                     <button
                       onClick={() => handleSelectCategory('todos')}
-                      className="btn-secondary"
+                      className="btn-secondary category-section-all-btn"
                       style={{ fontSize: '0.75rem', padding: '6px 14px', borderRadius: '99px' }}
                     >
                       Ver todas as categorias
@@ -2092,12 +2126,15 @@ export default function DeliveryView({
                 </div>
 
                 {/* Grade de Cards da Categoria */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                  gap: '1.5rem',
-                  alignItems: 'stretch'
-                }}>
+                <div 
+                  className="category-products-grid"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '1.5rem',
+                    alignItems: 'stretch'
+                  }}
+                >
                   {section.products.map(product => {
                     const themes = {
                       1: { color: '#eab308', floaties: ['🥓', '🌭', '🧀'] },
@@ -2225,37 +2262,61 @@ export default function DeliveryView({
                           )}
                         </div>
 
-                        <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}>
+                        <h3 
+                          className="grid-card-title"
+                          style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}
+                        >
                           {product.name}
                         </h3>
                         
-                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5', marginBottom: '1.25rem', flex: 1 }}>
+                        <p 
+                          className="grid-card-desc"
+                          style={{ 
+                            fontSize: '0.85rem', 
+                            color: 'rgba(255,255,255,0.7)', 
+                            lineHeight: '1.4', 
+                            marginBottom: '1rem', 
+                            flex: 1,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {product.description}
                         </p>
 
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          width: '100%', 
-                          borderTop: '1px solid rgba(255,255,255,0.08)', 
-                          paddingTop: '1rem',
-                          gap: '0.75rem'
-                        }}>
-                          <span style={{ 
-                            fontSize: '1.5rem', 
-                            fontWeight: 800, 
-                            color: 'var(--color-brand)',
-                            textAlign: 'center'
-                          }}>
+                        <div 
+                          className="grid-card-footer"
+                          style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            width: '100%', 
+                            borderTop: '1px solid rgba(255,255,255,0.08)', 
+                            paddingTop: '1rem',
+                            gap: '0.75rem',
+                            marginTop: 'auto'
+                          }}
+                        >
+                          <span 
+                            className="grid-card-price"
+                            style={{ 
+                              fontSize: '1.5rem', 
+                              fontWeight: 800, 
+                              color: 'var(--color-brand)',
+                              textAlign: 'center'
+                            }}
+                          >
                             R$ {product.price.toFixed(2)}
                           </span>
                           
                           <button 
                             onClick={() => handleOpenProduct(product)}
                             disabled={isPaused}
-                            className="btn-primary"
+                            className="btn-primary grid-card-button"
                             style={{ 
                               width: '100%',
                               display: 'flex',

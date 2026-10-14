@@ -1,15 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useSystem } from '../contexts/SystemContext';
-import { Printer, X, Scissors, Layers, Check, Info } from 'lucide-react';
+import { Printer, X, Scissors } from 'lucide-react';
 
 export default function ThermalPrintReceipt({ order, onClose, autoPrint = false }) {
   const { storeSettings, currentOperator } = useSystem();
-  
-  // Opções de impressão: 2 vias (padrão solicitado) ou 1 via
-  const [printCopies, setPrintCopies] = useState('two_copies'); // 'two_copies' | 'single_copy'
-  // Largura da bobina térmica: 80mm (padrão de mercado) ou 58mm
-  const [paperWidth, setPaperWidth] = useState('80mm'); // '80mm' | '58mm'
-  const [showKioskHelp, setShowKioskHelp] = useState(false);
 
   if (!order) return null;
 
@@ -22,10 +16,19 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
     if (autoPrint) {
       const timer = setTimeout(() => {
         window.print();
-      }, 400);
+      }, 350);
       return () => clearTimeout(timer);
     }
   }, [autoPrint, order?.id]);
+
+  // Fecha o modal automaticamente quando o diálogo de impressão é concluído/enviado
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      if (onClose) onClose();
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, [onClose]);
 
   // Fechar com a tecla ESC
   useEffect(() => {
@@ -66,20 +69,20 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
           color: '#000',
           backgroundColor: '#fff',
           fontFamily: "'Segoe UI', Arial, -apple-system, sans-serif",
-          fontSize: paperWidth === '58mm' ? '11px' : '12.5px',
+          fontSize: '12.5px',
           lineHeight: '1.35',
           paddingBottom: '8px'
         }}
       >
         {/* Cabeçalho da Empresa */}
         <div style={{ textAlign: 'center', borderBottom: '1.5px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
-          <div style={{ fontSize: paperWidth === '58mm' ? '16px' : '19px', fontWeight: '900', letterSpacing: '0.5px' }}>
+          <div style={{ fontSize: '19px', fontWeight: '900', letterSpacing: '0.5px' }}>
             NUU PRENSADO
           </div>
-          <div style={{ fontSize: paperWidth === '58mm' ? '10px' : '11px', fontWeight: '600', color: '#111' }}>
+          <div style={{ fontSize: '11px', fontWeight: '600', color: '#111' }}>
             O Melhor Prensado da Cidade
           </div>
-          <div style={{ fontSize: paperWidth === '58mm' ? '10px' : '11px', fontWeight: '700', color: '#000', marginTop: '1px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#000', marginTop: '1px' }}>
             WhatsApp: {storeSettings?.whatsapp || storeSettings?.phone || '(38) 99161-1378'}
           </div>
           {storeSettings?.storeAddress && (
@@ -95,7 +98,7 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
           color: '#fff',
           textAlign: 'center',
           fontWeight: '900',
-          fontSize: paperWidth === '58mm' ? '11px' : '12.5px',
+          fontSize: '12.5px',
           padding: '3px 4px',
           letterSpacing: '0.5px',
           marginBottom: '8px'
@@ -110,14 +113,14 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
         {/* Identificação do Pedido */}
         <div style={{ borderBottom: '1.5px dashed #000', paddingBottom: '7px', marginBottom: '7px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: paperWidth === '58mm' ? '16px' : '18px', fontWeight: '900' }}>
+            <span style={{ fontSize: '18px', fontWeight: '900' }}>
               PEDIDO #{order.id}
             </span>
             <span style={{ 
               fontWeight: '900',
               border: '1.5px solid #000',
               padding: '2px 6px',
-              fontSize: paperWidth === '58mm' ? '10px' : '11px'
+              fontSize: '11px'
             }}>
               {isDelivery ? 'DELIVERY' : 'BALCÃO'}
             </span>
@@ -134,11 +137,11 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
 
         {/* Dados do Cliente e Endereço */}
         <div style={{ borderBottom: '1.5px dashed #000', paddingBottom: '7px', marginBottom: '7px' }}>
-          <div style={{ fontSize: paperWidth === '58mm' ? '11.5px' : '13px', fontWeight: '800' }}>
+          <div style={{ fontSize: '13px', fontWeight: '800' }}>
             CLIENTE: {order.customerName || 'Cliente Balcão'}
           </div>
           {order.phone && (
-            <div style={{ fontSize: paperWidth === '58mm' ? '12px' : '13.5px', fontWeight: '900', marginTop: '2px' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: '900', marginTop: '2px' }}>
               TEL: {order.phone}
             </div>
           )}
@@ -150,14 +153,14 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
               padding: isMotoboyCopy ? '4px 6px' : '0', 
               border: isMotoboyCopy ? '1px solid #000' : 'none' 
             }}>
-              <div style={{ fontWeight: '900', fontSize: paperWidth === '58mm' ? '11px' : '12px', textDecoration: 'underline' }}>
+              <div style={{ fontWeight: '900', fontSize: '12px', textDecoration: 'underline' }}>
                 ENDEREÇO DE ENTREGA:
               </div>
-              <div style={{ fontSize: paperWidth === '58mm' ? '12px' : '13.5px', fontWeight: '800', marginTop: '2px' }}>
+              <div style={{ fontSize: '13.5px', fontWeight: '800', marginTop: '2px' }}>
                 {order.address || 'Endereço não informado'}
               </div>
               {order.neighborhood && (
-                <div style={{ fontSize: paperWidth === '58mm' ? '11.5px' : '13px', fontWeight: '900', marginTop: '2px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '900', marginTop: '2px' }}>
                   BAIRRO: {order.neighborhood}
                 </div>
               )}
@@ -183,17 +186,17 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
           {order.items?.map((item, idx) => (
             <div key={idx} style={{ marginBottom: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontWeight: '800' }}>
-                <span style={{ fontSize: paperWidth === '58mm' ? '12px' : '13.5px' }}>
+                <span style={{ fontSize: '13.5px' }}>
                   {item.quantity}x {item.name}
                 </span>
-                <span style={{ fontSize: paperWidth === '58mm' ? '11px' : '12.5px', fontWeight: '700' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '700' }}>
                   R$ {(Number(item.price || 0) * (item.quantity || 1)).toFixed(2)}
                 </span>
               </div>
               {/* Observações / Adicionais */}
               {item.notes && (
                 <div style={{ 
-                  fontSize: paperWidth === '58mm' ? '11px' : '12px', 
+                  fontSize: '12px', 
                   fontWeight: '800', 
                   padding: '2px 4px', 
                   backgroundColor: '#f3f3f3', 
@@ -239,7 +242,7 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center', 
-            fontSize: paperWidth === '58mm' ? '15px' : '17px', 
+            fontSize: '17px', 
             fontWeight: '900', 
             marginTop: '4px',
             paddingTop: '3px',
@@ -256,7 +259,7 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
             border: '1.5px solid #000', 
             backgroundColor: isMotoboyCopy ? '#f4f4f4' : 'transparent' 
           }}>
-            <div style={{ fontSize: paperWidth === '58mm' ? '11px' : '12.5px', fontWeight: '900' }}>
+            <div style={{ fontSize: '12.5px', fontWeight: '900' }}>
               PAGAMENTO: {order.paymentMethod || 'Não informado'}
             </div>
 
@@ -333,7 +336,7 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
       padding: '1rem',
       overflowY: 'auto'
     }}>
-      {/* Barra de controle superior (escondida na impressão física) */}
+      {/* Barra de controle superior simplificada (escondida na impressão física) */}
       <div style={{
         position: 'fixed',
         top: '16px',
@@ -341,18 +344,17 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
         transform: 'translateX(-50%)',
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
+        gap: '12px',
         zIndex: 100000,
         backgroundColor: '#18181b',
         border: '1px solid rgba(255,255,255,0.2)',
         borderRadius: '12px',
-        padding: '8px 14px',
+        padding: '8px 16px',
         boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
         maxWidth: '95vw',
-        flexWrap: 'wrap',
         justifyContent: 'center'
       }} className="no-print">
-        {/* Botão de Disparo de Impressão */}
+        {/* Botão de Disparo Manual de Impressão */}
         <button
           type="button"
           onClick={handlePrint}
@@ -364,111 +366,14 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '9px 18px',
+            padding: '9px 20px',
             fontSize: '0.92rem',
             fontWeight: 800,
             boxShadow: '0 4px 15px rgba(225,29,72,0.4)',
             cursor: 'pointer'
           }}
         >
-          <Printer size={18} /> Imprimir Comanda
-        </button>
-
-        {/* Seletor de Vias (2 Vias solicitado) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '8px', padding: '3px' }}>
-          <button
-            type="button"
-            onClick={() => setPrintCopies('two_copies')}
-            style={{
-              background: printCopies === 'two_copies' ? '#eab308' : 'transparent',
-              color: printCopies === 'two_copies' ? '#000' : '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 10px',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <Layers size={13} /> 2 Vias (Motoboy + Caixa)
-          </button>
-          <button
-            type="button"
-            onClick={() => setPrintCopies('single_copy')}
-            style={{
-              background: printCopies === 'single_copy' ? '#eab308' : 'transparent',
-              color: printCopies === 'single_copy' ? '#000' : '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 10px',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              cursor: 'pointer'
-            }}
-          >
-            1 Via
-          </button>
-        </div>
-
-        {/* Seletor de Largura (80mm ou 58mm) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '8px', padding: '3px' }}>
-          <button
-            type="button"
-            onClick={() => setPaperWidth('80mm')}
-            style={{
-              background: paperWidth === '80mm' ? '#3b82f6' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 9px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            80mm
-          </button>
-          <button
-            type="button"
-            onClick={() => setPaperWidth('58mm')}
-            style={{
-              background: paperWidth === '58mm' ? '#3b82f6' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 9px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            58mm
-          </button>
-        </div>
-
-        {/* Botão de Dica Kiosk */}
-        <button
-          type="button"
-          onClick={() => setShowKioskHelp(prev => !prev)}
-          style={{
-            background: showKioskHelp ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            color: '#93c5fd',
-            borderRadius: '8px',
-            padding: '7px 10px',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-          title="Dica para impressão 100% silenciosa sem abrir janelas"
-        >
-          <Info size={14} /> Dica Auto-Print
+          <Printer size={18} /> Imprimir Comanda (2 Vias • 80mm)
         </button>
 
         {/* Botão Fechar */}
@@ -480,12 +385,12 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
             border: '1px solid rgba(255,255,255,0.25)',
             color: '#fff',
             borderRadius: '8px',
-            padding: '7px 12px',
+            padding: '8px 14px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '5px',
-            fontSize: '0.82rem',
+            fontSize: '0.85rem',
             fontWeight: 600
           }}
         >
@@ -493,50 +398,12 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
         </button>
       </div>
 
-      {/* Caixa de ajuda sobre impressão 100% silenciosa no Chrome */}
-      {showKioskHelp && (
-        <div 
-          className="no-print animate-fade-in"
-          style={{
-            position: 'fixed',
-            top: '75px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            maxWidth: '560px',
-            width: '90%',
-            backgroundColor: '#1e293b',
-            border: '1px solid #3b82f6',
-            borderRadius: '10px',
-            padding: '12px 16px',
-            color: '#f8fafc',
-            fontSize: '0.8rem',
-            lineHeight: '1.4',
-            zIndex: 100001,
-            boxShadow: '0 15px 35px rgba(0,0,0,0.6)'
-          }}
-        >
-          <div style={{ fontWeight: 800, color: '#60a5fa', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
-            <span>Como imprimir 100% automático e direto na impressora física:</span>
-            <button onClick={() => setShowKioskHelp(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>×</button>
-          </div>
-          <p style={{ margin: '0 0 6px 0' }}>
-            O Chrome por padrão abre a janela de confirmação de impressão. Para que a impressão saia <strong>direto e silenciosamente na impressora térmica sem abrir o diálogo do Chrome</strong>:
-          </p>
-          <ol style={{ margin: '0', paddingLeft: '18px', color: '#cbd5e1' }}>
-            <li>No Windows, clique com botão direito no atalho do Google Chrome &gt; <strong>Propriedades</strong>.</li>
-            <li>No campo <strong>Destino</strong>, ao final do texto, dê um espaço e adicione: <code style={{ color: '#facc15', backgroundColor: '#0f172a', padding: '1px 5px', borderRadius: '4px' }}>--kiosk-printing</code></li>
-            <li>Defina sua impressora térmica de 80mm/58mm como a <strong>Impressora Padrão do Windows</strong>.</li>
-            <li>Pronto! Ao chegar qualquer pedido, a comanda sairá automaticamente sem necessidade de clicar em nada!</li>
-          </ol>
-        </div>
-      )}
-
-      {/* Folha / Recibo Térmico Formatado */}
+      {/* Folha / Recibo Térmico Padrão 80mm com 2 Vias */}
       <div 
         id="thermal-printable-receipt"
-        className={`thermal-receipt ${paperWidth === '58mm' ? 'receipt-58mm' : 'receipt-80mm'}`}
+        className="thermal-receipt receipt-80mm"
         style={{
-          width: paperWidth === '58mm' ? '280px' : '360px',
+          width: '360px',
           maxWidth: '100%',
           backgroundColor: '#fff',
           color: '#000',
@@ -545,48 +412,43 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
           borderRadius: '4px',
           maxHeight: '85vh',
           overflowY: 'auto',
-          marginTop: '70px',
+          marginTop: '65px',
           marginBottom: '20px'
         }}
       >
         {/* VIA 1: MOTOBOY / ENTREGA */}
         {renderReceiptContent('motoboy')}
 
-        {/* SE FOR 2 VIAS: LINHA DE CORTE + VIA 2 (CAIXA / CONFERÊNCIA) */}
-        {printCopies === 'two_copies' && (
-          <>
-            {/* Linha de separação e corte com tesourinha */}
-            <div 
-              className="receipt-cut-divider"
-              style={{
-                margin: '14px 0',
-                padding: '6px 0',
-                borderTop: '1.5px dashed #000',
-                borderBottom: '1.5px dashed #000',
-                textAlign: 'center',
-                fontWeight: '900',
-                fontSize: '11px',
-                letterSpacing: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                color: '#000'
-              }}
-            >
-              <Scissors size={14} /> - - - - CORTE AQUI - - - - <Scissors size={14} />
-            </div>
+        {/* LINHA DE CORTE E SERRILHA */}
+        <div 
+          className="receipt-cut-divider"
+          style={{
+            margin: '14px 0',
+            padding: '6px 0',
+            borderTop: '1.5px dashed #000',
+            borderBottom: '1.5px dashed #000',
+            textAlign: 'center',
+            fontWeight: '900',
+            fontSize: '11px',
+            letterSpacing: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            color: '#000'
+          }}
+        >
+          <Scissors size={14} /> - - - - CORTE AQUI - - - - <Scissors size={14} />
+        </div>
 
-            {/* VIA 2: CAIXA / CONFERÊNCIA */}
-            {renderReceiptContent('cash')}
-          </>
-        )}
+        {/* VIA 2: CAIXA / CONFERÊNCIA */}
+        {renderReceiptContent('cash')}
       </div>
 
-      {/* ESTILOS CSS DE IMPRESSÃO TÉRMICA PROFISSIONAL */}
+      {/* ESTILOS CSS DE IMPRESSÃO TÉRMICA 80MM */}
       <style dangerouslySetInnerHTML={{ __html: `
         @page {
-          size: auto;
+          size: 80mm auto;
           margin: 0mm !important;
         }
 
@@ -601,13 +463,13 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
         }
 
         @media print {
-          /* Zera margens da página no Chrome/Windows */
           @page {
+            size: 80mm auto;
             margin: 0mm !important;
           }
           
           html, body {
-            width: 100% !important;
+            width: 80mm !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
@@ -645,8 +507,8 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: ${paperWidth === '58mm' ? '52mm' : '76mm'} !important;
-            max-width: ${paperWidth === '58mm' ? '52mm' : '76mm'} !important;
+            width: 76mm !important;
+            max-width: 76mm !important;
             margin: 0 !important;
             padding: 2mm 3mm 8mm 3mm !important;
             box-shadow: none !important;
@@ -656,7 +518,7 @@ export default function ThermalPrintReceipt({ order, onClose, autoPrint = false 
             color: #000 !important;
             overflow: visible !important;
             max-height: none !important;
-            font-size: ${paperWidth === '58mm' ? '10.5px' : '12px'} !important;
+            font-size: 12px !important;
             line-height: 1.3 !important;
           }
 

@@ -2053,11 +2053,11 @@ export default function DeliveryView({
                     gap: '12px',
                     padding: '1rem 1.5rem',
                     borderRadius: '16px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderLeft: `5px solid ${section.accentColor}`,
-                    backdropFilter: 'blur(10px)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+                    background: `linear-gradient(135deg, ${section.accentColor}26 0%, rgba(20, 20, 22, 0.95) 75%)`,
+                    border: `1px solid ${section.accentColor}4d`,
+                    borderLeft: `6px solid ${section.accentColor}`,
+                    backdropFilter: 'blur(12px)',
+                    boxShadow: `0 6px 24px -4px ${section.accentColor}2b, 0 4px 16px rgba(0, 0, 0, 0.4)`
                   }}
                 >
                   <div className="category-section-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
@@ -2068,11 +2068,12 @@ export default function DeliveryView({
                         width: '48px',
                         height: '48px',
                         borderRadius: '12px',
-                        backgroundColor: `${section.accentColor}20`,
+                        backgroundColor: `${section.accentColor}2e`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        border: `1px solid ${section.accentColor}40`,
+                        border: `1.5px solid ${section.accentColor}66`,
+                        boxShadow: `0 2px 10px ${section.accentColor}33`,
                         flexShrink: 0
                       }}
                     >

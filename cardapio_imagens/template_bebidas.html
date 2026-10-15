@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cardápio Bebidas - Nuu Prensado!!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 1080px;
+      height: 1920px;
+      background: radial-gradient(circle at 50% 0%, #0f1c2e 0%, #080d17 40%, #04060a 100%);
+      color: #fff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      position: relative;
+      overflow: hidden;
+      padding: 50px 55px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    /* Efeitos de iluminação gelada */
+    .bg-glow-top {
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(14, 165, 233, 0.12) 60%, transparent 100%);
+      filter: blur(70px);
+      pointer-events: none;
+    }
+    .bg-pattern {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* Cabeçalho */
+    .header {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid rgba(59, 130, 246, 0.35);
+      padding-bottom: 28px;
+    }
+    .header-logo-group {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .header-logo {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
+    }
+    .header-title-box h1 {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1;
+      background: linear-gradient(90deg, #93c5fd 0%, #38bdf8 40%, #eab308 80%, #f97316 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+    }
+    .header-title-box p {
+      font-size: 19px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+    .header-badge {
+      background: linear-gradient(135deg, #1e40af, #0369a1);
+      border: 1.5px solid #38bdf8;
+      padding: 12px 26px;
+      border-radius: 999px;
+      text-align: right;
+      box-shadow: 0 8px 24px rgba(3, 105, 161, 0.4);
+    }
+    .header-badge span {
+      display: block;
+      font-size: 13px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #7dd3fc;
+    }
+    .header-badge strong {
+      display: block;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    /* Seções de Bebidas */
+    .main-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+      margin: 30px 0;
+      flex: 1;
+      justify-content: space-evenly;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #bae6fd;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1.5px solid rgba(56, 189, 248, 0.25);
+    }
+    .section-title span.badge {
+      font-size: 13px;
+      font-weight: 800;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+
+    /* Grid de Bebidas de 1 Litro (4 itens) */
+    .grid-litro {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .drink-card {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 18px 24px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(10px);
+    }
+    .drink-card.litro {
+      border-left: 6px solid #38bdf8;
+    }
+    .drink-card.lata {
+      border-left: 6px solid #facc15;
+    }
+    .drink-img-box {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      background: #000;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+    .drink-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+    .drink-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .drink-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .drink-desc {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .drink-price {
+      font-size: 26px;
+      font-weight: 900;
+      color: #38bdf8;
+      letter-spacing: -0.5px;
+    }
+
+    /* Grid de Latas (6 itens: 3 cols x 2 linhas) */
+    .grid-latas {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .lata-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-top: 5px solid #facc15;
+      border-radius: 20px;
+      padding: 20px 14px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+    .lata-img-box {
+      width: 140px;
+      height: 140px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      background: #000;
+      margin-bottom: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    }
+    .lata-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+    .lata-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+    .lata-vol {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+    .lata-price {
+      font-size: 25px;
+      font-weight: 900;
+      color: #facc15;
+    }
+
+    /* Banner Informativo de Entrega Gelada */
+    .gelada-banner {
+      background: linear-gradient(135deg, rgba(3, 105, 161, 0.3) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1.5px solid rgba(56, 189, 248, 0.4);
+      border-radius: 18px;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+    }
+    .gelada-text {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .gelada-icon {
+      font-size: 40px;
+    }
+    .gelada-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #e0f2fe;
+      margin-bottom: 3px;
+    }
+    .gelada-sub {
+      font-size: 14px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    /* Rodapé */
+    .footer {
+      position: relative;
+      z-index: 2;
+      border-top: 2px solid rgba(59, 130, 246, 0.35);
+      padding-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .footer-left .horario {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .footer-left .cidade {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .footer-cta {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      padding: 12px 28px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4);
+    }
+    .footer-cta-text {
+      text-align: right;
+    }
+    .footer-cta-text span {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #bae6fd;
+    }
+    .footer-cta-text strong {
+      display: block;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.1;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow-top"></div>
+  <div class="bg-pattern"></div>
+
+  <!-- CABEÇALHO -->
+  <div class="header">
+    <div class="header-logo-group">
+      <img src="../public/logoNuuPrensado-semfundo.png" alt="Nuu Prensado" class="header-logo">
+      <div class="header-title-box">
+        <h1>Nuu Prensado!!</h1>
+        <p>Bebidas Estupidamente Geladas para Acompanhar seu Prensado</p>
+      </div>
+    </div>
+    <div class="header-badge">
+      <span>CARDÁPIO OFICIAL</span>
+      <strong>BEBIDAS GELADAS</strong>
+    </div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- SEÇÃO 1: GARRAFAS 1 LITRO (FAMÍLIA) -->
+    <div>
+      <div class="section-title">
+        <span>🧊 Garrafas de 1 Litro</span>
+        <span class="badge">Ideais para Compartilhar</span>
+      </div>
+      <div class="grid-litro" style="margin-top: 14px;">
+
+        <!-- Coca 1L -->
+        <div class="drink-card litro">
+          <div class="drink-img-box">
+            <img src="../public/images/bebidas/coca 1l.jpg" alt="Coca-Cola 1L">
+          </div>
+          <div class="drink-info">
+            <div class="drink-name">Coca-Cola 1 Litro</div>
+            <div class="drink-desc">Garrafa 1L bem geladinha</div>
+            <div class="drink-price">R$ 10,00</div>
+          </div>
+        </div>
+
+        <!-- Coca Zero 1L -->
+        <div class="drink-card litro">
+          <div class="drink-img-box">
+            <img src="../public/images/bebidas/coca zero 1l.jpg" alt="Coca-Cola Zero 1L">
+          </div>
+          <div class="drink-info">
+            <div class="drink-name">Coca-Cola Zero 1 Litro</div>
+            <div class="drink-desc">Zero açúcar, sabor original</div>
+            <div class="drink-price">R$ 10,00</div>
+          </div>
+        </div>
+
+        <!-- Mate Couro 1L -->
+        <div class="drink-card litro">
+          <div class="drink-img-box">
+            <img src="../public/images/bebidas/mate couro 1l.jpg" alt="Mate Couro 1L">
+          </div>
+          <div class="drink-info">
+            <div class="drink-name">Mate Couro 1 Litro</div>
+            <div class="drink-desc">O autêntico sabor mineiro</div>
+            <div class="drink-price">R$ 8,50</div>
+          </div>
+        </div>
+
+        <!-- Guaraná 1L -->
+        <div class="drink-card litro">
+          <div class="drink-img-box">
+            <img src="../public/images/bebidas/guarana 1l.jpg" alt="Guaraná 1L">
+          </div>
+          <div class="drink-info">
+            <div class="drink-name">Guaraná 1 Litro</div>
+            <div class="drink-desc">Super refrescante e gelado</div>
+            <div class="drink-price">R$ 8,50</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SEÇÃO 2: REFRIGERANTES EM LATA 350ML -->
+    <div style="margin-top: 10px;">
+      <div class="section-title">
+        <span>⚡ Latas 350ml Individuais</span>
+        <span class="badge">Estupidamente Geladas • R$ 6,50 cada</span>
+      </div>
+      <div class="grid-latas" style="margin-top: 14px;">
+
+        <!-- Coca Lata -->
+        <div class="lata-card">
+          <div class="lata-img-box">
+            <img src="../public/images/bebidas/coca 350ml.jpg" alt="Coca-Cola Lata">
+          </div>
+          <div class="lata-name">Coca-Cola Tradicional</div>
+          <div class="lata-vol">Lata 350ml</div>
+          <div class="lata-price">R$ 6,50</div>
+        </div>
+
+        <!-- Coca Zero Lata -->
+        <div class="lata-card">
+          <div class="lata-img-box">
+            <img src="../public/images/bebidas/coca zero 350ml.jpg" alt="Coca-Cola Zero Lata">
+          </div>
+          <div class="lata-name">Coca-Cola Zero Açúcar</div>
+          <div class="lata-vol">Lata 350ml</div>
+          <div class="lata-price">R$ 6,50</div>
+        </div>
+
+        <!-- Guaraná Antarctica Lata -->
+        <div class="lata-card">
+          <div class="lata-img-box">
+            <img src="../public/images/bebidas/guarana 350ml.jpg" alt="Guaraná Antarctica Lata">
+          </div>
+          <div class="lata-name">Guaraná Antarctica</div>
+          <div class="lata-vol">Lata 350ml</div>
+          <div class="lata-price">R$ 6,50</div>
+        </div>
+
+        <!-- Guaraná Zero Lata -->
+        <div class="lata-card">
+          <div class="lata-img-box">
+            <img src="../public/images/bebidas/guarana zero 350ml.jpg" alt="Guaraná Zero Lata">
+          </div>
+          <div class="lata-name">Guaraná Antarctica Zero</div>
+          <div class="lata-vol">Lata 350ml</div>
+          <div class="lata-price">R$ 6,50</div>
+        </div>
+
+        <!-- Fanta Laranja Lata -->
+        <div class="lata-card">
+          <div class="lata-img-box">
+            <img src="../public/images/bebidas/fanta 350ml.jpg" alt="Fanta Laranja Lata">
+          </div>
+          <div class="lata-name">Fanta Laranja</div>
+          <div class="lata-vol">Lata 350ml</div>
+          <div class="lata-price">R$ 6,50</div>
+        </div>
+
+        <!-- Sprite Lata -->
+        <div class="lata-card">
+          <div class="lata-img-box">
+            <img src="../public/images/bebidas/sprite 350ml.jpg" alt="Sprite Lata">
+          </div>
+          <div class="lata-name">Sprite Limão</div>
+          <div class="lata-vol">Lata 350ml</div>
+          <div class="lata-price">R$ 6,50</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BANNER DE QUALIDADE -->
+    <div class="gelada-banner">
+      <div class="gelada-text">
+        <div class="gelada-icon">❄️</div>
+        <div>
+          <div class="gelada-title">Bebidas Entregues Estupidamente Geladas</div>
+          <div class="gelada-sub">Transportadas em embalagens térmicas para chegar no ponto perfeito até você!</div>
+        </div>
+      </div>
+      <div style="font-size: 26px;">🥤</div>
+    </div>
+
+  </div>
+
+  <!-- RODAPÉ -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="horario">⏰ Terça a Domingo • Das 19h00 às 23h30</div>
+      <div class="cidade">📍 Montes Claros - MG • Entrega Rápida Delivery e Balcão</div>
+    </div>
+    <div class="footer-cta">
+      <div class="footer-cta-text">
+        <span>Faça seu pedido</span>
+        <strong>Peça no WhatsApp ou Site</strong>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

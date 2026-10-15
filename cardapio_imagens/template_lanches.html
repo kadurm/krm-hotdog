@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cardápio Lanches - Nuu Prensado!!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 1080px;
+      height: 1920px;
+      background: radial-gradient(circle at 50% 0%, #20140c 0%, #0c0806 40%, #050403 100%);
+      color: #fff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      position: relative;
+      overflow: hidden;
+      padding: 50px 55px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    /* Efeitos de fundo e glow */
+    .bg-glow-top {
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(234, 179, 8, 0.22) 0%, rgba(220, 38, 38, 0.12) 60%, transparent 100%);
+      filter: blur(70px);
+      pointer-events: none;
+    }
+    .bg-pattern {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* Cabeçalho */
+    .header {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid rgba(234, 179, 8, 0.3);
+      padding-bottom: 28px;
+    }
+    .header-logo-group {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .header-logo {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
+    }
+    .header-title-box h1 {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1;
+      background: linear-gradient(90deg, #fef08a 0%, #eab308 40%, #f97316 80%, #ef4444 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+    }
+    .header-title-box p {
+      font-size: 19px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+    .header-badge {
+      background: linear-gradient(135deg, #b91c1c, #991b1b);
+      border: 1.5px solid #ef4444;
+      padding: 12px 26px;
+      border-radius: 999px;
+      text-align: right;
+      box-shadow: 0 8px 24px rgba(185, 28, 28, 0.4);
+    }
+    .header-badge span {
+      display: block;
+      font-size: 13px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #fef08a;
+    }
+    .header-badge strong {
+      display: block;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    /* Grade de Lanches */
+    .lanches-list {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .lanche-card {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      background: rgba(26, 20, 16, 0.85);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 14px 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      backdrop-filter: blur(10px);
+    }
+    .lanche-card.card-0 { border-left: 6px solid #eab308; }
+    .lanche-card.card-1 { border-left: 6px solid #f97316; }
+    .lanche-card.card-2 { border-left: 6px solid #dc2626; }
+    .lanche-card.card-3 { border-left: 6px solid #eab308; }
+    .lanche-card.card-4 { border-left: 6px solid #f97316; }
+
+    .lanche-img-box {
+      width: 175px;
+      height: 125px;
+      flex-shrink: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+      background: #000;
+    }
+    .lanche-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+    .lanche-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .lanche-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .lanche-name {
+      font-size: 26px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .lanche-tag {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tag-yellow { background: rgba(234, 179, 8, 0.18); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.4); }
+    .tag-orange { background: rgba(249, 115, 22, 0.18); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.4); }
+    .tag-red { background: rgba(220, 38, 38, 0.18); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.4); }
+
+    .lanche-desc {
+      font-size: 14.5px;
+      line-height: 1.35;
+      color: rgba(255, 255, 255, 0.72);
+      margin-bottom: 6px;
+    }
+    .lanche-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .lanche-price-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .lanche-price {
+      font-size: 28px;
+      font-weight: 900;
+      color: #facc15;
+      letter-spacing: -0.5px;
+    }
+
+    /* Seção de Escolha Inclusa / Passo a Passo */
+    .custom-section {
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(30, 20, 15, 0.9) 100%);
+      border: 1.5px solid rgba(234, 179, 8, 0.35);
+      border-radius: 20px;
+      padding: 20px 24px;
+      margin-top: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .custom-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #fef08a;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .custom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr 1fr;
+      gap: 16px;
+    }
+    .custom-column {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .custom-column-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #fb923c;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 4px;
+    }
+    .custom-column ul {
+      list-style: none;
+    }
+    .custom-column li {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+    .custom-column li span.check {
+      color: #22c55e;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    /* Seção de Adicionais Pagos */
+    .extras-section {
+      position: relative;
+      z-index: 2;
+      background: rgba(18, 14, 12, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-top: 14px;
+    }
+    .extras-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .extras-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+    }
+    .extra-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .extra-pill strong {
+      color: #facc15;
+    }
+
+    /* Rodapé */
+    .footer {
+      position: relative;
+      z-index: 2;
+      border-top: 2px solid rgba(234, 179, 8, 0.3);
+      padding-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .footer-left .horario {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .footer-left .cidade {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .footer-cta {
+      background: linear-gradient(135deg, #eab308, #ea580c);
+      padding: 12px 28px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(234, 179, 8, 0.35);
+    }
+    .footer-cta-text {
+      text-align: right;
+    }
+    .footer-cta-text span {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1a0f02;
+    }
+    .footer-cta-text strong {
+      display: block;
+      font-size: 20px;
+      font-weight: 900;
+      color: #000;
+      line-height: 1.1;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow-top"></div>
+  <div class="bg-pattern"></div>
+
+  <!-- CABEÇALHO -->
+  <div class="header">
+    <div class="header-logo-group">
+      <img src="../public/logoNuuPrensado-semfundo.png" alt="Nuu Prensado" class="header-logo">
+      <div class="header-title-box">
+        <h1>Nuu Prensado!!</h1>
+        <p>O Autêntico Cachorro-Quente Prensado Artesanal</p>
+      </div>
+    </div>
+    <div class="header-badge">
+      <span>CARDÁPIO OFICIAL</span>
+      <strong>LANCHES PRENSADOS</strong>
+    </div>
+  </div>
+
+  <!-- LISTA DE LANCHES (5 OPÇÕES) -->
+  <div class="lanches-list">
+
+    <!-- 1. PRENSADINHO -->
+    <div class="lanche-card card-0">
+      <div class="lanche-img-box">
+        <img src="../public/images/lanches/Prensadinho.jpg" alt="Prensadinho">
+      </div>
+      <div class="lanche-info">
+        <div class="lanche-title-row">
+          <div class="lanche-name">1. Prensadinho</div>
+          <span class="lanche-tag tag-yellow">O Clássico da Casa</span>
+        </div>
+        <p class="lanche-desc">Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, mussarela, bacon crocante, milho, batata e molhos da casa.</p>
+        <div class="lanche-price-row">
+          <span class="lanche-price-label">Apenas</span>
+          <span class="lanche-price">R$ 17,50</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. PRENSADO DE FRANGO -->
+    <div class="lanche-card card-1">
+      <div class="lanche-img-box">
+        <img src="../public/images/lanches/prensado de frango.png" alt="Prensado de Frango">
+      </div>
+      <div class="lanche-info">
+        <div class="lanche-title-row">
+          <div class="lanche-name">2. Prensado de Frango</div>
+          <span class="lanche-tag tag-orange">150g de Frango Desfiado</span>
+        </div>
+        <p class="lanche-desc">Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de frango temperado desfiado, mussarela ou cheddar, bacon, batata, milho e molhos.</p>
+        <div class="lanche-price-row">
+          <span class="lanche-price-label">Apenas</span>
+          <span class="lanche-price">R$ 23,00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. PRENSADO PERNIL -->
+    <div class="lanche-card card-2">
+      <div class="lanche-img-box">
+        <img src="../public/images/lanches/prensado de pernil.png" alt="Prensado Pernil">
+      </div>
+      <div class="lanche-info">
+        <div class="lanche-title-row">
+          <div class="lanche-name">3. Prensado Pernil</div>
+          <span class="lanche-tag tag-red">150g de Pernil Especial</span>
+        </div>
+        <p class="lanche-desc">Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de pernil desfiado macio e temperado, mussarela ou cheddar, bacon, batata, milho e molhos.</p>
+        <div class="lanche-price-row">
+          <span class="lanche-price-label">Apenas</span>
+          <span class="lanche-price">R$ 23,00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. PRENSADO DE FRALDINHA -->
+    <div class="lanche-card card-3">
+      <div class="lanche-img-box">
+        <img src="../public/images/lanches/prensado de fraldinha.jfif" alt="Prensado de Fraldinha">
+      </div>
+      <div class="lanche-info">
+        <div class="lanche-title-row">
+          <div class="lanche-name">4. Prensado de Fraldinha</div>
+          <span class="lanche-tag tag-yellow">150g de Carne Nobre</span>
+        </div>
+        <p class="lanche-desc">Pão, molho de tomate artesanal, 2 salsichas, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de fraldinha desfiada super suculenta, queijo mussarela ou cheddar, bacon, milho e batata.</p>
+        <div class="lanche-price-row">
+          <span class="lanche-price-label">Apenas</span>
+          <span class="lanche-price">R$ 25,00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. PRENSADO DE COSTELA -->
+    <div class="lanche-card card-4">
+      <div class="lanche-img-box">
+        <img src="../public/images/lanches/prensado de costela.png" alt="Prensado de Costela">
+      </div>
+      <div class="lanche-info">
+        <div class="lanche-title-row">
+          <div class="lanche-name">5. Prensado de Costela</div>
+          <span class="lanche-tag tag-orange">150g de Costela Premium</span>
+        </div>
+        <p class="lanche-desc">Pão, 2 salsichas, molho artesanal, Catupiry / Cheddar Cremoso / Cream Cheese, 150g de costela bovina desfiada no bafo, queijo mussarela ou cheddar, bacon crocante, batata, milho e molhos.</p>
+        <div class="lanche-price-row">
+          <span class="lanche-price-label">Apenas</span>
+          <span class="lanche-price">R$ 28,00</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PERSONALIZAÇÃO INCLUSA (SEM CUSTO ADICIONAL) -->
+  <div class="custom-section">
+    <div class="custom-title">
+      <span>✨</span> Personalize Seu Lanche (Sem Custo Adicional):
+    </div>
+    <div class="custom-grid">
+      <div class="custom-column">
+        <div class="custom-column-title">1. Tipo de Pão (Escolha 1)</div>
+        <ul>
+          <li><span class="check">✓</span> Pão Tradicional</li>
+          <li><span class="check">✓</span> Pão 3 Queijos</li>
+        </ul>
+      </div>
+      <div class="custom-column">
+        <div class="custom-column-title">2. Queijo Cremoso (Escolha 1)</div>
+        <ul>
+          <li><span class="check">✓</span> Catupiry Original</li>
+          <li><span class="check">✓</span> Cheddar Cremoso</li>
+          <li><span class="check">✓</span> Cream Cheese</li>
+        </ul>
+      </div>
+      <div class="custom-column">
+        <div class="custom-column-title">3. Queijo & Extras</div>
+        <ul>
+          <li><span class="check">✓</span> Mussarela ou Cheddar</li>
+          <li><span class="check">✓</span> Vinagrete Especial</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADICIONAIS EXTRAS PAGOS -->
+  <div class="extras-section">
+    <div class="extras-title">🔥 Turbine com Adicionais Extras:</div>
+    <div class="extras-pills">
+      <div class="extra-pill">Bacon Extra <strong>+R$ 4,00</strong></div>
+      <div class="extra-pill">Frango Extra (150g) <strong>+R$ 4,00</strong></div>
+      <div class="extra-pill">Pernil Extra (150g) <strong>+R$ 4,00</strong></div>
+      <div class="extra-pill">Costela Extra (150g) <strong>+R$ 6,00</strong></div>
+      <div class="extra-pill">Fraldinha Extra (150g) <strong>+R$ 6,00</strong></div>
+      <div class="extra-pill">Catupiry / Cheddar / Cream Cheese <strong>+R$ 3,50</strong></div>
+      <div class="extra-pill">Maionese de Bacon <strong>+R$ 2,50</strong></div>
+      <div class="extra-pill">Maionese Temperada / Molho Rosé <strong>+R$ 1,50</strong></div>
+    </div>
+  </div>
+
+  <!-- RODAPÉ -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="horario">⏰ Terça a Domingo • Das 19h00 às 23h30</div>
+      <div class="cidade">📍 Montes Claros - MG • Entrega Rápida Delivery e Balcão</div>
+    </div>
+    <div class="footer-cta">
+      <div class="footer-cta-text">
+        <span>Faça seu pedido</span>
+        <strong>Peça no WhatsApp ou Site</strong>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

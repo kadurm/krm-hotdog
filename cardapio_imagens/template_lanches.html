@@ -51,58 +51,48 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 2px solid rgba(234, 179, 8, 0.3);
-      padding-bottom: 28px;
+      border-bottom: 2px solid rgba(234, 179, 8, 0.35);
+      padding-bottom: 24px;
     }
     .header-logo-group {
       display: flex;
       align-items: center;
-      gap: 24px;
+      gap: 20px;
     }
     .header-logo {
-      width: 110px;
-      height: 110px;
+      height: 115px;
+      width: auto;
       object-fit: contain;
-      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
-    }
-    .header-title-box h1 {
-      font-size: 52px;
-      font-weight: 900;
-      letter-spacing: -1px;
-      line-height: 1;
-      background: linear-gradient(90deg, #fef08a 0%, #eab308 40%, #f97316 80%, #ef4444 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-transform: uppercase;
-    }
-    .header-title-box p {
-      font-size: 19px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.8);
-      margin-top: 6px;
-      letter-spacing: 0.5px;
+      filter: drop-shadow(0 10px 24px rgba(0,0,0,0.7));
     }
     .header-badge {
       background: linear-gradient(135deg, #b91c1c, #991b1b);
       border: 1.5px solid #ef4444;
-      padding: 12px 26px;
+      padding: 14px 32px;
       border-radius: 999px;
-      text-align: right;
-      box-shadow: 0 8px 24px rgba(185, 28, 28, 0.4);
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(185, 28, 28, 0.45);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .header-badge span {
       display: block;
       font-size: 13px;
       text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 1.5px;
+      font-weight: 800;
+      letter-spacing: 2px;
       color: #fef08a;
+      white-space: nowrap;
+      margin-bottom: 2px;
     }
     .header-badge strong {
       display: block;
-      font-size: 20px;
+      font-size: 26px;
       font-weight: 900;
       color: #fff;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      line-height: 1.1;
     }
 
     /* Grade de Lanches */
@@ -361,9 +351,9 @@
   <div class="header">
     <div class="header-logo-group">
       <img src="../public/logoNuuPrensado-semfundo.png" alt="Nuu Prensado" class="header-logo">
-      <div class="header-title-box">
-        <h1>Nuu Prensado!!</h1>
-        <p>O Autêntico Cachorro-Quente Prensado Artesanal</p>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 21px; font-weight: 700; color: #fef08a; letter-spacing: 0.5px;">O Autêntico Cachorro-Quente</span>
+        <span style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.7);">Prensado Artesanal de Montes Claros</span>
       </div>
     </div>
     <div class="header-badge">

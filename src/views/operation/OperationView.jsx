@@ -14,7 +14,8 @@ import {
   Phone, MapPin, CheckCircle2, AlertTriangle, Volume2, VolumeX, 
   LogOut, User, Lock, Store, ShoppingBag, ArrowRight, Shield, 
   RotateCcw, Sparkles, Navigation, Check, X, RefreshCw, Database, Flame,
-  Pause, Play, Power, ChevronDown, AlertCircle, Calendar, Filter, Ban, XCircle
+  Pause, Play, Power, ChevronDown, AlertCircle, Calendar, Filter, Ban, XCircle,
+  MessageCircle
 } from 'lucide-react';
 
 export default function OperationView({ onOpenAdmin, onGoDelivery }) {
@@ -267,6 +268,59 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
     });
   };
 
+  const buildCustomerWhatsAppUrl = (order, motoboyName = '') => {
+    if (!order || !order.phone) return null;
+    let cleanPhone = String(order.phone).replace(/\D/g, '');
+    if (!cleanPhone) return null;
+    // Se tiver 8 ou 9 dígitos (sem DDD), assume Montes Claros (DDD 38)
+    if (cleanPhone.length === 8 || cleanPhone.length === 9) {
+      cleanPhone = '38' + cleanPhone;
+    }
+    const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
+
+    const custName = (order.customerName || 'Cliente').trim();
+    const isPickup = order.type === 'takeout' || order.type === 'pickup' || order.type === 'balcao';
+
+    let msg = '';
+    if (isPickup) {
+      msg = `🌭 *NUU PRENSADO!! - SEU PEDIDO ESTÁ PRONTO!* 🏪✨\n\n` +
+        `Olá, *${custName}*! Tudo bem?\n` +
+        `Seu pedido *#${order.id}* acabou de sair quentinho da nossa chapa e já está *PRONTO* para retirada no balcão! 🔥🥪\n\n` +
+        `📍 *Local para retirada:*\n` +
+        `Rua Agapanto, 264 - Sagrada Família, Montes Claros\n\n` +
+        `Pode vir buscar quando quiser, seu lanche te espera quentinho! ❤️🌭`;
+    } else {
+      const addressStr = order.address ? `${order.address}${order.neighborhood ? ` (${order.neighborhood})` : ''}` : 'Endereço cadastrado';
+      const motoboyInfo = motoboyName ? `🛵 *Entregador(a):* ${motoboyName}\n` : '';
+      msg = `🌭 *NUU PRENSADO!! - SEU PEDIDO ESTÁ A CAMINHO!* 🛵💨\n\n` +
+        `Olá, *${custName}*! Tudo bem?\n` +
+        `Seu pedido *#${order.id}* acabou de ficar pronto na chapa e já está *SAINDO PARA ENTREGA*! 🔥✨\n\n` +
+        `📍 *Destino:* ${addressStr}\n` +
+        motoboyInfo +
+        `\nFique atento(a) que nosso entregador já está a caminho para levar seu prensado super recheado e quentinho até você! 🚀\n\n` +
+        `Qualquer dúvida, estamos à disposição. Bom apetite! ❤️🌭`;
+    }
+
+    return `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
+  };
+
+  const handleAdvanceToShipping = (order) => {
+    // 1. Avança o pedido para a etapa Pronto / Despache (status: 'shipping')
+    updateOrderStatus(order.id, 'shipping');
+
+    // 2. Dispara abertura automática do WhatsApp para avisar o cliente
+    const mb = motoboys.find(m => m.id === order.motoboyId);
+    const waUrl = buildCustomerWhatsAppUrl(order, mb?.name);
+    if (waUrl) {
+      try {
+        if (typeof window !== 'undefined') {
+          window.open(waUrl, '_blank');
+        }
+      } catch (e) {
+        console.warn('Erro ao abrir WhatsApp automaticamente:', e);
+      }
+    }
+  };
 
   const handleSelectOperator = (op) => {
     setSelectedOperatorForLogin(op);
@@ -1360,12 +1414,13 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                           <RotateCcw size={15} />
                         </button>
                         <button
-                          onClick={() => updateOrderStatus(order.id, order.type === 'delivery' ? 'shipping' : 'delivered')}
+                          onClick={() => handleAdvanceToShipping(order)}
                           className="btn-primary"
                           style={{ flex: 1, padding: '8px', fontSize: '0.85rem', fontWeight: 800, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}
+                          title="Mover para Pronto / Despache e abrir WhatsApp do cliente"
                         >
-                          {order.type === 'delivery' ? <Bike size={16} /> : <CheckCircle2 size={16} />}
-                          <span>{order.type === 'delivery' ? 'Pronto para Despache' : 'Entregar no Balcão'}</span>
+                          <Bike size={16} />
+                          <span>Pronto / Despache</span>
                         </button>
                       </div>
                     </div>
@@ -1390,79 +1445,160 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                 </h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {shippingOrders.map(order => (
-                    <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.1rem' }}>#{order.id}</span>
-                          <OrderTimerBadge orderDate={order.date} />
-                          <button 
-                            onClick={() => handleCancelOrder(order)}
-                            style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                            title="Cancelar Pedido (Estorna faturamento e estoque)"
-                          >
-                            <Ban size={13} />
-                          </button>
+                  {shippingOrders.map(order => {
+                    const isPickup = order.type === 'takeout' || order.type === 'pickup' || order.type === 'balcao';
+                    const assignedMb = motoboys.find(m => m.id === order.motoboyId);
+                    const waUrl = buildCustomerWhatsAppUrl(order, assignedMb?.name);
 
-                        </div>
-                      </div>
+                    return (
+                      <div key={order.id} className="glass-panel" style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 800, color: 'var(--color-brand)', fontSize: '1.1rem' }}>#{order.id}</span>
+                            <OrderTimerBadge orderDate={order.date} />
+                            <button 
+                              onClick={() => handleCancelOrder(order)}
+                              style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                              title="Cancelar Pedido (Estorna faturamento e estoque)"
+                            >
+                              <Ban size={13} />
+                            </button>
+                          </div>
 
-                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{order.customerName}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                        📍 {order.address} ({order.neighborhood})
-                      </div>
-
-                      {/* Atribuição de Motoboy */}
-                      <div style={{ marginBottom: '10px' }}>
-                        <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>
-                          Motoboy Responsável:
-                        </label>
-                        <select
-                          value={order.motoboyId || ''}
-                          onChange={(e) => assignOrderMotoboy(order.id, e.target.value)}
-                          className="form-input"
-                          style={{ padding: '6px 8px', fontSize: '0.8rem' }}
-                        >
-                          <option value="">Aguardando Motoboy...</option>
-                          {motoboys.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        {order.address && (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address + ', ' + order.neighborhood)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => setReceiptOrder(order)}
                             style={{
-                              padding: '8px 10px',
-                              backgroundColor: 'rgba(56,189,248,0.15)',
+                              background: 'rgba(56,189,248,0.15)',
                               border: '1px solid rgba(56,189,248,0.3)',
                               color: '#38bdf8',
-                              borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              textDecoration: 'none'
+                              borderRadius: '4px',
+                              padding: '3px 8px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
                             }}
-                            title="Abrir GPS Google Maps"
                           >
-                            <Navigation size={15} />
-                          </a>
+                            <Printer size={12} /> Comanda
+                          </button>
+                        </div>
+
+                        <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{order.customerName}</div>
+                        {isPickup ? (
+                          <div style={{ fontSize: '0.8rem', color: '#4ade80', fontWeight: 700, margin: '4px 0 8px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🏪 Retirada no Balcão
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 8px 0' }}>
+                            📍 {order.address || 'Endereço cadastrado'} {order.neighborhood ? `(${order.neighborhood})` : ''}
+                          </div>
                         )}
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'delivered')}
-                          className="btn-success"
-                          style={{ flex: 1, padding: '8px', fontSize: '0.85rem', fontWeight: 800, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}
-                        >
-                          <CheckCircle2 size={16} />
-                          <span>Confirmar Entrega</span>
-                        </button>
+
+                        {/* Itens do Pedido */}
+                        <div style={{ backgroundColor: 'rgba(0,0,0,0.25)', padding: '6px 8px', borderRadius: '6px', marginBottom: '10px', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                          {(order.items || []).map((it, idx) => (
+                            <span key={idx}>
+                              <strong>{it.quantity}x</strong> {it.name}{idx < (order.items || []).length - 1 ? ' • ' : ''}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Atribuição de Motoboy (apenas se for entrega) */}
+                        {!isPickup && (
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>
+                              Motoboy Responsável:
+                            </label>
+                            <select
+                              value={order.motoboyId || ''}
+                              onChange={(e) => assignOrderMotoboy(order.id, e.target.value)}
+                              className="form-input"
+                              style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                            >
+                              <option value="">Aguardando Motoboy...</option>
+                              {motoboys.map(m => (
+                                <option key={m.id} value={m.id}>{m.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          {/* Voltar para Na Chapa */}
+                          <button
+                            onClick={() => updateOrderStatus(order.id, 'preparing')}
+                            style={{
+                              padding: '8px',
+                              background: 'rgba(255,255,255,0.06)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              color: 'var(--text-secondary)',
+                              borderRadius: '6px',
+                              cursor: 'pointer'
+                            }}
+                            title="Voltar para Na Chapa / Preparando"
+                          >
+                            <RotateCcw size={15} />
+                          </button>
+
+                          {/* Notificar / Reenviar WhatsApp */}
+                          {waUrl && (
+                            <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: '8px 10px',
+                                backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                                border: '1px solid rgba(34, 197, 94, 0.35)',
+                                color: '#4ade80',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                textDecoration: 'none'
+                              }}
+                              title="Avisar cliente no WhatsApp que pedido está pronto"
+                            >
+                              <MessageCircle size={15} />
+                            </a>
+                          )}
+
+                          {/* Abrir GPS Google Maps */}
+                          {!isPickup && order.address && (
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address + (order.neighborhood ? ', ' + order.neighborhood : ''))}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: '8px 10px',
+                                backgroundColor: 'rgba(56,189,248,0.15)',
+                                border: '1px solid rgba(56,189,248,0.3)',
+                                color: '#38bdf8',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textDecoration: 'none'
+                              }}
+                              title="Abrir GPS Google Maps"
+                            >
+                              <Navigation size={15} />
+                            </a>
+                          )}
+
+                          {/* Concluir Pedido */}
+                          <button
+                            onClick={() => updateOrderStatus(order.id, 'delivered')}
+                            className="btn-success"
+                            style={{ flex: 1, padding: '8px', fontSize: '0.85rem', fontWeight: 800, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}
+                          >
+                            <CheckCircle2 size={16} />
+                            <span>{isPickup ? 'Entregar no Balcão' : 'Confirmar Entrega'}</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {shippingOrders.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -1812,7 +1948,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {order.phone && (
                             <a
-                              href={`https://wa.me/55${order.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.customerName}! Seu pedido #${order.id} do Nuu Prensado acabou de sair para entrega!`)}`}
+                              href={buildCustomerWhatsAppUrl(order, mb?.name)}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{
@@ -1828,6 +1964,7 @@ export default function OperationView({ onOpenAdmin, onGoDelivery }) {
                                 fontSize: '0.82rem',
                                 fontWeight: 600
                               }}
+                              title="Avisar cliente no WhatsApp"
                             >
                               <Phone size={14} /> WhatsApp
                             </a>
